@@ -1,0 +1,245 @@
+/* css/perfil.css */
+
+:root {
+    --bg-painel: #262626;
+    /* Cor escura fiel ao print */
+    --bg-input: #352B46;
+    --bg-btn-editar: #4A3A69;
+}
+
+body.pagina-perfil {
+    /* Fundo Gradiente Estático e Elegante */
+    background: linear-gradient(180deg, var(--fundo-pagina-inicio) 0%, var(--fundo-pagina-fim) 100%);
+    background-attachment: fixed;
+    color: #fff;
+    padding-top: 120px;
+    min-height: 100vh;
+}
+
+.perfil-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+
+/* Header Avatar */
+
+.perfil-header {
+    display: flex;
+    align-items: center;
+    gap: 40px;
+    margin-bottom: 50px;
+}
+
+.perfil-avatar-wrapper {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background: #fff;
+    padding: 8px;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+}
+
+.perfil-avatar {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.perfil-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.perfil-info h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.perfil-nome-box {
+    background-color: var(--bg-input);
+    padding: 12px 25px;
+    border-radius: 25px;
+    font-size: 1.2rem;
+    font-weight: 500;
+    display: inline-block;
+    min-width: 280px;
+}
+
+.btn-editar-perfil {
+    background-color: var(--bg-btn-editar);
+    color: #fff;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    width: fit-content;
+    transition: background-color 0.2s;
+}
+
+.btn-editar-perfil:hover {
+    background-color: #5d4b85;
+}
+
+
+/* Sistema de Grid */
+
+.grid-layout {
+    display: grid;
+    gap: 30px;
+    padding-bottom: 50px;
+}
+
+
+/* Jogador: 2 colunas lado a lado */
+
+.grid-jogador {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas: "personagens campanhas";
+}
+
+
+/* Mestre: Topo largo (ocupa as duas colunas), base dividida */
+
+.grid-mestre {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas: "personagens campanhas" "sistemas sistemas";
+}
+
+#painel-personagens {
+    grid-area: personagens;
+}
+
+#painel-campanhas {
+    grid-area: campanhas;
+}
+
+#painel-sistemas {
+    grid-area: sistemas;
+}
+
+
+/* Paineis Escuros */
+
+.painel-dark {
+    background-color: var(--bg-painel);
+    border-radius: 20px;
+    padding: 25px 15px 25px 25px;
+    height: 400px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.painel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    padding-right: 15px;
+}
+
+.painel-header h2 {
+    font-style: italic;
+    font-weight: 800;
+    font-size: 1.6rem;
+}
+
+.btn-criar {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: opacity 0.2s;
+}
+
+.btn-criar:hover {
+    opacity: 0.8;
+}
+
+
+/* Scroller Interno Redesenhado */
+
+.scroller {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding-right: 15px;
+}
+
+.scroller::-webkit-scrollbar {
+    width: 8px;
+}
+
+.scroller::-webkit-scrollbar-track {
+    background: #1a1a1a;
+    border-radius: 10px;
+}
+
+.scroller::-webkit-scrollbar-thumb {
+    background: #6b6b6b;
+    border-radius: 10px;
+}
+
+
+/* Itens da Lista */
+
+.lista-item {
+    background: #151515;
+    padding: 12px 20px;
+    border-radius: 15px;
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.item-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: #e0e0e0;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.item-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.item-dados {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.item-dados h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.item-dados p {
+    font-size: 0.8rem;
+    color: #fff;
+    margin: 0;
+}
+
+.item-dados span {
+    font-size: 0.75rem;
+    color: #a8a8a8;
+}
