@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TABLE | Editar Perfil</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <link rel="stylesheet" href="../css/nav-footer.css">
+    <link rel="stylesheet" href="../css/editar-perfil.css"> 
+</head>
+
+<body class="pagina-edicao">
+
+    <header>
+        <div class="logotipo">
+            <a href="index.html"><img src="../img/logo_horizontal.png" alt="Logo TABLE"></a>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="index.html">Início</a></li>
+                <li><a href="#">Como Jogar</a></li>
+                <li><a href="#">Personagens</a></li>
+                <li><a href="#">Mundos</a></li>
+                <li><a href="#">Dados</a></li>
+                <li><a href="#">Sobre Nós</a></li>
+            </ul>
+        </nav>
+
+        <div class="usuario-logado-nav" id="btn-voltar-perfil" title="Ir para o Perfil" onclick="window.location.href='perfil.html'">
+            <img src="../img/foto-ficha.jpg" alt="Avatar Navbar" class="avatar-nav">
+            <span id="nav-nome-usuario-global" class="nome-nav">Carregando...</span>
+            <i class="far fa-star icone-nav"></i>
+        </div>
+    </header>
+
+    <main class="container-principal-edicao">
+        <div class="cartao-edicao">
+            
+            <a href="perfil.html" class="link-voltar">
+                <i class="fas fa-arrow-left"></i> Voltar ao Perfil
+            </a>
+
+            <div class="cabecalho-edicao">
+                <div class="foto-container">
+                    <img src="../img/foto-ficha.jpg" alt="Foto de perfil do usuário" class="foto-perfil">
+                    <div class="icone-camera">
+                        <i class="fas fa-camera"></i>
+                    </div>
+                </div>
+                <div class="info-usuario">
+                    <h2 id="exibicao-nome">Carregando...</h2>
+                    <p id="exibicao-email">carregando@email.com</p>
+                    <p class="membro-desde">Membro desde: 29/11/2025</p>
+                </div>
+            </div>
+
+            <hr class="divisor">
+
+            <section>
+                <h3 class="titulo-roxo">Meus Dados</h3>
+                <form class="formulario-edicao" id="form-meus-dados">
+                    <div class="campo-edicao">
+                        <label for="input-nome">Nome de Usuário:</label>
+                        <input type="text" id="input-nome" name="nome">
+                    </div>
+                    <div class="campo-edicao">
+                        <label for="input-email">E-mail:</label>
+                        <input type="email" id="input-email" name="email">
+                    </div>
+                    <div class="campo-edicao">
+                        <label for="input-data">Data de nascimento:</label>
+                        <input type="text" id="input-data" value="10/09/2007" disabled>
+                    </div>
+                    <div class="area-botao-centro">
+                        <button type="button" id="btn-salvar-dados" class="botao-roxo">Salvar alterações</button>
+                    </div>
+                </form>
+            </section>
+
+            <hr class="divisor">
+
+            <section>
+                <h3 class="titulo-roxo">Ser Mestre</h3>
+                <p class="texto-descricao">
+                    Torne-se um verdadeiro mestre e desbloqueie a habilidade de criar seus próprios sistemas de RPG. Construa mundos, regras e experiências únicas, compartilhe tudo com a comunidade para que outros vivam as aventuras que você imaginar.
+                </p>
+                <div class="area-botao-centro">
+                    <button type="button" id="btn-mudar-cargo" class="botao-roxo">
+                        <i class="fas fa-book"></i> <span id="texto-botao-cargo">Seja mestre</span>
+                    </button>
+                </div>
+            </section>
+
+            <hr class="divisor">
+
+            <div class="acoes-conta">
+                <button type="button" id="btn-sair-conta" class="botao-cinza">
+                    <i class="fas fa-sign-out-alt"></i> Sair da Conta
+                </button>
+                <button type="button" id="btn-excluir-conta" class="botao-vermelho">
+                    <i class="fas fa-trash-alt"></i> Excluir Conta
+                </button>
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="rodape-principal">
+        <div class="rodape-conteudo">
+            <div class="rodape-logo-area">
+                <div class="rodape-marca">
+                    <img src="../img/logo_branco.png" alt="Logo TABLE">
+                    <span>TABLE</span>
+                </div>
+                <p>Acompanhe uma experiência imersiva nos mundos de RPG. Aprenda e jogue com seus amigos!</p>
+            </div>
+            <div class="rodape-links">
+                <h4>Navegação</h4>
+                <ul>
+                    <li><a href="index.html">Início</a></li>
+                    <li><a href="#">Como Jogar</a></li>
+                    <li><a href="#">Personagens</a></li>
+                    <li><a href="#">Mundos</a></li>
+                    <li><a href="#">Dados</a></li>
+                    <li><a href="#">Sobre nós</a></li>
+                </ul>
+            </div>
+            <div class="rodape-links">
+                <h4>Jogar</h4>
+                <ul>
+                    <li><a href="#">Campanhas</a></li>
+                    <li><a href="#">Como Player</a></li>
+                    <li><a href="#">Como Mestre</a></li>
+                    <li><a href="#">Outros</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="rodape-inferior">
+            <p>© 2026 TABLE. Todos os direitos reservados.</p>
+            <div class="redes-sociais">
+                <a href="#"><i class="fa-brands fa-discord"></i></a>
+                <a href="#"><i class="fa-brands fa-instagram"></i></a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../js/editar-perfil.js"></script>
+    <script src="../js/nav-global.js" defer></script>
+</body>
+</html>
