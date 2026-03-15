@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="img/logo_horizontal.png" alt="Logo TABLE" width="350">
+  <img src="../img/logo_horizontal.png" alt="Logo TABLE" width="350">
   
   <h3>Plataforma Digital para RPG de Mesa 🐉</h3>
   <p>
