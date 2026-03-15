@@ -1,5 +1,6 @@
 <div align="center">
-  <h1>🎲 TABLE</h1>
+  <img src="img/logo_horizontal.png" alt="Logo TABLE" width="350">
+  
   <h3>Plataforma Digital para RPG de Mesa 🐉</h3>
   <p>
     <img src="https://img.shields.io/badge/Status-Concluído-8b5cf6?style=for-the-badge" alt="Status">
