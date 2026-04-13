@@ -1,0 +1,328 @@
+<?php
+    /**
+     *  Após a página de login definir a sessão com os dados do usuario a página index lê a sessão e inicia a mesma
+     *  Na navbar temos um if e else para cado o usuario esteja conectado ou não, mudando sendo que: 
+     *  SE o usuário estiver logado irá mostrar a foto e o nome do usuário
+     */
+    session_start();
+
+    // Redireciona para login se não estiver logado
+    if (!isset($_SESSION['usuario'])) {
+        header('Location: login.php');
+        exit;
+    }
+?>
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TABLE | Criar Sistema</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="shortcut icon" href="../img/logo_icone.png" type="image/x-icon">
+    <link rel="stylesheet" href="../css/nav-footer.css">
+    <link rel="stylesheet" href="../css/criar-sistema.css">
+</head>
+
+<body class="pagina-criacao-sistema">
+
+    <header>
+        <div class="logotipo">
+            <a href="index.php"><img src="../img/logo_horizontal.png" alt="Logo TABLE"></a>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="index.php" class="ativo">Início</a></li>
+                <li><a href="#">Como Jogar</a></li>
+                <li><a href="#">Personagens</a></li>
+                <li><a href="#">Mundos</a></li>
+                <li><a href="#">Dados</a></li>
+                <li><a href="#">Sobre Nós</a></li>
+            </ul>
+        </nav>
+        <?php if (isset($_SESSION['usuario'])): ?>
+            <div class="usuario-logado-nav" id="nav-logado"
+                onclick="window.location.href='perfil.php'" title="Ir para o Perfil">
+                <img src="../img/foto-ficha.jpg" alt="Avatar Navbar" class="avatar-nav">
+                <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
+                <i class="far fa-star icone-nav"></i>
+            </div>
+        <?php endif; ?>
+    </header>
+
+    <main class="container-sistema">
+
+        <nav class="menu-abas" id="menu-principal">
+            <div class="indicador-aba"></div>
+            <button type="button" class="aba ativa" data-index="0" data-alvo="aba-descricao">Descrição</button>
+            <button type="button" class="aba" data-index="1" data-alvo="aba-atributos">Atributos</button>
+            <button type="button" class="aba" data-index="2" data-alvo="aba-status">Status</button>
+            <button type="button" class="aba" data-index="3" data-alvo="aba-componentes">Componentes</button>
+        </nav>
+
+        <form id="form-criar-sistema">
+
+            <div id="aba-descricao" class="conteudo-aba ativa">
+                <section class="secao-topo">
+                    <div class="area-imagem">
+                        <div class="caixa-imagem" id="preview-imagem">
+                            <div class="silhueta-cabeca" id="silhueta-1"></div>
+                            <div class="silhueta-corpo" id="silhueta-2"></div>
+                        </div>
+                        <p class="dica-imagem">Tamanho ideal: 320x180px</p>
+                        <input type="file" id="input-foto-sistema" accept="image/*" hidden>
+                        <button type="button" class="btn-contorno" id="btn-trocar-foto">Trocar foto</button>
+                    </div>
+
+                    <div class="area-inputs">
+                        <div class="grupo-form">
+                            <label for="input-nome-sistema">Nome do Sistema:</label>
+                            <input type="text" id="input-nome-sistema" class="input-escuro" required
+                                placeholder="Digite o nome do sistema...">
+                        </div>
+                        <div class="grupo-form">
+                            <label>Classificação de Idade:</label>
+                            <input type="hidden" id="input-classificacao" value="L">
+                            <div class="grupo-classificacao" id="botoes-idade">
+                                <button type="button" class="btn-idade bg-livre ativo" data-idade="L">L</button>
+                                <button type="button" class="btn-idade bg-10" data-idade="10">10</button>
+                                <button type="button" class="btn-idade bg-12" data-idade="12">12</button>
+                                <button type="button" class="btn-idade bg-14" data-idade="14">14</button>
+                                <button type="button" class="btn-idade bg-16" data-idade="16">16</button>
+                                <button type="button" class="btn-idade bg-18" data-idade="18">18</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="secao-descricao">
+                    <div class="acoes-globais-desc"
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <input type="text" class="input-titulo-desc" id="titulo-desc-1" value="Descrição 1:"
+                            style="width: 50%; font-size: 1.2rem; font-weight: 800; margin: 0;">
+                        <div class="botoes-acao-desc" style="display: flex; gap: 15px;">
+                            <button type="button" class="btn-texto" id="btn-excluir-desc-global">Excluir tópico <i
+                                    class="far fa-minus-square"></i></button>
+                            <button type="button" class="btn-texto btn-add-desc" id="btn-add-desc-global">Adicionar
+                                tópico <i class="far fa-plus-square"></i></button>
+                        </div>
+                    </div>
+
+                    <div id="container-descricoes" class="lista-descricoes">
+                        <div class="item-descricao" id="desc-fixa-1">
+                            <textarea class="input-escuro textarea-escuro" required
+                                placeholder="Digite os detalhes da Descrição 1 aqui..."></textarea>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="botoes-nav-form apenas-proximo">
+                    <button type="button" class="btn-form-nav btn-proximo-aba">Próximo <i
+                            class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <div id="aba-atributos" class="conteudo-aba">
+                <div class="container-painel-duplo">
+                    <div class="painel-esquedo">
+                        <div class="cabecalho-painel">
+                            <h2>ATRIBUTOS</h2>
+                            <div>
+                                <span class="contador-painel" id="contador-atributos">0/8</span>
+                                <button type="button" class="btn-icone-add" id="btn-add-atributo-vazio"><i
+                                        class="fas fa-plus-circle"></i></button>
+                            </div>
+                        </div>
+                        <div class="lista-itens" id="lista-atributos">
+                        </div>
+                    </div>
+
+                    <div class="painel-direito">
+                        <h3 id="titulo-painel-attr">Novo Atributo</h3>
+                        <div class="grupo-form-painel">
+                            <label>Nome do Atributo</label>
+                            <input type="text" id="input-nome-atributo" class="input-painel"
+                                placeholder="Digite o nome do atributo..." maxlength="12">
+                        </div>
+                        <div class="grupo-form-painel">
+                            <label>Abreviação</label>
+                            <input type="text" id="input-abrev-atributo" class="input-painel"
+                                placeholder="Digite a abreviação (Máx. 3)..." maxlength="3">
+                        </div>
+                        <div class="grupo-form-painel">
+                            <label>Valor Inicial</label>
+                            <input type="hidden" id="input-valor-atributo" value="0">
+                            <div class="grupo-botoes-sel botoes-valor-atributo">
+                                <button type="button" class="btn-sel ativo" data-valor="0">0</button>
+                                <button type="button" class="btn-sel" data-valor="1">1</button>
+                                <button type="button" class="btn-sel" data-valor="2">2</button>
+                                <button type="button" class="btn-sel" data-valor="3">3</button>
+                                <button type="button" class="btn-sel" data-valor="4">4</button>
+                                <button type="button" class="btn-sel" data-valor="5">5</button>
+                            </div>
+                        </div>
+                        <div class="acoes-form-painel">
+                            <button type="button" id="btn-salvar-atributo" class="btn-salvar-escuro">Salvar</button>
+                            <button type="button" id="btn-cancelar-atributo"
+                                class="btn-cancelar-escuro">Cancelar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="botoes-nav-form">
+                    <button type="button" class="btn-form-nav btn-voltar-aba"><i class="fas fa-arrow-left"></i>
+                        Voltar</button>
+                    <button type="button" class="btn-form-nav btn-proximo-aba">Próximo <i
+                            class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <div id="aba-status" class="conteudo-aba">
+                <div class="container-painel-duplo">
+                    <div class="painel-esquedo" id="container-listas-status-defesa">
+                        <div class="cabecalho-painel" style="margin-bottom: 20px;">
+                            <h2>BARRAS DE STATUS & DEFESA</h2>
+                        </div>
+
+                        <div class="sub-cabecalho">
+                            <h3>STATUS</h3>
+                            <div>
+                                <span class="contador-painel" id="contador-status">1/3</span>
+                                <button type="button" class="btn-icone-add" id="btn-add-status-vazio"><i
+                                        class="fas fa-plus-circle"></i></button>
+                            </div>
+                        </div>
+                        <div class="lista-itens" id="lista-status">
+                        </div>
+
+                        <hr class="divisor-painel">
+
+                        <div class="sub-cabecalho">
+                            <h3>DEFESA</h3>
+                            <div>
+                                <span class="contador-painel" id="contador-defesas">1/3</span>
+                                <button type="button" class="btn-icone-add" id="btn-add-defesa-vazio"><i
+                                        class="fas fa-plus-circle"></i></button>
+                            </div>
+                        </div>
+                        <div class="lista-itens" id="lista-defesas">
+                        </div>
+                    </div>
+
+                    <div class="painel-direito">
+                        <h3 id="titulo-painel-status">Novo Status</h3>
+                        <div class="grupo-form-painel">
+                            <label>Nome do Status</label>
+                            <input type="text" id="input-nome-status" class="input-painel"
+                                placeholder="Digite o nome do status..." maxlength="12">
+                        </div>
+                        <div class="grupo-form-painel">
+                            <label>Cor</label>
+                            <input type="color" id="input-cor-status" class="btn-cor" value="#ed1c24">
+                        </div>
+                        <div class="grupo-form-painel">
+                            <label>Atributo Base</label>
+                            <input type="hidden" id="input-base-status" value="null">
+                            <div class="grupo-botoes-sel" id="botoes-base-status">
+                                <button type="button" class="btn-sel btn-sel-base ativo" data-base="null">Ø</button>
+                            </div>
+                        </div>
+                        <div class="acoes-form-painel">
+                            <button type="button" id="btn-salvar-status" class="btn-salvar-escuro">Salvar</button>
+                            <button type="button" id="btn-cancelar-status" class="btn-cancelar-escuro">Cancelar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="botoes-nav-form">
+                    <button type="button" class="btn-form-nav btn-voltar-aba"><i class="fas fa-arrow-left"></i>
+                        Voltar</button>
+                    <button type="button" class="btn-form-nav btn-proximo-aba">Próximo <i
+                            class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <div id="aba-componentes" class="conteudo-aba">
+                <div class="container-componentes">
+                    <div class="menu-componentes" id="menu-comp">
+                        <button type="button" class="btn-comp-aba ativa" data-index="0">CLASSES</button>
+                        <button type="button" class="btn-comp-aba" data-index="1">PERÍCIAS</button>
+                        <button type="button" class="btn-comp-aba" data-index="2">ORIGENS</button>
+                        <button type="button" class="btn-comp-aba" data-index="3">EQUIPAMENTOS</button>
+                        <button type="button" class="btn-comp-aba" data-index="4">PODERES</button>
+                        <button type="button" class="btn-comp-aba" data-index="5">MONSTROS</button>
+                    </div>
+
+                    <div class="cabecalho-comp">
+                        <span class="btn-criar-nova" id="btn-criar-comp">Criar Nova <i
+                                class="fas fa-plus-circle"></i></span>
+                        <span class="contador-comp" id="contador-comp-atual">0/30</span>
+                    </div>
+
+                    <div class="viewport-comp">
+                        <div class="track-comp" id="track-comp">
+                            <div class="painel-categoria" data-cat="CLASSES"></div>
+                            <div class="painel-categoria" data-cat="PERÍCIAS"></div>
+                            <div class="painel-categoria" data-cat="ORIGENS"></div>
+                            <div class="painel-categoria" data-cat="EQUIPAMENTOS"></div>
+                            <div class="painel-categoria" data-cat="PODERES"></div>
+                            <div class="painel-categoria" data-cat="MONSTROS"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="botoes-nav-form">
+                    <button type="button" class="btn-form-nav btn-voltar-aba"><i class="fas fa-arrow-left"></i>
+                        Voltar</button>
+                    <button type="submit" class="btn-concluir">Salvar Sistema <i class="fas fa-check"></i></button>
+                </div>
+            </div>
+
+        </form>
+    </main>
+
+    <div class="modal-overlay" id="modal-comp">
+        <div class="modal-box">
+            <h3 id="modal-comp-titulo">Criar Componente</h3>
+
+            <div class="grupo-form-painel">
+                <label>Nome</label>
+                <input type="text" id="modal-input-nome" class="input-painel" placeholder="EX: COMBATENTE, ATLETA..."
+                    maxlength="12">
+            </div>
+
+            <div class="grupo-form-painel">
+                <label id="lbl-val1">Descrição</label>
+                <textarea id="modal-input-val1" class="input-painel" placeholder="Detalhes breves..."
+                    style="min-height: 100px; max-height: 100px; resize: none; overflow-y: auto;"></textarea>
+            </div>
+
+            <div class="grupo-form-painel">
+                <label id="lbl-val2">Habilidades / Extras</label>
+                <textarea id="modal-input-val2" class="input-painel" placeholder="Ataque especial, Bônus..."
+                    style="min-height: 100px; max-height: 100px; resize: none; overflow-y: auto;"></textarea>
+            </div>
+
+            <div class="acoes-form-painel" style="justify-content: space-between;">
+                <button type="button" class="btn-cancelar-escuro" id="btn-excluir-modal"
+                    style="background-color: #ff4d4d; border-color: #ff4d4d; display: none;">Excluir</button>
+                <div style="display: flex; gap: 10px;">
+                    <button type="button" class="btn-cancelar-escuro" id="btn-fechar-modal">Cancelar</button>
+                    <button type="button" class="btn-salvar-escuro" id="btn-salvar-modal">Salvar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="rodape-principal">
+    </footer>
+
+    <script src="../js/nav-global.js" defer></script>
+    <script src="../js/criar-sistema.js" defer></script>
+</body>
+
+</html>
