@@ -11,7 +11,7 @@ class Database {
             $host = 'localhost';
             $dbname = 'db_table_synera';
             $usuario = 'root';
-            $senha = '0209';
+            $senha = '';
             $port = 3306;
             $charset = 'utf8mb4';
             
