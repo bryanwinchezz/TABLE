@@ -45,6 +45,6 @@ Para correr o projeto com o banco de dados a funcionar, o processo é bastante s
 
 <div align="center">
   <h3>⚔️ Pronto para a aventura? 🛡️</h3>
-  <p>Desenvolvido com muita dedicação para o <b>TCC da ETEC Dra. Ruth Cardoso</b> pela equipa <b>SYNERA</b>.</p>
+  <p>Desenvolvido com muita dedicação para o <b>TCC da ETEC Dra. Ruth Cardoso</b> pela equipe <b>SYNERA</b>.</p>
   <img src="https://img.shields.io/badge/Feito_para-Comunidade_de_RPG-C193FD?style=flat-square" alt="Feito para RPG">
 </div>
