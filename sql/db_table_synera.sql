@@ -8,11 +8,11 @@
 
 -- drop database db_table_synera;
 
-CREATE DATABASE IF NOT EXISTS db_table_synera
+CREATE DATABASE IF NOT EXISTS db_table
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
 
-USE db_table_synera;
+USE db_table;
 
 -- ============================================================
 -- 1. USUÁRIO
@@ -22,12 +22,13 @@ USE db_table_synera;
 -- ============================================================
 CREATE TABLE tb_usuario (
     id_usuario    INT            NOT NULL AUTO_INCREMENT,
-    nm_usuario    VARCHAR(70)    NOT NULL,
+    nm_exibicao   VARCHAR(70)    DEFAULT NULL,       -- nome real/exibição (pode ter espaços)
+    nm_usuario    VARCHAR(70)    NOT NULL,           -- login/handle (sem espaços)
     ds_email      VARCHAR(100)   NOT NULL,
     ds_senha      VARCHAR(255)   NOT NULL,          -- espaço para hash bcrypt
+    dt_nascimento DATE           DEFAULT NULL,       -- campo adicionado para o formulário de cadastro
     tp_cargo      ENUM('jogador','mestre','admin')
                   NOT NULL DEFAULT 'jogador',
-    dt_nascimento DATE DEFAULT NULL,
     ds_foto       VARCHAR(300)   DEFAULT NULL,       -- URL/caminho da foto de perfil
     ds_bio        VARCHAR(500)   DEFAULT NULL,       -- mini-biografia do usuário
     dt_cadastro   DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -1,0 +1,1298 @@
+/* ==========================================================
+   PÁGINA: CRIAR CAMPANHA
+========================================================== */
+
+.body-criar-campanha {
+    display: flex; 
+    flex-direction: column; 
+    min-height: 100vh; 
+    background-color: #311c61; 
+    color: #fff; 
+    font-family: 'Montserrat', sans-serif;
+    overflow-x: hidden;
+}
+
+.main-criar-campanha {
+    padding-top: 80px; /* Offset for fixed header */
+    min-height: calc(100vh - 100px);
+    background-color: var(--fundo-pagina-fim);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-bottom: 50px;
+}
+
+.conteudo-campanha {
+    width: 100%;
+    max-width: 1200px;
+    padding: 40px 20px;
+}
+
+.titulo-pagina {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: 30px;
+    text-align: left;
+}
+
+/* Card do Formulário */
+.card-formulario-campanha {
+    background-color: var(--fundo-cartao-escuro);
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.grupo-form {
+    margin-bottom: 25px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.grupo-form label {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: #fff;
+}
+
+.input-campanha {
+    background-color: #332d42;
+    border: 1px solid #4a4063;
+    border-radius: 12px;
+    padding: 12px 20px;
+    color: #fff;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    width: 100%;
+}
+
+.input-campanha:focus {
+    outline: none;
+    border-color: var(--cor-destaque-claro);
+    box-shadow: 0 0 8px rgba(157, 122, 255, 0.3);
+}
+
+.input-campanha::placeholder {
+    color: #888;
+}
+
+/* Simulação do Editor de Texto */
+.editor-container {
+    border: 1px solid #4a4063;
+    border-radius: 12px;
+    overflow: hidden;
+    background-color: #332d42;
+}
+
+.editor-toolbar {
+    background-color: #2a2438;
+    padding: 10px 15px;
+    border-bottom: 1px solid #4a4063;
+    display: flex;
+    gap: 15px;
+}
+
+.toolbar-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    padding: 5px 12px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 35px;
+}
+
+.toolbar-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: var(--cor-destaque-claro);
+    border-color: var(--cor-destaque-claro);
+}
+
+.toolbar-btn.bold { font-weight: 900; }
+.toolbar-btn.italic { font-style: italic; }
+.toolbar-btn.underline { text-decoration: underline; }
+
+.textarea-campanha {
+    width: 100%;
+    min-height: 200px;
+    background-color: #332d42;
+    border: none;
+    padding: 15px 20px;
+    color: #fff;
+    font-size: 1rem;
+    resize: vertical;
+    overflow-y: auto;
+}
+
+.textarea-campanha:focus {
+    outline: none;
+}
+
+/* Estilo específico para o div editável */
+[contenteditable="true"]:empty:before {
+    content: attr(placeholder);
+    color: #888;
+    pointer-events: none;
+    display: block;
+}
+
+button {
+    font-family: 'Montserrat', sans-serif;
+    cursor: pointer;
+    border: none;
+    background: none;
+}
+
+.form-acoes {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 20px;
+    margin-top: 30px;
+}
+
+.btn-cancelar {
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    opacity: 0.7;
+    background: transparent;
+    border: none;
+    padding: 10px 20px;
+}
+
+.btn-cancelar:hover {
+    color: #ff4d4d;
+    opacity: 1;
+    transform: translateX(-3px);
+}
+
+.btn-criar-campanha {
+    background: linear-gradient(135deg, #7b4ff7, #5b2be0);
+    color: #fff;
+    border: none;
+    padding: 12px 35px;
+    border-radius: 15px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(91, 43, 224, 0.3);
+}
+
+.btn-criar-campanha:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(91, 43, 224, 0.5);
+    background: linear-gradient(135deg, #8c66ff, #6a3df5);
+}
+
+/* Tela de Detalhes (Pós-Criação) */
+.sessao-detalhes {
+    width: 100%;
+    display: none; /* Escondido por padrão */
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.titulo-campanha-criada {
+    font-size: 3rem;
+    font-weight: 700;
+    margin-bottom: 30px;
+}
+
+.banner-campanha {
+    width: 100%;
+    height: 300px;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 20px;
+    margin-bottom: 20px;
+    background-size: cover;
+    background-position: center;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.descricao-campanha-display {
+    background: rgba(255, 255, 255, 0.03);
+    border-left: 4px solid var(--cor-destaque-claro);
+    padding: 20px 30px;
+    border-radius: 0 15px 15px 0;
+    margin-bottom: 40px;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    color: #ddd;
+    font-style: italic;
+}
+
+.barra-acoes {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden; /* Garante que o scroll vertical não apareça */
+    gap: 12px;
+    margin-bottom: 40px;
+    padding-top: 10px; /* Adicionado para evitar o corte no hover */
+    padding-bottom: 12px;
+    scrollbar-width: auto; /* Deixa a barra padrão mais visível no Firefox */
+    scrollbar-color: rgba(255,255,255,0.3) transparent;
+}
+
+.barra-acoes::-webkit-scrollbar {
+    height: 10px; /* Barra mais grossa */
+}
+
+.barra-acoes::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.25); /* Mais visível */
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+
+.barra-acoes::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,255,255,0.4);
+}
+
+.btn-acao {
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    backdrop-filter: blur(5px);
+}
+
+.btn-acao:hover {
+    background-color: #fff;
+    color: var(--cor-primaria);
+    border-color: #fff;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+    transform: translateY(-3px);
+}
+
+.btn-acao:active {
+    transform: translateY(-1px);
+}
+
+/* Botão especial Escudo do Mestre */
+.btn-acao.especial {
+    border-color: var(--cor-destaque-claro);
+    color: var(--cor-destaque-claro);
+    background: rgba(157, 122, 255, 0.1);
+}
+
+.btn-acao.especial:hover {
+    background-color: var(--cor-destaque-claro);
+    color: #fff;
+    box-shadow: 0 0 25px rgba(157, 122, 255, 0.5);
+}
+
+.sub-nav-campanha {
+    display: flex;
+    gap: 30px;
+    margin-top: 20px;
+}
+
+.link-sub-nav {
+    color: #fff;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+    padding: 5px 20px;
+    border-radius: 20px;
+    border: 2px solid transparent;
+}
+
+.link-sub-nav.ativa {
+    border-color: #fff;
+    font-style: normal;
+}
+
+.link-sub-nav:hover {
+    opacity: 0.7;
+}
+
+/* Lista de Agentes */
+.lista-agentes {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.card-agente {
+    background-color: rgba(31, 26, 44, 0.6);
+    border-radius: 20px;
+    padding: 15px 25px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: transform 0.2s ease;
+}
+
+.card-agente:hover {
+    transform: scale(1.01);
+    background-color: rgba(31, 26, 44, 0.8);
+}
+
+.avatar-agente {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    overflow: hidden;
+    background-color: #ccc;
+    flex-shrink: 0;
+}
+
+.avatar-agente img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.info-agente {
+    flex: 1;
+}
+
+.info-agente h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 2px;
+}
+
+.info-agente p {
+    font-size: 0.9rem;
+    color: #aaa;
+    margin-bottom: 2px;
+}
+
+.info-agente span {
+    font-size: 0.8rem;
+    color: #777;
+}
+
+.btn-ver-ficha {
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 10px 25px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-ver-ficha:hover {
+    background-color: #fff;
+    color: var(--cor-primaria);
+    border-color: #fff;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+/* Cards de Combate */
+.lista-combates {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 25px;
+    margin-top: 30px;
+}
+
+.card-combate {
+    background-color: rgba(31, 26, 44, 0.6);
+    border-radius: 15px;
+    padding: 25px;
+    width: 100%;
+    border-left: 5px solid #7b4ff7;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.card-combate h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.card-combate p {
+    font-size: 0.9rem;
+    color: #888;
+    margin-bottom: 30px;
+}
+
+.card-combate-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.btn-remover-combate, .btn-editar-combate {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 8px 15px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.btn-remover-combate {
+    color: #ff4d4d;
+}
+
+.btn-editar-combate {
+    color: #00d1b2;
+}
+
+.btn-remover-combate:hover {
+    background: rgba(255, 77, 77, 0.15);
+    border-color: #ff4d4d;
+    box-shadow: 0 0 15px rgba(255, 77, 77, 0.2);
+}
+
+.btn-editar-combate:hover {
+    background: rgba(0, 209, 178, 0.15);
+    border-color: #00d1b2;
+    box-shadow: 0 0 15px rgba(0, 209, 178, 0.2);
+}
+
+/* Modais Persistentes */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.modal-overlay.ativo {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-box {
+    background-color: var(--fundo-cartao-escuro);
+    width: 90%;
+    max-width: 600px;
+    padding: 40px;
+    border-radius: 25px;
+    position: relative;
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.6);
+    transform: scale(0.85);
+    transition: transform 0.3s ease;
+}
+
+.modal-overlay.ativo .modal-box {
+    transform: scale(1);
+}
+
+.modal-close {
+    position: absolute;
+    top: 25px;
+    right: 25px;
+    color: #fff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: transform 0.2s, color 0.2s;
+}
+
+.modal-close:hover {
+    color: var(--cor-destaque-claro);
+    transform: rotate(90deg);
+}
+
+.modal-box h2 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    margin-bottom: 30px;
+    padding-right: 40px;
+}
+
+/* Conteúdos dos Modais */
+.modal-body-central {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 150px;
+}
+
+.btn-selecionar-img {
+    background-color: #553c8b;
+    color: #fff;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.btn-selecionar-img:hover {
+    background-color: #6a4aad;
+}
+
+.bloco-link-convite {
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 20px;
+    border-radius: 10px;
+    width: 100%;
+    text-align: center;
+    word-break: break-all;
+    margin-bottom: 30px;
+}
+
+.bloco-link-convite a {
+    color: #ccc;
+    font-size: 0.9rem;
+    text-decoration: underline;
+}
+
+.modal-footer-acoes {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.btn-resetar {
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 10px 20px;
+    border-radius: 30px;
+    transition: all 0.3s ease;
+}
+
+.btn-resetar:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: #fff;
+}
+
+.btn-copiar {
+    background: linear-gradient(135deg, #7b4ff7, #5b2be0);
+    color: #fff;
+    border: none;
+    padding: 12px 35px;
+    border-radius: 30px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(91, 43, 224, 0.3);
+}
+
+.btn-copiar:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(91, 43, 224, 0.5);
+    filter: brightness(1.1);
+}
+
+.modal-lista-agentes {
+    width: 100%;
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+/* TELA DE COMBATE */
+.sessao-combate {
+    display: none;
+    flex-direction: column;
+    padding-bottom: 60px;
+}
+
+.combate-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 40px;
+}
+
+.combate-titulo-area {
+    display: flex;
+    gap: 40px;
+    align-items: flex-end;
+}
+
+.input-nome-combate {
+    background: none;
+    border: none;
+    border-bottom: 2px solid #555;
+    color: #fff;
+    font-size: 1.5rem;
+    font-weight: 700;
+    padding: 5px;
+    width: 300px;
+}
+
+.input-nome-combate::placeholder {
+    color: #555;
+}
+
+.vd-total-display {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.vd-total-display span {
+    display: block;
+    font-size: 2.2rem;
+    line-height: 1;
+}
+
+.combate-botoes-topo {
+    display: flex;
+    gap: 15px;
+}
+
+.btn-combate-sair {
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    padding: 10px 25px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-combate-sair:hover {
+    background: rgba(255, 77, 77, 0.1);
+    border-color: #ff4d4d;
+    color: #ff4d4d;
+}
+
+.btn-combate-salvar {
+    background: linear-gradient(135deg, #fff, #ddd);
+    color: var(--cor-primaria);
+    border: none;
+    padding: 10px 35px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 800;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
+}
+
+.btn-combate-salvar:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255, 255, 255, 0.3);
+    background: #fff;
+}
+
+.combate-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 30px;
+}
+
+@media (max-width: 1100px) {
+    .combate-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .combate-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 20px;
+    }
+    
+    .combate-botoes-topo {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .input-nome-combate {
+        width: 100%;
+    }
+}
+
+.catalogo-ameacas, .ameacas-selecionadas {
+    background-color: rgba(31, 26, 44, 0.4);
+    border-radius: 20px;
+    padding: 25px;
+    min-height: 600px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.2);
+}
+
+.sessao-editar-container {
+    width: 100%; 
+    max-width: 800px; 
+    margin: 0 auto;
+}
+
+.titulo-ameacas-selecionadas {
+    margin-bottom: 25px; 
+    font-size: 1.1rem; 
+    text-align: center; 
+    color: #fff; 
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.9;
+}
+
+/* ÁREA DE BANNERS COMBATE (ESTILO PRINT) */
+.area-banners-combate {
+    margin-bottom: 25px;
+}
+
+.banners-flex {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 10px;
+}
+
+.banner-card {
+    flex: 1;
+    height: 100px;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 10px;
+    background-color: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.banner-card img {
+    max-height: 50px;
+    margin-bottom: 5px;
+}
+
+.banner-card span {
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.banner-ordem { background-color: #120000; overflow: hidden; } /* Tema dark red */
+.banner-table { background-color: #2a2438; }
+.banner-card.banner-novas { 
+    background-color: #2a164b; 
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.banner-card.banner-novas:hover {
+    background-color: #3b1e6b;
+    border-color: var(--cor-destaque-claro);
+    transform: translateY(-2px);
+    box-shadow: 0 0 15px rgba(157, 122, 255, 0.3);
+}
+
+.lista-ameacas-header {
+    margin-bottom: 25px;
+}
+
+.lista-ameacas-header label {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 15px;
+    font-size: 1.3rem;
+    color: #fff;
+    letter-spacing: 0.5px;
+}
+
+.search-container {
+    background-color: rgba(31, 26, 44, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+}
+
+.search-container:focus-within {
+    border-color: var(--cor-destaque-claro);
+    box-shadow: 0 0 15px rgba(157, 122, 255, 0.2);
+    background-color: rgba(31, 26, 44, 0.8);
+}
+
+.search-container i {
+    color: #888;
+    font-size: 1rem;
+}
+
+.search-container input {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1rem;
+    width: 100%;
+    outline: none;
+}
+
+.search-container input::placeholder {
+    color: #666;
+}
+
+.filtros-elemento {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 15px;
+    padding: 5px 0;
+}
+
+.btn-filtro {
+    background: rgba(255, 255, 255, 0.05);
+    color: #888;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 5px 15px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border-radius: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-filtro:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.btn-filtro.ativo {
+    color: #fff;
+    background: var(--cor-primaria);
+    border-color: var(--cor-primaria);
+    font-weight: 700;
+    box-shadow: 0 0 10px rgba(91, 43, 224, 0.4);
+}
+
+/* CARDS DE AMEAÇA (HIGH-FIDELITY) */
+/* CARDS DE AMEAÇA (HIGH-FIDELITY UNIFICADO) */
+.card-ameaca {
+    width: 100%;
+    min-height: 120px;
+    border-radius: 16px;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 12px;
+    transition: all 0.3s ease;
+    background-color: #1a1a1a;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+/* Overlay para garantir legibilidade do texto sobre qualquer imagem */
+.card-ameaca::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 50%, rgba(0,0,0,0.3) 100%);
+    z-index: 1;
+}
+
+.card-ameaca:hover {
+    transform: translateX(5px);
+    border-color: var(--cor-destaque-claro);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+}
+
+.card-ameaca-info {
+    position: relative;
+    z-index: 2;
+    flex: 1;
+}
+
+.card-ameaca-info h4 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 5px;
+    color: #fff;
+}
+
+.card-ameaca-info p {
+    font-size: 0.85rem;
+    color: #bbb;
+    line-height: 1.4;
+}
+
+.card-ameaca-acoes-row {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.btn-ameaca-ficha, .btn-ameaca-add, .btn-ameaca-remover {
+    padding: 10px 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn-ameaca-ficha {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-ameaca-ficha:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.btn-ameaca-add, .btn-ameaca-remover {
+    background: linear-gradient(135deg, #b31d1d, #711a1a);
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(113, 26, 26, 0.3);
+}
+
+.btn-ameaca-add:hover, .btn-ameaca-remover:hover {
+    background: linear-gradient(135deg, #d42222, #b31d1d);
+    box-shadow: 0 6px 15px rgba(113, 26, 26, 0.5);
+    transform: scale(1.05);
+}
+
+.btn-ameaca-remover {
+    background: linear-gradient(135deg, #555, #333);
+}
+
+/* Classes de Utilitários para Transição */
+.escondido {
+    display: none !important;
+}
+
+.visivel {
+    display: block !important;
+}
+
+/* Responsividade Adicional */
+@media (max-width: 768px) {
+    .titulo-campanha-criada {
+        font-size: 2.2rem;
+        text-align: center;
+    }
+    
+    .barra-acoes {
+        justify-content: center;
+    }
+    
+    .sub-nav-campanha {
+        justify-content: center;
+    }
+}
+
+/* ==========================================================
+   ESCUDO DO MESTRE (PRINT 3)
+   ========================================================== */
+.sessao-escudo {
+    display: none;
+    width: 100vw;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 3000;
+    background-color: #311c61;
+    color: #fff;
+    overflow: hidden;
+}
+
+.escudo-wrapper {
+    display: flex;
+    width: 100%;
+    height: 100%;
+}
+
+/* Histórico de Dados (Sidebar Esquerda) */
+.escudo-sidebar {
+    width: 280px;
+    background-color: rgba(0, 0, 0, 0.4);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.sidebar-dados-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.item-dado {
+    background: rgba(31, 26, 44, 0.8);
+    border-radius: 12px;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+.hexa-dado {
+    width: 45px;
+    height: 45px;
+    background-color: #444;
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1.2rem;
+    color: #ccc;
+    flex-shrink: 0;
+}
+
+.info-rolagem p {
+    font-size: 0.75rem;
+    color: #888;
+    margin-bottom: 2px;
+}
+
+.info-rolagem h4 {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #fff;
+}
+
+/* Conteúdo Principal do Escudo */
+.escudo-principal {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 30px 50px;
+    overflow-y: auto;
+}
+
+.escudo-topo {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.escudo-topo h1 {
+    font-size: 2rem;
+    font-weight: 800;
+}
+
+.escudo-nav {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 40px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 10px;
+}
+
+.escudo-link-nav {
+    color: #888;
+    text-decoration: none;
+    font-size: 1.1rem;
+    font-weight: 600;
+    transition: all 0.3s;
+    position: relative;
+    cursor: pointer;
+}
+
+.escudo-link-nav:hover, .escudo-link-nav.ativo {
+    color: #fff;
+}
+
+.escudo-link-nav.ativo::after {
+    content: '';
+    position: absolute;
+    bottom: -11px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background-color: var(--cor-destaque-claro);
+}
+
+/* Grid de Agentes do Escudo */
+.escudo-agentes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 25px;
+}
+
+.card-agente-compacto {
+    background-color: rgba(31, 26, 44, 0.7);
+    border-radius: 15px;
+    padding: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.card-compacto-header {
+    display: flex;
+    flex-direction: column;
+}
+
+.card-compacto-header h3 { font-size: 1.2rem; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 1px; }
+.card-compacto-header p { font-size: 0.8rem; color: #888; margin-bottom: 2px; }
+.card-compacto-header span { font-size: 0.7rem; color: var(--cor-destaque-claro); font-weight: 700; }
+
+.atributos-compactos {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    text-align: center;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 10px;
+    border-radius: 10px;
+}
+
+.attr-item span { display: block; font-size: 0.6rem; color: #666; font-weight: 700; text-transform: uppercase; }
+.attr-item strong { font-size: 1.1rem; color: #fff; }
+
+.status-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.status-bar-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.status-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.status-progress-bg {
+    height: 12px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+.status-progress-fill { height: 100%; border-radius: 6px; }
+.fill-vida { background: #d32f2f; width: 100%; }
+.fill-sanidade { background: #7b4ff7; width: 100%; }
+.fill-esforco { background: #f57c00; width: 100%; }
+
+.compacto-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+    color: #888;
+    margin-top: 5px;
+}
+
+.footer-stats-grid {
+    display: flex;
+    gap: 15px;
+}
+
+.footer-stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.footer-stat-item span { font-size: 0.6rem; text-transform: uppercase; }
+.footer-stat-item strong { font-size: 0.9rem; color: #fff; }
+
+.btn-ficha-compacto {
+    color: #888;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: color 0.2s;
+}
+
+.btn-ficha-compacto:hover { color: #fff; text-decoration: underline; }
+
+.escudo-acoes-topo {
+    display: flex;
+    gap: 15px;
+}
+
+.btn-escudo-sair {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    padding: 8px 20px;
+    border-radius: 30px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-escudo-salvar {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    padding: 8px 25px;
+    border-radius: 30px;
+    font-weight: 700;
+    cursor: pointer;
+}
