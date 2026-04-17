@@ -32,19 +32,21 @@
             <ul>
                 <li><a href="index.php" class="ativo">Início</a></li>
                 <li><a href="cm-jogar.php">Como Jogar</a></li>
-                <li><a href="#">Personagens</a></li>
+                <li><a href="../app/controllers/logout.php">Personagens</a></li>
                 <li><a href="#">Mundos</a></li>
                 <li><a href="#">Dados</a></li>
                 <li><a href="#">Sobre Nós</a></li>
             </ul>
         </nav>
         <?php if (isset($_SESSION['usuario'])): ?>
-            <div class="usuario-logado-nav" id="nav-logado"
-                onclick="window.location.href='perfil.php'" title="Ir para o Perfil">
-                <img src="../img/foto-ficha.jpg" alt="Avatar Navbar" class="avatar-nav">
-                <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
-                <i class="far fa-star icone-nav"></i>
-            </div>
+            <a href="perfil.php" style="text-decoration: none;">
+                <div class="usuario-logado-nav" id="nav-logado"
+                    onclick="window.location.href='perfil.php'" title="Ir para o Perfil">
+                    <img src="../img/foto-ficha.jpg" alt="Avatar Navbar" class="avatar-nav">
+                    <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
+                    <i class="far fa-star icone-nav"></i>
+                </div>
+            </a>
         <?php else: ?>
             <div class="botoes-navegacao" id="nav-deslogado">
                 <a href="login.php" class="botao-entrar">

@@ -8,7 +8,7 @@
 
     // Redireciona para login se não estiver logado
     if (!isset($_SESSION['usuario'])) {
-        header('Location: login.php');
+        header('Location: index.php');
         exit;
     }
 ?>
@@ -61,7 +61,9 @@
             </div>
             <div class="perfil-info">
                 <h1>Nome:</h1>
-                <div class="perfil-nome-box" id="display-nome-usuario">Carregando...</div>
+                <div class="perfil-nome-box">
+                    <?= htmlspecialchars($_SESSION['usuario']['nome']) ?>
+                </div>
                 <a href="editar-perfil.php" class="btn-editar-perfil" style="text-decoration: none; text-align: center;">Editar meu perfil</a>
             </div>
         </section>
@@ -161,7 +163,6 @@
         </div>
     </footer>
 
-    <script src="../js/perfil-render.js"></script>
     <script src="../js/nav-global.js" defer></script>
 </body>
 

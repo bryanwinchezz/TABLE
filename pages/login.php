@@ -48,7 +48,7 @@
                         'email' => $usuario['ds_email'],
                         'cargo' => $usuario['tp_cargo'],
                     ];
-                    header('Location: index.html');
+                    header('Location: index.php');
                     exit;
                 }
             } catch (PDOException $e) {

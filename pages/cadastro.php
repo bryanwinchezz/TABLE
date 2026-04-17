@@ -3,14 +3,13 @@
 
     // Se já estiver logado, redireciona direto pro perfil
     if (isset($_SESSION['usuario'])) {
-        header('Location: cm-jogar.html');
+        header('Location: index.php');
         exit;
     }
 
     require_once '../app/config/Database.php';
 
     $erro  = '';
-    $sucesso = '';
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $nome       = trim($_POST['nome']       ?? '');
