@@ -1,0 +1,149 @@
+<?php
+session_start();
+require_once __DIR__ . '/../config/database.php';
+
+header('Content-Type: application/json');
+
+$cargo = $_SESSION['usuario']['cargo'] ?? '';
+if ($cargo !== 'mestre' && $cargo !== 'admin') {
+    echo json_encode(['success' => false, 'error' => 'Acesso negado. Apenas mestres ou admins podem criar sistemas.']);
+    exit;
+}
+
+$data = json_decode(file_get_contents('php://input'), true);
+
+if (!$data || empty($data['nome'])) {
+    echo json_encode(['success' => false, 'error' => 'Payload inválido ou nome do sistema ausente.']);
+    exit;
+}
+
+try {
+    $pdo = Database::getConexao();
+    $pdo->beginTransaction();
+
+    $id_usuario = $_SESSION['usuario']['id'];
+    $nome = $data['nome'];
+    $classificacao = $data['classificacao'] ?? 'L';
+    $descricao = $data['descricao'] ?? '';
+    
+    // Processamento da Imagem (Base64)
+    $imagem = '../img/foto-regra.jpg'; // Default
+    if (!empty($data['imagem_base64'])) {
+        $base64 = $data['imagem_base64'];
+        if (preg_match('/^data:image\/(\w+);base64,/', $base64, $type)) {
+            $data_img = substr($base64, strpos($base64, ',') + 1);
+            $type = strtolower($type[1]); // jpg, png, gif
+
+            if (in_array($type, ['jpg', 'jpeg', 'gif', 'png'])) {
+                $data_img = base64_decode($data_img);
+                if ($data_img !== false) {
+                    $nome_arquivo = 'sistema_' . time() . '_' . uniqid() . '.' . $type;
+                    $caminho_salvamento = __DIR__ . '/../../img/uploads/sistemas/' . $nome_arquivo;
+                    
+                    // Garante que o diretório existe
+                    if (!is_dir(__DIR__ . '/../../img/uploads/sistemas/')) {
+                        mkdir(__DIR__ . '/../../img/uploads/sistemas/', 0777, true);
+                    }
+
+                    if (file_put_contents($caminho_salvamento, $data_img)) {
+                        $imagem = '../img/uploads/sistemas/' . $nome_arquivo;
+                    }
+                }
+            }
+        }
+    }
+
+    $stmtSis = $pdo->prepare("INSERT INTO tb_sistema (nm_sistema, ds_descricao, tp_classificacao, ds_imagem, id_usuario_criador) VALUES (?, ?, ?, ?, ?)");
+    $stmtSis->execute([$nome, $descricao, $classificacao, $imagem, $id_usuario]);
+    $id_sistema = $pdo->lastInsertId();
+
+    // Inserir Atributos e guardar os IDs
+    $attrIdMap = [];
+    if (!empty($data['atributos'])) {
+        $stmtAttr = $pdo->prepare("INSERT INTO tb_atributo (nm_atributo, ds_abreviacao, id_sistema) VALUES (?, ?, ?)");
+        foreach ($data['atributos'] as $attr) {
+            $stmtAttr->execute([$attr['nome'], $attr['abrev'], $id_sistema]);
+            $attrIdMap[$attr['id']] = $pdo->lastInsertId();
+        }
+    }
+
+    // Inserir Classes
+    if (!empty($data['classes'])) {
+        $stmtCla = $pdo->prepare("INSERT INTO tb_classe (nm_classe, ds_descricao, id_sistema) VALUES (?, ?, ?)");
+        foreach ($data['classes'] as $cla) {
+            $stmtCla->execute([$cla['nome'], $cla['val1'], $id_sistema]);
+        }
+    }
+
+    // Inserir Perícias
+    if (!empty($data['pericias'])) {
+        $stmtPer = $pdo->prepare("INSERT INTO tb_pericia (nm_pericia, ds_atributo_base, id_sistema) VALUES (?, ?, ?)");
+        foreach ($data['pericias'] as $per) {
+            $stmtPer->execute([$per['nome'], $per['val1'], $id_sistema]);
+        }
+    }
+
+    // Inserir Origens
+    if (!empty($data['origens'])) {
+        $stmtOri = $pdo->prepare("INSERT INTO tb_origem (nm_origem, ds_origem, id_sistema) VALUES (?, ?, ?)");
+        foreach ($data['origens'] as $ori) {
+            $stmtOri->execute([$ori['nome'], $ori['val1'], $id_sistema]);
+        }
+    }
+
+    // Inserir Status (Barras)
+    if (!empty($data['status'])) {
+        $stmtStat = $pdo->prepare("INSERT INTO tb_sistema_status (nm_status, ds_cor, tp_status, id_sistema) VALUES (?, ?, 'barra', ?)");
+        foreach ($data['status'] as $stat) {
+            $stmtStat->execute([$stat['nome'], $stat['cor'], $id_sistema]);
+        }
+    }
+
+    // Inserir Defesas (Escudos)
+    if (!empty($data['defesas'])) {
+        $stmtDef = $pdo->prepare("INSERT INTO tb_sistema_status (nm_status, ds_cor, tp_status, id_sistema) VALUES (?, ?, 'defesa', ?)");
+        foreach ($data['defesas'] as $def) {
+            $stmtDef->execute([$def['nome'], $def['cor'], $id_sistema]);
+        }
+    }
+
+    // Inserir Monstros e Atributos de Monstros
+    if (!empty($data['monstros'])) {
+        $stmtMonstro = $pdo->prepare("INSERT INTO tb_monstro (nm_monstro, ds_monstro, tp_monstro, ds_imagem, qt_vida, qt_defesa, qt_xp_recompensa, qt_vd, id_sistema) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmtMonAttr = $pdo->prepare("INSERT INTO tb_monstro_atributo (id_monstro, id_atributo, qt_valor) VALUES (?, ?, ?)");
+        
+        foreach ($data['monstros'] as $monstro) {
+            // Imagem padrão já que a página de criação não processa upload neste endpoint MVP
+            $stmtMonstro->execute([
+                $monstro['nome'], 
+                $monstro['desc'] ?? '', 
+                $monstro['val1'] ?? 'Criatura', // tipo/elemento vem de val1 no js
+                '../img/logo_icone.png', 
+                $monstro['vida'] ?? 0, 
+                $monstro['defesa'] ?? 0, 
+                $monstro['xp'] ?? 0, 
+                $monstro['val2'] ?? 0, // VD vem de val2 no js
+                $id_sistema
+            ]);
+            $id_monstro = $pdo->lastInsertId();
+            
+            if (!empty($monstro['atributos_monstro'])) {
+                foreach ($monstro['atributos_monstro'] as $mAttr) {
+                    $realAttrId = $attrIdMap[$mAttr['id_atributo_temp']] ?? null;
+                    if ($realAttrId) {
+                        $stmtMonAttr->execute([$id_monstro, $realAttrId, $mAttr['valor']]);
+                    }
+                }
+            }
+        }
+    }
+
+    $pdo->commit();
+    echo json_encode(['success' => true, 'id_sistema' => $id_sistema]);
+
+} catch (Exception $e) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+}
