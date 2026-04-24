@@ -1,0 +1,289 @@
+:root {
+    /* CORES GERAIS */
+    --cor-branco: #FFFFFF;
+    --cor-cinza-claro: #D9D9D9;
+    --cor-preto: #000000;
+    --cor-roxo-escuro: #311C61;
+    --cor-roxo-claro: #633898;
+    --cor-roxo-intermediario: #6539C7;
+    --cor-roxo-muito-claro: #C193FD;
+    --cor-azul-claro: #BFBADA;
+
+    /* CORES ADICIONAIS PARA DARK THEME */
+    --cor-fundo-card: rgba(255, 255, 255, 0.05);
+    --cor-borda-card: rgba(193, 147, 253, 0.2);
+}
+
+/* =========================================
+   CONFIGURAÇÕES GERAIS E ALINHAMENTO
+========================================= */
+main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+/* =========================================
+   BANNERS PRINCIPAIS (COMO JOGAR)
+========================================= */
+.comojogar,
+.comojogar2 {
+    display: flex;
+    gap: 40px;
+    align-items: center;
+    justify-content: space-between;
+    width: 90%;
+    max-width: 1000px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, var(--cor-roxo-escuro), var(--cor-roxo-claro));
+    padding: 40px;
+    margin-bottom: 40px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    color: var(--cor-branco);
+}
+
+.desc-comojogar {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    max-width: 500px;
+    text-align: left;
+}
+
+.desc-comojogar h1 {
+    color: var(--cor-roxo-muito-claro);
+    font-size: 32px;
+}
+
+.desc-comojogar p {
+    font-size: 1.1rem;
+    line-height: 1.6;
+}
+
+.img-comojogar {
+    width: 350px;
+    height: 260px;
+    object-fit: cover;
+    border-radius: 15px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* =========================================
+   SEÇÕES DE TEXTO (BLOCOS CLAROS RESTAURADOS)
+========================================= */
+.expli-rpg,
+.expli-jogador {
+    background-color: whitesmoke;
+    /* Volta a cor clara original */
+    display: flex;
+    gap: 50px;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding: 60px 20px;
+    margin: 40px 0;
+    box-shadow: inset 0 5px 15px rgba(0, 0, 0, 0.05), 0 10px 30px rgba(0, 0, 0, 0.15);
+    /* Sombras para profundidade */
+    border: none;
+}
+
+.txt-expli,
+.txt-jogador {
+    max-width: 600px;
+    color: #333333;
+    /* Cinza escuro para leitura perfeita no fundo claro */
+    text-align: left;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    font-weight: 500;
+}
+
+.txt-expli h1,
+.txt-jogador h1 {
+    color: var(--cor-roxo-escuro);
+    /* O roxo clássico original para títulos */
+    margin-bottom: 20px;
+    font-weight: 800;
+}
+
+.img-expli-rpg {
+    width: 450px;
+    height: 390px;
+    object-fit: cover;
+    border-radius: 20px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.img-expli-rpg-mestre {
+    width: 390px;
+    height: 500px;
+    object-fit: cover;
+    border-radius: 20px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* =========================================
+   LISTA DE COMPONENTES (CARDS)
+========================================= */
+.componentes {
+    padding: 40px 20px;
+    text-align: center;
+    width: 100%;
+    max-width: 1000px;
+}
+
+.componentes h1 {
+    margin-bottom: 40px;
+    font-size: 32px;
+    color: var(--cor-roxo-muito-claro);
+}
+
+.lista-comp {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+}
+
+.item-comp {
+    background-color: var(--cor-fundo-card);
+    border: 1px solid var(--cor-borda-card);
+    border-left: 5px solid var(--cor-roxo-muito-claro);
+    border-radius: 12px;
+    padding: 25px 30px;
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    text-align: left;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.item-comp:hover {
+    transform: translateX(10px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.item-comp h3 {
+    min-width: 200px;
+    color: var(--cor-roxo-muito-claro);
+    font-size: 1.3rem;
+}
+
+.item-comp p {
+    line-height: 1.6;
+    color: var(--cor-cinza-claro);
+}
+
+/* =========================================
+   COMO FUNCIONA / TIPOS DE RPG
+========================================= */
+.rpg-componentes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 40px;
+    justify-content: center;
+    width: 100%;
+    max-width: 1200px;
+    padding: 50px 20px;
+}
+
+.como-funciona,
+.tipos-rpg {
+    flex: 1;
+    min-width: 400px;
+    background-color: whitesmoke;
+    /* Mudado para branco/cinza claro */
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 40px;
+    color: #333333;
+    /* Texto escuro para leitura perfeita */
+    border-radius: 20px;
+    box-shadow: inset 0 5px 15px rgba(0, 0, 0, 0.05), 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.como-funciona h2,
+.tipos-rpg h2 {
+    text-align: center;
+    color: var(--cor-roxo-escuro);
+    /* Roxo clássico para destaque */
+    margin-bottom: 30px;
+    font-size: 26px;
+    font-weight: 800;
+    border-bottom: 2px solid rgba(49, 28, 97, 0.2);
+    padding-bottom: 15px;
+}
+
+.txt-topico {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 25px;
+    background: #ffffff;
+    /* Fundo totalmente branco para destacar os tópicos */
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.ico-nm {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    color: var(--cor-roxo-intermediario);
+    /* Título roxo */
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.desc-topico p {
+    color: #555555;
+    /* Cinza escuro para não forçar a visão */
+    line-height: 1.5;
+}
+
+/* =========================================
+   BOTÕES DE NAVEGAÇÃO (Inspirados no Index)
+========================================= */
+.btns-como,
+.btn-navegacao {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    width: 100%;
+    padding: 30px 0;
+}
+
+.btns-como a,
+.btn-navegacao a {
+    text-decoration: none;
+}
+
+.btns-como button,
+.btn-navegacao button {
+    background: linear-gradient(135deg, #6539C7, #8b5cf6);
+    color: #ffffff;
+    border: none;
+    padding: 15px 40px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    border-radius: 50px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+    box-shadow: 0 5px 15px rgba(101, 57, 199, 0.4);
+}
+
+.btns-como button:hover,
+.btn-navegacao button:hover {
+    transform: translateY(-4px) scale(1.05);
+    box-shadow: 0 12px 25px rgba(139, 92, 246, 0.6);
+    background: linear-gradient(135deg, #8b5cf6, #C193FD);
+}

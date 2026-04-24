@@ -1,0 +1,418 @@
+/* ==========================================================
+   VARIÁVEIS E RESET GLOBAL (CABEÇALHO, RODAPÉ E BOTÕES)
+========================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Ledger&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&display=swap');
+:root {
+    --fundo-pagina-inicio: #492499;
+    --fundo-pagina-fim: #190e35;
+    --fundo-cartao: #ffffff;
+    --fundo-cartao-escuro: #1F1A2C;
+    --borda-escura: #4a4063;
+    --cor-primaria: #5b2be0;
+    --cor-primaria-hover: #7b4ff7;
+    --cor-texto-suave: #ccc;
+    --cor-destaque-claro: #9d7aff;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Montserrat", sans-serif !important;
+}
+
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1f1a2c;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: #4a4063;
+    border-radius: 10px;
+    border: 2px solid #1f1a2c;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: #5b507a;
+}
+
+
+/* ==========================================================
+    CABEÇALHO (HEADER)
+========================================================== */
+
+header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #fff;
+    padding: 10px 60px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+}
+
+.logotipo img {
+    width: 150px;
+    height: 60px;
+    object-fit: contain;
+}
+
+nav ul {
+    display: flex;
+    list-style: none;
+    gap: 30px;
+}
+
+nav a {
+    position: relative;
+    text-decoration: none;
+    color: #000;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+nav a::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -5px;
+    width: 0%;
+    height: 2px;
+    background: linear-gradient(90deg, var(--cor-primaria), var(--cor-destaque-claro));
+    transition: width 0.3s ease;
+}
+
+nav a:hover::after {
+    width: 100%;
+}
+
+nav a:hover,
+nav a.ativo {
+    color: var(--cor-primaria);
+}
+
+.botoes-navegacao {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.botoes-navegacao a {
+    text-decoration: none;
+    font-weight: 500;
+    padding: 8px 18px;
+    border-radius: 20px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.botao-entrar {
+    color: #000;
+    border: 1px solid transparent;
+}
+
+.botao-entrar:hover {
+    color: var(--cor-primaria);
+    border-color: var(--cor-primaria);
+    background-color: rgba(91, 43, 224, 0.05);
+}
+
+.botao-cadastrar {
+    background-color: var(--cor-primaria);
+    color: #fff;
+}
+
+.botao-cadastrar:hover {
+    background-color: var(--cor-primaria-hover);
+    box-shadow: 0 0 12px rgba(123, 79, 247, 0.6);
+    transform: scale(1.05);
+}
+
+
+/* ==========================================================
+    BOTÕES GLOBAIS
+========================================================== */
+
+.botao {
+    border: none;
+    padding: 12px 28px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.botao-primario {
+    background: linear-gradient(135deg, var(--cor-primaria), var(--cor-primaria-hover));
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(91, 43, 224, 0.4);
+}
+
+.botao-primario:hover {
+    background: linear-gradient(135deg, var(--cor-primaria-hover), var(--cor-primaria));
+    box-shadow: 0 6px 20px rgba(123, 79, 247, 0.6);
+    transform: translateY(-2px);
+}
+
+.botao-contorno {
+    border: 2px solid #fff;
+    background: transparent;
+    color: #fff;
+}
+
+.botao-contorno:hover {
+    background-color: #fff;
+    color: #000;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
+}
+
+
+/* ==========================================================
+    RODAPÉ (FOOTER)
+========================================================== */
+
+.rodape-principal {
+    background-color: var(--fundo-cartao-escuro);
+    color: var(--cor-texto-suave);
+    padding-top: 50px;
+    margin-top: auto;
+    border-top: 1px solid #fff;
+}
+
+.rodape-conteudo {
+    max-width: 1500px;
+    margin: 0 auto;
+    padding: 0 5%;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 60px;
+}
+
+.rodape-logo-area {
+    flex: 2;
+    min-width: 350px;
+}
+
+.rodape-marca {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.rodape-logo-area img {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.rodape-logo-area span {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+.rodape-logo-area p {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-top: 15px;
+    max-width: 450px;
+}
+
+.rodape-links {
+    flex: 1;
+    min-width: 150px;
+}
+
+.rodape-links h4 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 20px;
+    position: relative;
+    padding-bottom: 8px;
+}
+
+.rodape-links h4::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 40px;
+    height: 3px;
+    background-color: var(--cor-destaque-claro);
+    border-radius: 2px;
+}
+
+.rodape-links ul {
+    list-style: none;
+    padding: 0;
+}
+
+.rodape-links li {
+    margin-bottom: 12px;
+    font-size: 0.95rem;
+}
+
+.rodape-links a {
+    text-decoration: none;
+    color: var(--cor-texto-suave);
+    transition: color 0.3s ease;
+    position: relative;
+    padding-bottom: 3px;
+    display: inline-block;
+}
+
+.rodape-links a::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 0%;
+    height: 2px;
+    background: linear-gradient(90deg, var(--cor-primaria), var(--cor-destaque-claro));
+    transition: width 0.3s ease;
+}
+
+.rodape-links a:hover {
+    color: #fff;
+}
+
+.rodape-links a:hover::after {
+    width: 100%;
+}
+
+.rodape-inferior {
+    text-align: center;
+    padding: 20px 5%;
+    margin-top: 40px;
+    border-top: 1px solid var(--borda-escura);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.rodape-inferior p {
+    font-size: 0.9rem;
+    color: #888;
+}
+
+
+/* ==========================================================
+REDES SOCIAIS
+========================================================== */
+
+.redes-sociais {
+    font-size: 1.3rem;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.redes-sociais a {
+    color: #ccc;
+    transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.redes-sociais a:hover {
+    color: var(--cor-destaque-claro);
+    transform: scale(1.2);
+}
+
+
+/* ==========================================================
+   CORREÇÃO FONT AWESOME
+========================================================== */
+
+.fas,
+.fa-solid {
+    font-family: "Font Awesome 6 Free" !important;
+    font-weight: 900 !important;
+}
+
+.far,
+.fa-regular {
+    font-family: "Font Awesome 6 Free" !important;
+    font-weight: 400 !important;
+}
+
+.fa-brands {
+    font-family: "Font Awesome 6 Brands" !important;
+    font-weight: 400 !important;
+}
+
+/* ==========================================================
+   ESTILIZAÇÕES GERAIS PARA FOTO DE PERFIL
+========================================================== */
+
+.usuario-logado-nav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    padding: 5px 15px;
+    border-radius: 30px;
+    transition: background 0.3s ease;
+}
+
+.usuario-logado-nav:hover {
+    background-color: rgba(91, 43, 224, 0.05);
+}
+
+.avatar-nav {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--cor-primaria);
+}
+
+.nome-nav {
+    font-weight: 700;
+    color: var(--cor-primaria);
+    font-size: 1rem;
+}
+
+.icone-nav {
+    color: var(--cor-primaria);
+    font-size: 1.2rem;
+}
+/* SISTEMA DE NOTIFICA��ES (TOASTS) - PREMIUM GLASSMORPHISM */
+.toast-container { position: fixed; top: 20px; right: 20px; z-index: 100000; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+.toast { background: rgba(17, 14, 26, 0.8); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; padding: 16px 24px; border-radius: 16px; display: flex; align-items: center; gap: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); min-width: 300px; max-width: 450px; transform: translateX(120%); transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); pointer-events: auto; }
+.toast.show { transform: translateX(0); }
+.toast-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
+.toast-content { flex-grow: 1; }
+.toast-title { font-weight: 800; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+.toast-msg { font-size: 0.85rem; color: rgba(255,255,255,0.7); line-height: 1.4; }
+.toast-success { border-left: 4px solid #00ff88; }
+.toast-success .toast-icon { background: rgba(0, 255, 136, 0.1); color: #00ff88; }
+.toast-error { border-left: 4px solid #ff4d4d; }
+.toast-error .toast-icon { background: rgba(255, 77, 77, 0.1); color: #ff4d4d; }
+.toast-warning { border-left: 4px solid #ffcc00; }
+.toast-warning .toast-icon { background: rgba(255, 204, 0, 0.1); color: #ffcc00; }
+.toast-info { border-left: 4px solid #00ccff; }
+.toast-info .toast-icon { background: rgba(0, 204, 255, 0.1); color: #00ccff; }

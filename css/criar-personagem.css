@@ -1,0 +1,756 @@
+/* ==========================================
+   ESTRUTURA BASE E ABAS
+========================================== */
+.container-sistema {
+    flex: 1;
+    padding: 120px 5% 60px 5%;
+    max-width: 1100px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.menu-abas {
+    position: relative;
+    background-color: #ffffff;
+    border-radius: 50px;
+    display: flex;
+    justify-content: space-between;
+    padding: 6px;
+    margin-bottom: 50px;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+    z-index: 1;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.indicador-aba {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    height: calc(100% - 12px);
+    width: calc((100% - 12px) / 5);
+    background-color: #311c61;
+    border-radius: 40px;
+    z-index: -1;
+    transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.aba {
+    color: #555555;
+    font-weight: 800;
+    padding: 12px 30px;
+    border-radius: 40px;
+    border: none;
+    background: transparent;
+    font-size: 1rem;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: color 0.3s;
+    flex: 1;
+    text-align: center;
+}
+
+.aba.ativa {
+    color: #ffffff;
+}
+
+.conteudo-aba {
+    display: none;
+    animation: animacaoAba 0.4s ease forwards;
+}
+
+.conteudo-aba.ativa {
+    display: block;
+}
+
+@keyframes animacaoAba {
+    from {
+        opacity: 0;
+        transform: translateY(15px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==========================================
+   TEXTOS DE DESCRIÇÃO NO TOPO
+========================================== */
+.desc {
+    text-align: center;
+    margin-bottom: 40px;
+    background: rgba(0, 0, 0, 0.15);
+    padding: 30px;
+    border-radius: 20px;
+    border-left: 5px solid #C193FD;
+}
+
+.desc h1 {
+    font-size: 2rem;
+    margin-bottom: 15px;
+    color: #C193FD;
+    letter-spacing: 2px;
+}
+
+.desc p {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    max-width: 800px;
+    margin: 0 auto;
+    color: #e0e0e0;
+}
+
+/* ==========================================
+   SELEÇÃO DE SISTEMA (ABA 0)
+========================================== */
+.sistemas-grid-selecao {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 30px;
+    margin-bottom: 40px;
+}
+
+.card-sistema-selecao {
+    background-color: #252424 !important;
+    border-radius: 20px;
+    overflow: hidden;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+.card-sistema-selecao:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    border-color: rgba(193, 147, 253, 0.5);
+}
+
+.sistema-img-wrapper {
+    height: 160px;
+    width: 100%;
+    overflow: hidden;
+    background-color: #1a1a1a;
+}
+
+.sistema-img-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s;
+}
+
+.card-sistema-selecao:hover .sistema-img-wrapper img {
+    transform: scale(1.1);
+}
+
+.sistema-info {
+    padding: 20px;
+    flex: 1;
+}
+
+.sistema-info h3 {
+    margin: 0 0 10px 0;
+    font-size: 1.3rem;
+    color: #C193FD;
+}
+
+.sistema-info p {
+    font-size: 0.9rem;
+    color: #b0b0b0;
+    line-height: 1.5;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.btn-selecionar-sistema {
+    margin: 0 20px 20px 20px;
+    padding: 12px;
+    border-radius: 12px;
+    border: none;
+    background-color: #311c61 !important;
+    color: #ffffff !important;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: block;
+    width: calc(100% - 40px);
+}
+
+.btn-selecionar-sistema:hover {
+    background-color: #4b2c91 !important;
+}
+
+.card-sistema-selecao.selecionado {
+    border-color: #0c9447;
+    box-shadow: 0 0 20px rgba(12, 148, 71, 0.4);
+}
+
+.card-sistema-selecao.selecionado .btn-selecionar-sistema {
+    background-color: #0c9447;
+    color: white;
+}
+
+.card-sistema-selecao.selecionado .btn-selecionar-sistema:hover {
+    background-color: #086d34 !important;
+}
+
+/* ==========================================
+   FORMULÁRIOS (DESCRIÇÃO DA ABA 1)
+========================================== */
+.area-inputs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+.caracteristicas-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+}
+
+.grupo-form label {
+    display: block;
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+    color: #ffffff;
+}
+
+.input-escuro,
+.textarea-escuro {
+    width: 100%;
+    background-color: #7B7287;
+    color: #311c61;
+    border: none;
+    padding: 15px;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: outline 0.3s;
+}
+
+.textarea-escuro {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.input-escuro:focus,
+.textarea-escuro:focus {
+    outline: 2px solid #ffffff;
+}
+
+.input-escuro::placeholder,
+.textarea-escuro::placeholder {
+    color: rgba(49, 28, 97, 0.6);
+}
+
+/* ==========================================
+   ORIGENS (ABA 2)
+========================================== */
+.origens-container {
+    max-width: 800px;
+    margin: 0 auto;
+    background-color: #18131b;
+    padding: 30px;
+    border-radius: 30px;
+}
+
+.pesq-ori {
+    display: flex;
+    background-color: #2e2637;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 30px;
+    height: 45px;
+    align-items: center;
+    padding: 0 15px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.pesq-ori .icon-pesq {
+    color: rgba(255, 255, 255, 0.5);
+    margin-right: 15px;
+    font-size: 1.1rem;
+}
+
+.input-field {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 1rem;
+    outline: none;
+}
+
+.input-field::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.origem {
+    border-radius: 10px;
+    margin-bottom: 15px;
+    overflow: hidden;
+    background-color: #3a2e45;
+    border: 2px solid transparent;
+    transition: border 0.3s, box-shadow 0.3s;
+}
+
+.origem-header {
+    background-color: transparent;
+    padding: 15px 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.origem-header:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.origem-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.arrow-icon {
+    transition: transform 0.3s;
+    font-size: 0.9rem;
+    transform: rotate(-90deg);
+}
+
+.origem-header.active .arrow-icon {
+    transform: rotate(0deg);
+}
+
+.origem-content {
+    max-height: 0;
+    padding: 0 20px;
+    overflow: hidden;
+    transition: all 0.4s ease;
+    background-color: transparent;
+}
+
+.origem-content.show {
+    max-height: 800px;
+    padding: 0 20px 20px 20px;
+}
+
+.roxo-italico {
+    color: #b794f4;
+    font-style: italic;
+    font-weight: 600;
+}
+
+.origem-content p.descricao {
+    color: #e0e0e0;
+    line-height: 1.5;
+    font-size: 0.95rem;
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.origem-content .treinamento {
+    margin-bottom: 15px;
+    font-size: 0.95rem;
+    color: #e0e0e0;
+}
+
+.origem-content .arquetipos {
+    font-size: 0.95rem;
+}
+
+.origem-content ul {
+    margin-top: 5px;
+    margin-bottom: 0;
+    padding-left: 20px;
+}
+
+.origem-content li {
+    margin-bottom: 5px;
+    color: #e0e0e0;
+}
+
+.area-btn-escolher {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 30px;
+}
+
+.btn-escolher-origem {
+    background-color: #6d587b;
+    color: white;
+    border: none;
+    padding: 8px 25px;
+    border-radius: 20px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s, transform 0.2s;
+}
+
+.btn-escolher-origem:hover {
+    background-color: #826a92;
+}
+
+.origem.selecionado {
+    border: 2px solid #0c9447;
+    box-shadow: 0 0 15px rgba(12, 148, 71, 0.3);
+}
+
+.origem.selecionado .btn-escolher-origem {
+    background-color: #0c9447;
+    color: white;
+}
+
+.origem.selecionado .btn-escolher-origem:hover {
+    background-color: #086d34 !important;
+}
+
+/* ==========================================
+   ATRIBUTOS (ABA 3)
+========================================== */
+
+.pontos-disponiveis {
+    display: inline-block;
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid #C193FD;
+    padding: 10px 25px;
+    border-radius: 50px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin-top: 20px;
+    box-shadow: 0 0 15px rgba(193, 147, 253, 0.3);
+}
+
+#pontos-restantes {
+    color: #C193FD;
+    font-size: 1.5rem;
+    font-weight: 900;
+    margin-left: 10px;
+    transition: color 0.3s;
+}
+
+#pontos-restantes.zerado {
+    color: #ff4d4d;
+}
+
+.atributos-section {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+    align-items: center;
+    padding: 20px 0;
+}
+
+.trio-atri {
+    display: flex;
+    gap: 80px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.atributo-item {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    border-radius: 15px;
+}
+
+.atributo-sigla {
+    background-color: #ffffff;
+    color: #311c61;
+    width: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    font-weight: 900;
+    border-radius: 12px 0 0 12px;
+    cursor: help;
+    transition: all 0.3s ease;
+}
+
+.atributo-input {
+    width: 90px;
+    /* Restaurada a largura normal */
+    background-color: transparent;
+    border: 3px solid #ffffff;
+    border-left: none;
+    border-radius: 0 15px 15px 0;
+    color: #ffffff;
+    font-size: 2rem;
+    font-weight: 800;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.3s, color 0.3s;
+    -moz-appearance: textfield;
+}
+
+/* ESCONDE AS SETAS PADRÃO DO NAVEGADOR */
+.atributo-input::-webkit-outer-spin-button,
+.atributo-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.atributo-input:focus {
+    border-color: #C193FD;
+}
+
+.atributo-input.alterado {
+    color: #C193FD;
+}
+
+/* Tooltips */
+.atributo-sigla::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 110%;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    background: #1a1220;
+    color: #f0e6ff;
+    padding: 5px 15px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s;
+    border: 1px solid #C193FD;
+    white-space: nowrap;
+}
+
+.atributo-sigla:hover::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* ==========================================
+   CLASSES (ABA 4) - CAIXAS DO MESMO TAMANHO
+========================================== */
+.tri-class {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 30px;
+    /* Removido o align-items: start; Agora as 3 caixas esticam juntas! */
+}
+
+.class-card {
+    background-color: #252424;
+    border-radius: 15px;
+    padding: 30px 20px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    /* Força a ocupar a altura toda disponível */
+    transition: transform 0.3s, box-shadow 0.3s;
+    border: 2px solid transparent;
+    box-sizing: border-box;
+}
+
+.class-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+}
+
+.class-card h2 {
+    margin: 0;
+    text-align: center;
+    color: #ffffff;
+    font-weight: 900;
+    font-size: 1.6rem;
+    letter-spacing: 1px;
+}
+
+.class-card hr {
+    border: none;
+    height: 2px;
+    background-color: #C193FD;
+    margin: 10px 0 20px 0;
+    opacity: 0.8;
+}
+
+.desc-classe {
+    font-size: 0.9rem;
+    color: #e0e0e0;
+    line-height: 1.5;
+    text-align: justify;
+    margin-bottom: 25px;
+    min-height: 130px; /* Alinhamento horizontal garantido */
+    display: flex;
+    align-items: flex-start;
+}
+
+.caract-class {
+    height: 280px; /* Altura fixa para manter os botões alinhados */
+    overflow-y: auto;
+    padding-right: 10px;
+    margin-bottom: 20px;
+}
+
+.caract-class::-webkit-scrollbar {
+    width: 6px;
+}
+
+.caract-class::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.1);
+}
+
+.caract-class::-webkit-scrollbar-thumb {
+    background: #C193FD;
+    border-radius: 10px;
+}
+
+.caract-titulo {
+    text-align: center;
+    border-bottom: 3px solid white;
+    width: 80%;
+    margin: 0 auto 20px auto;
+    padding-bottom: 8px;
+    color: #ffffff;
+    font-size: 1.1rem;
+    font-weight: 800;
+}
+
+/* Tópicos internos da Classe - Linhas Ajustadas */
+.topic-title {
+    font-weight: 700;
+    color: #ffffff;
+    margin: 15px 0 0 0; /* Zera a margem de baixo */
+    padding: 0; /* Garante que não tem nenhum preenchimento invisível */
+    font-size: 0.95rem;
+    line-height: 1;
+}
+
+.topic-line {
+    border: none;
+    height: 1px;
+    background-color: #573186; 
+}
+
+.topic-desc {
+    color: #b0b0b0;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.topic-list {
+    padding-left: 20px;
+    color: #b0b0b0;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    margin-top: 5px;
+    margin-bottom: 20px;
+}
+
+.topic-list li {
+    margin-bottom: 5px;
+}
+
+.btn-selecionar-classe {
+    margin-top: auto;
+    /* Empurra o botão pro fundo da caixa perfeitamente! */
+    width: 80%;
+    align-self: center;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    background-color: #6539C7;
+    color: white;
+    font-weight: bold;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.btn-selecionar-classe:hover {
+    background-color: #8b5cf6;
+}
+
+.class-card.selecionado {
+    border: 2px solid #0c9447;
+    box-shadow: 0 0 25px rgba(12, 148, 71, 0.4);
+    transform: translateY(-5px);
+}
+
+.class-card.selecionado .btn-selecionar-classe {
+    background-color: #0c9447;
+    color: white;
+}
+
+.class-card.selecionado .btn-selecionar-classe:hover {
+    background-color: #086d34 !important;
+}
+
+/* ==========================================
+   BOTÕES DE NAVEGAÇÃO ENTRE ABAS
+========================================== */
+.botoes-nav-form {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 50px;
+    padding-top: 30px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.botoes-nav-form.apenas-proximo {
+    justify-content: flex-end;
+}
+
+.btn-form-nav {
+    background: transparent;
+    color: white;
+    border: 1px solid #ffffff;
+    padding: 10px 30px;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-form-nav:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.btn-concluir {
+    background: linear-gradient(135deg, #6539C7, #8b5cf6);
+    color: white;
+    border: none;
+    padding: 10px 35px;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    font-weight: 800;
+    cursor: pointer;
+    text-transform: uppercase;
+    box-shadow: 0 5px 15px rgba(101, 57, 199, 0.4);
+    transition: transform 0.3s, box-shadow 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-concluir:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(139, 92, 246, 0.6);
+}
