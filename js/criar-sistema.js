@@ -1,0 +1,914 @@
+// js/criar-sistema.js
+const gerarID = () => '_' + Math.random().toString(36).substr(2, 9);
+const gerarIDComp = () => '_' + Math.random().toString(36).substr(2, 9);
+
+document.addEventListener('DOMContentLoaded', () => {
+
+    // 1. Verificação de Mestre (Simulação)
+    const sessao = JSON.parse(localStorage.getItem('table_sessao_ativa'));
+    if (!sessao || sessao.cargo !== 'mestre') {
+        // window.location.href = 'perfil.html'; // Descomente para produção
+    }
+
+    // =======================================================
+    // FORÇAR MAIÚSCULAS NOS INPUTS
+    // =======================================================
+    const forcarMaiuscula = (e) => {
+        e.target.value = e.target.value.toUpperCase();
+    };
+    document.getElementById('input-nome-atributo').addEventListener('input', forcarMaiuscula);
+    document.getElementById('input-abrev-atributo').addEventListener('input', forcarMaiuscula);
+    document.getElementById('input-nome-status').addEventListener('input', forcarMaiuscula);
+    document.getElementById('modal-input-nome').addEventListener('input', forcarMaiuscula);
+
+
+    // =======================================================
+    // NAVEGAÇÃO POR ABAS (Estilo Criar Personagem)
+    // =======================================================
+    const abas = document.querySelectorAll('.aba');
+    const conteudos = document.querySelectorAll('.conteudo-aba');
+    const indicador = document.querySelector('.indicador-aba');
+
+    function ativarAba(aba) {
+        // Remove 'ativa' de todos
+        abas.forEach(a => a.classList.remove('ativa'));
+        conteudos.forEach(c => c.classList.remove('ativa'));
+
+        // Ativa a aba atual
+        aba.classList.add('ativa');
+        const alvo = document.getElementById(aba.getAttribute('data-alvo'));
+        if (alvo) alvo.classList.add('ativa');
+
+        // Move indicador roxo
+        const index = aba.getAttribute('data-index');
+        indicador.style.transform = `translateX(${index * 100}%)`;
+
+        // Scroll suave pro topo
+        // document.getElementById('form-criar-sistema').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // Clique direto nas abas do menu superior (Com Validação)
+    abas.forEach(aba => {
+        aba.addEventListener('click', (e) => {
+            const abaAlvoIndex = parseInt(aba.getAttribute('data-index'));
+            const abaAtual = document.querySelector('.aba.ativa');
+            const currentIndex = parseInt(abaAtual.getAttribute('data-index'));
+
+            // Se tentar ir para frente saindo da aba 0, valida
+            if (currentIndex === 0 && abaAlvoIndex > 0) {
+                const nomeSistema = document.getElementById('input-nome-sistema').value.trim();
+                const descricoes = document.querySelectorAll('.item-descricao textarea');
+                let descPreenchida = false;
+                descricoes.forEach(t => { if (t.value.trim() !== '') descPreenchida = true; });
+
+                if (!nomeSistema) {
+                    alert("Por favor, informe o nome do sistema antes de prosseguir.");
+                    return;
+                }
+                if (!descPreenchida) {
+                    alert("Por favor, preencha pelo menos um tópico de descrição.");
+                    return;
+                }
+            }
+
+            // Permite navegar para trás ou se validado
+            ativarAba(aba);
+        });
+    });
+
+    // Inicializa
+    if (abas.length > 0) ativarAba(abas[0]);
+
+    // Botões Próximo e Voltar
+    document.querySelectorAll('.btn-proximo-aba').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const abaAtual = document.querySelector('.aba.ativa');
+            const currentIndex = parseInt(abaAtual.getAttribute('data-index'));
+
+            // Validação da Aba de Descrição (Aba 0)
+            if (currentIndex === 0) {
+                const nomeSistema = document.getElementById('input-nome-sistema').value.trim();
+                const descricoes = document.querySelectorAll('.item-descricao textarea');
+                let descPreenchida = false;
+                descricoes.forEach(t => { if (t.value.trim() !== '') descPreenchida = true; });
+
+                if (!nomeSistema) {
+                    alert("Por favor, informe o nome do sistema.");
+                    return;
+                }
+
+                if (!descPreenchida) {
+                    alert("Por favor, preencha pelo menos um tópico de descrição antes de prosseguir.");
+                    return;
+                }
+            }
+
+            const proximaAba = document.querySelector(`.aba[data-index="${currentIndex + 1}"]`);
+            if (proximaAba) ativarAba(proximaAba);
+        });
+    });
+
+    document.querySelectorAll('.btn-voltar-aba').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const abaAtual = document.querySelector('.aba.ativa');
+            const currentIndex = parseInt(abaAtual.getAttribute('data-index'));
+            const abaAnterior = document.querySelector(`.aba[data-index="${currentIndex - 1}"]`);
+            if (abaAnterior) ativarAba(abaAnterior);
+        });
+    });
+
+    // Submissão do Formulário para API
+    document.getElementById('form-criar-sistema').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const nomeSistema = document.getElementById('input-nome-sistema').value.trim();
+        if (!nomeSistema) {
+            alert("Falha arcana: O nome do sistema é obrigatório!");
+            const abaIdent = document.querySelector('.aba[data-index="0"]');
+            if(abaIdent) ativarAba(abaIdent);
+            return;
+        }
+        
+        const btn = document.querySelector('.btn-proximo-aba'); // Qualquer botão que serviu de submit ou um indicativo de carregamento
+        if(btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+        
+        let descTotal = '';
+        document.querySelectorAll('.item-descricao textarea').forEach((t, index) => {
+             if(t.value.trim() !== '') descTotal += (index > 0 ? '\n\n' : '') + t.value.trim();
+        });
+
+        const payload = {
+            nome: document.getElementById('input-nome-sistema').value,
+            classificacao: document.getElementById('input-classificacao').value,
+            descricao: descTotal,
+            atributos: atributosObj,
+            status: statusObj,
+            defesas: defesasObj,
+            imagem_base64: imagemBase64,
+            classes: componentesDb['CLASSES'] ? componentesDb['CLASSES'].items : [],
+            pericias: componentesDb['PERÍCIAS'] ? componentesDb['PERÍCIAS'].items : [],
+            origens: componentesDb['ORIGENS'] ? componentesDb['ORIGENS'].items : [],
+            monstros: componentesDb['AMEAÇAS'] ? componentesDb['AMEAÇAS'].items : []
+        };
+
+        try {
+            const req = await fetch('../app/ajax/salvar-sistema.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const res = await req.json();
+            if(res.success) {
+                alert("Mundo criado com sucesso! O Grimório o registra na história.");
+                window.location.href = 'perfil.php';
+            } else {
+                alert("Falha arcana: " + res.error);
+            }
+        } catch(e) {
+            alert("Erro de comunicação com o servidor.");
+        }
+    });
+
+    // =======================================================
+    // UPLOAD DE IMAGEM
+    // =======================================================
+    const btnTrocarFoto = document.getElementById('btn-trocar-foto');
+    const inputFoto = document.getElementById('input-foto-sistema');
+    const previewImagem = document.getElementById('preview-imagem');
+    const silhuetas = previewImagem.querySelectorAll('div');
+
+    btnTrocarFoto.addEventListener('click', () => inputFoto.click());
+
+    let imagemBase64 = null;
+
+    inputFoto.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                previewImagem.style.backgroundImage = `url(${event.target.result})`;
+                silhuetas.forEach(s => s.style.display = 'none');
+                imagemBase64 = event.target.result; // Salva o Base64
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+
+    // =======================================================
+    // CLASSIFICAÇÃO DE IDADE
+    // =======================================================
+    const botoesIdade = document.querySelectorAll('.btn-idade');
+    botoesIdade.forEach(botao => {
+        botao.addEventListener('click', () => {
+            botoesIdade.forEach(b => b.classList.remove('ativo'));
+            botao.classList.add('ativo');
+            document.getElementById('input-classificacao').value = botao.getAttribute('data-idade');
+        });
+    });
+
+
+    // =======================================================
+    // ABA 1: DESCRIÇÕES DINÂMICAS
+    // =======================================================
+    const containerDescricoes = document.getElementById('container-descricoes');
+    const btnAddDescGlobal = document.getElementById('btn-add-desc-global');
+    const btnExcluirDescGlobal = document.getElementById('btn-excluir-desc-global');
+    let modoExclusao = false;
+    let contadorDescricao = 1;
+
+    const cancelarModoExclusao = () => {
+        modoExclusao = false;
+        containerDescricoes.classList.remove('modo-exclusao');
+        btnExcluirDescGlobal.innerHTML = 'Excluir tópico <i class="far fa-minus-square"></i>';
+        btnExcluirDescGlobal.style.color = '';
+    };
+
+    const adicionarDescricao = () => {
+        const itensAtuais = document.querySelectorAll('#container-descricoes .item-descricao');
+        if (itensAtuais.length >= 4) {
+            alert("Limite arcano atingido: Você só pode ter 4 tópicos de descrição.");
+            return;
+        }
+
+        contadorDescricao++;
+        const idUnico = Date.now();
+        const html = `
+            <div class="item-descricao" id="desc-${idUnico}">
+                <div class="cabecalho-descricao" style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <input type="text" class="input-titulo-desc" value="Descrição ${contadorDescricao}:" style="width: 50%;">
+                    <button type="button" class="btn-texto btn-excluir-desc-inline" data-id="desc-${idUnico}">Excluir <i class="fas fa-times"></i></button>
+                </div>
+                <textarea class="input-escuro textarea-escuro" placeholder="Digite os detalhes aqui..."></textarea>
+            </div>
+        `;
+        containerDescricoes.insertAdjacentHTML('beforeend', html);
+    };
+
+    btnAddDescGlobal.addEventListener('click', adicionarDescricao);
+
+    btnExcluirDescGlobal.addEventListener('click', () => {
+        const itens = containerDescricoes.querySelectorAll('.item-descricao');
+
+        if (!modoExclusao && itens.length <= 1) {
+            alert("Apenas a Descrição 1 resta, e ela não pode ser excluída.");
+            cancelarModoExclusao();
+            return;
+        }
+
+        modoExclusao = !modoExclusao;
+        containerDescricoes.classList.toggle('modo-exclusao', modoExclusao);
+
+        if (modoExclusao) {
+            btnExcluirDescGlobal.innerHTML = 'Cancelar <i class="far fa-times-circle"></i>';
+            btnExcluirDescGlobal.style.color = '#ff4d4d';
+        } else {
+            cancelarModoExclusao();
+        }
+    });
+
+    containerDescricoes.addEventListener('click', (e) => {
+        if (e.target.closest('.btn-excluir-desc-inline')) {
+            const id = e.target.closest('.btn-excluir-desc-inline').getAttribute('data-id');
+            document.getElementById(id).remove();
+
+            contadorDescricao = 1;
+            const titulo1 = document.getElementById('titulo-desc-1');
+            if (titulo1 && titulo1.value.startsWith('Descrição')) {
+                titulo1.value = 'Descrição 1:';
+            }
+
+            containerDescricoes.querySelectorAll('.item-descricao').forEach(item => {
+                if (item.id !== 'desc-fixa-1') {
+                    contadorDescricao++;
+                    const input = item.querySelector('.input-titulo-desc');
+                    if (input && input.value.startsWith('Descrição')) {
+                        input.value = `Descrição ${contadorDescricao}:`;
+                    }
+                }
+            });
+
+            cancelarModoExclusao();
+        }
+    });
+
+
+    // Variáveis de estado globais para serem acessadas por funções fora do DOMContentLoaded (como salvarMonstro)
+    window.atributosObj = [
+        { id: gerarID(), nome: 'FORÇA', abrev: 'FOR', valor: '0' }
+    ];
+    window.statusObj = [
+        { id: gerarID(), nome: 'VIDA', cor: '#ed1c24', base: 'null' }
+    ];
+    window.defesasObj = [
+        { id: gerarID(), nome: 'DEFESA', cor: '#0f75bc', base: 'null' }
+    ];
+    window.componentesDb = {
+        'CLASSES': {
+            limit: 15, labels: ['DESCRIÇÃO', 'HABILIDADES'], items: [
+                { id: gerarIDComp(), nome: 'COMBATENTE', val1: 'Treinado desde cedo...', val2: 'Ataque uma vez por cena...' }
+            ]
+        },
+        'PERÍCIAS': { limit: 30, labels: ['DESCRIÇÃO', 'HABILIDADES'], items: [] },
+        'ORIGENS': { limit: 75, labels: ['DESCRIÇÃO', 'HABILIDADES'], items: [] },
+        'EQUIPAMENTOS': { limit: 100, labels: ['DESCRIÇÃO', 'CATEGORIA'], items: [] },
+        'PODERES': { limit: 50, labels: ['DESCRIÇÃO', 'DURAÇÃO'], items: [] },
+        'AMEAÇAS': { limit: 50, labels: ['TIPO DA AMEAÇA', 'VD'], items: [] }
+    };
+
+    let atributoEditandoID = null;
+    let statusEditandoID = null;
+    let editandoTipo = 'status';
+
+    const botoesValorAttr = document.querySelectorAll('.botoes-valor-atributo .btn-sel');
+    botoesValorAttr.forEach(btn => {
+        btn.addEventListener('click', () => {
+            botoesValorAttr.forEach(b => b.classList.remove('ativo'));
+            btn.classList.add('ativo');
+            document.getElementById('input-valor-atributo').value = btn.getAttribute('data-valor');
+        });
+    });
+
+    const atualizarBotoesBaseStatus = () => {
+        const container = document.getElementById('botoes-base-status');
+        const atual = document.getElementById('input-base-status').value;
+        container.innerHTML = `<button type="button" class="btn-sel btn-sel-base ${atual === 'null' ? 'ativo' : ''}" data-base="null">Ø</button>`;
+
+        atributosObj.forEach(attr => {
+            const ativo = (atual === attr.abrev) ? 'ativo' : '';
+            container.insertAdjacentHTML('beforeend', `<button type="button" class="btn-sel btn-sel-base ${ativo}" data-base="${attr.abrev}">${attr.abrev}</button>`);
+        });
+
+        // Atualiza scrollbar customizada após reconstruir os botões
+        setTimeout(initScrollBase, 150);
+    };
+
+    // Scrollbar customizada para #botoes-base-status (Refatorado para Robustez)
+    const initScrollBase = () => {
+        const sc = document.getElementById('botoes-base-status');
+        const track = document.getElementById('scroll-track-base');
+        const thumb = document.getElementById('scroll-thumb-base');
+        if (!sc || !track || !thumb) return;
+
+        const update = () => {
+            if (!sc.scrollWidth) return;
+            const ratio = sc.clientWidth / sc.scrollWidth;
+            const thumbW = Math.max(ratio * track.clientWidth, 40);
+            const maxLeft = track.clientWidth - thumbW;
+            const scrollRange = sc.scrollWidth - sc.clientWidth;
+            const thumbLeft = scrollRange <= 0 ? 0 : (sc.scrollLeft / scrollRange) * maxLeft;
+            
+            thumb.style.width = (ratio >= 1 ? 0 : thumbW) + 'px'; // Esconde se não houver overflow
+            thumb.style.left = thumbLeft + 'px';
+            thumb.style.opacity = ratio >= 1 ? '0' : '1';
+        };
+
+        // Eventos de Scroll
+        sc.onscroll = update;
+
+        // Arrastar o Thumb
+        let drag = false, startX = 0, startScroll = 0;
+        
+        thumb.onmousedown = (e) => {
+            drag = true; 
+            startX = e.clientX;
+            startScroll = sc.scrollLeft;
+            document.body.style.userSelect = 'none';
+            thumb.style.background = '#444';
+            e.preventDefault();
+        };
+
+        document.onmousemove = (e) => {
+            if (!drag) return;
+            const dx = e.clientX - startX;
+            const trackW = track.clientWidth;
+            const thumbW = thumb.clientWidth;
+            const scrollableWidth = sc.scrollWidth - sc.clientWidth;
+            const trackScrollableW = trackW - thumbW;
+            
+            if (trackScrollableW > 0) {
+                const ratioScroll = scrollableWidth / trackScrollableW;
+                sc.scrollLeft = startScroll + dx * ratioScroll;
+            }
+        };
+
+        document.onmouseup = () => { 
+            if (drag) {
+                drag = false; 
+                document.body.style.userSelect = '';
+                thumb.style.background = ''; // Volta pro CSS
+            }
+        };
+
+        // Click no Track
+        track.onclick = (e) => {
+            if (e.target === thumb) return;
+            const rect = track.getBoundingClientRect();
+            const clickPos = (e.clientX - rect.left) / track.clientWidth;
+            sc.scrollLeft = clickPos * (sc.scrollWidth - sc.clientWidth);
+        };
+
+        // Suporte a wheel
+        sc.onwheel = (e) => {
+            if (Math.abs(e.deltaY) > 0) {
+                sc.scrollLeft += e.deltaY;
+                e.preventDefault();
+            }
+        };
+
+        // ResizeObserver para manter sincronizado
+        if (window._scrollBaseObserver) window._scrollBaseObserver.disconnect();
+        window._scrollBaseObserver = new ResizeObserver(update);
+        window._scrollBaseObserver.observe(sc);
+        window._scrollBaseObserver.observe(track);
+
+        update();
+    };
+
+    const handleWheel = (e) => {
+        const sc = document.getElementById('botoes-base-status');
+        if (Math.abs(e.deltaY) > 0) {
+            sc.scrollLeft += e.deltaY;
+            e.preventDefault();
+        }
+    };
+
+    document.getElementById('botoes-base-status').addEventListener('click', (e) => {
+        if (e.target.classList.contains('btn-sel-base')) {
+            document.querySelectorAll('#botoes-base-status .btn-sel-base').forEach(b => b.classList.remove('ativo'));
+            e.target.classList.add('ativo');
+            document.getElementById('input-base-status').value = e.target.getAttribute('data-base');
+        }
+    });
+
+    const renderAtributos = () => {
+        const box = document.getElementById('lista-atributos');
+        box.innerHTML = '';
+        atributosObj.forEach(a => {
+            box.insertAdjacentHTML('beforeend', `
+                <div class="item-painel">
+                    <span>${a.nome} (${a.abrev})</span> 
+                    <div class="botoes-item">
+                        <button type="button" class="btn-pilula btn-editar-attr" data-id="${a.id}">Editar</button>
+                        <button type="button" class="btn-pilula btn-deletar-attr" data-id="${a.id}">Excluir</button>
+                    </div>
+                </div>
+            `);
+        });
+        document.getElementById('contador-atributos').textContent = `${atributosObj.length}/8`;
+        atualizarBotoesBaseStatus();
+    };
+
+    // =======================================================
+    // LOGICA DE SCROLL CUSTOMIZADO (ATRIBUTOS E STATUS)
+    // =======================================================
+    function initCustomScroll(containerId, trackId, thumbId) {
+        const container = document.getElementById(containerId);
+        const track = document.getElementById(trackId);
+        const thumb = document.getElementById(thumbId);
+
+        if (!container || !track || !thumb) return;
+
+        function updateThumb() {
+            const scrollPercent = container.scrollLeft / (container.scrollWidth - container.clientWidth);
+            const thumbWidth = Math.max(30, (container.clientWidth / container.scrollWidth) * track.clientWidth);
+            thumb.style.width = thumbWidth + 'px';
+            const maxLeft = track.clientWidth - thumbWidth;
+            thumb.style.left = (scrollPercent * maxLeft) + 'px';
+        }
+
+        container.addEventListener('scroll', updateThumb);
+        window.addEventListener('resize', updateThumb);
+        setTimeout(updateThumb, 100);
+
+        let isDragging = false;
+        let startX, startScrollLeft;
+
+        thumb.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startX = e.pageX - thumb.offsetLeft;
+            startScrollLeft = container.scrollLeft;
+            thumb.style.cursor = 'grabbing';
+            e.preventDefault();
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const x = e.pageX - startX;
+            const thumbWidth = thumb.clientWidth;
+            const maxLeft = track.clientWidth - thumbWidth;
+            const percent = Math.min(Math.max(x / maxLeft, 0), 1);
+            container.scrollLeft = percent * (container.scrollWidth - container.clientWidth);
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDragging = false;
+            thumb.style.cursor = 'grab';
+        });
+
+        track.addEventListener('click', (e) => {
+            if (e.target === thumb) return;
+            const rect = track.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const thumbWidth = thumb.clientWidth;
+            const percent = Math.min(Math.max((clickX - thumbWidth / 2) / (track.clientWidth - thumbWidth), 0), 1);
+            container.scrollLeft = percent * (container.scrollWidth - container.clientWidth);
+        });
+    }
+
+    // Inicializa os scrolls
+    initCustomScroll('botoes-base-status', 'scroll-track-base', 'scroll-thumb-base');
+    initCustomScroll('botoes-valor-atributo', 'scroll-track-attr-valor', 'scroll-thumb-attr-valor');
+
+    const renderStatusEDefesas = () => {
+        const boxStatus = document.getElementById('lista-status');
+        boxStatus.innerHTML = '';
+        statusObj.forEach(s => {
+            const tag = s.base !== 'null' ? ` [${s.base}]` : '';
+            boxStatus.insertAdjacentHTML('beforeend', `
+                <div class="item-painel" style="border-left: 5px solid ${s.cor};">
+                    <span>${s.nome}${tag}</span>
+                    <div class="botoes-item">
+                        <button type="button" class="btn-pilula btn-editar-status" data-id="${s.id}" data-tipo="status">Editar</button>
+                        <button type="button" class="btn-pilula btn-deletar-status" data-id="${s.id}" data-tipo="status">Excluir</button>
+                    </div>
+                </div>
+            `);
+        });
+        document.getElementById('contador-status').textContent = `${statusObj.length}/3`;
+
+        const boxDefesas = document.getElementById('lista-defesas');
+        boxDefesas.innerHTML = '';
+        defesasObj.forEach(d => {
+            const tag = d.base !== 'null' ? ` [${d.base}]` : '';
+            boxDefesas.insertAdjacentHTML('beforeend', `
+                <div class="item-painel" style="border-left: 5px solid ${d.cor};">
+                    <span>${d.nome}${tag}</span>
+                    <div class="botoes-item">
+                        <button type="button" class="btn-pilula btn-editar-status" data-id="${d.id}" data-tipo="defesa">Editar</button>
+                        <button type="button" class="btn-pilula btn-deletar-status" data-id="${d.id}" data-tipo="defesa">Excluir</button>
+                    </div>
+                </div>
+            `);
+        });
+        document.getElementById('contador-defesas').textContent = `${defesasObj.length}/3`;
+    };
+
+    document.getElementById('btn-add-atributo-vazio').addEventListener('click', () => {
+        if (atributosObj.length >= 8) return alert("Máximo de 8 atributos atingido.");
+        atributosObj.push({ id: gerarID(), nome: 'NOVO', abrev: 'NOV', valor: '0' });
+        renderAtributos();
+    });
+
+    document.getElementById('btn-add-status-vazio').addEventListener('click', () => {
+        if (statusObj.length >= 3) return alert("Máximo de 3 status atingido.");
+        statusObj.push({ id: gerarID(), nome: 'NOVO', cor: '#888888', base: 'null' });
+        renderStatusEDefesas();
+    });
+
+    document.getElementById('btn-add-defesa-vazio').addEventListener('click', () => {
+        if (defesasObj.length >= 3) return alert("Máximo de 3 defesas atingido.");
+        defesasObj.push({ id: gerarID(), nome: 'NOVO', cor: '#888888', base: 'null' });
+        renderStatusEDefesas();
+    });
+
+    const resetarFormAtributo = () => {
+        atributoEditandoID = null;
+        document.getElementById('titulo-painel-attr').textContent = 'Novo Atributo';
+        document.getElementById('input-nome-atributo').value = '';
+        document.getElementById('input-abrev-atributo').value = '';
+        botoesValorAttr.forEach(b => b.classList.remove('ativo'));
+        document.querySelector('.botoes-valor-atributo .btn-sel[data-valor="0"]').classList.add('ativo');
+        document.getElementById('input-valor-atributo').value = '0';
+    };
+
+    const resetarFormStatus = () => {
+        statusEditandoID = null;
+        editandoTipo = 'status';
+        document.getElementById('titulo-painel-status').textContent = 'Novo Status/Defesa';
+        document.getElementById('input-nome-status').value = '';
+        document.getElementById('input-cor-status').value = '#ed1c24';
+        document.querySelectorAll('#botoes-base-status .btn-sel-base').forEach(b => b.classList.remove('ativo'));
+        const baseNula = document.querySelector('#botoes-base-status .btn-sel-base[data-base="null"]');
+        if (baseNula) baseNula.classList.add('ativo');
+        document.getElementById('input-base-status').value = 'null';
+    };
+
+    document.querySelector('#aba-atributos .btn-cancelar-escuro').addEventListener('click', resetarFormAtributo);
+    document.querySelector('#aba-status .btn-cancelar-escuro').addEventListener('click', resetarFormStatus);
+
+    document.getElementById('btn-salvar-atributo').addEventListener('click', () => {
+        if (!atributoEditandoID) return alert("Selecione um atributo para editar primeiro, ou clique em +.");
+        const attr = atributosObj.find(a => a.id === atributoEditandoID);
+        attr.nome = document.getElementById('input-nome-atributo').value.toUpperCase();
+        attr.abrev = document.getElementById('input-abrev-atributo').value.toUpperCase();
+        attr.valor = document.getElementById('input-valor-atributo').value;
+
+        renderAtributos();
+        resetarFormAtributo();
+    });
+
+    document.getElementById('btn-salvar-status').addEventListener('click', () => {
+        if (!statusEditandoID) return alert("Selecione um status ou defesa para editar primeiro, ou clique em +.");
+
+        let lista = editandoTipo === 'status' ? statusObj : defesasObj;
+        const stat = lista.find(s => s.id === statusEditandoID);
+        stat.nome = document.getElementById('input-nome-status').value.toUpperCase();
+        stat.cor = document.getElementById('input-cor-status').value;
+        stat.base = document.getElementById('input-base-status').value;
+
+        renderStatusEDefesas();
+        resetarFormStatus();
+    });
+
+    document.getElementById('lista-atributos').addEventListener('click', (e) => {
+        const id = e.target.dataset.id;
+        if (e.target.classList.contains('btn-deletar-attr')) {
+            atributosObj = atributosObj.filter(a => a.id !== id);
+            renderAtributos();
+            if (atributoEditandoID === id) resetarFormAtributo();
+        } else if (e.target.classList.contains('btn-editar-attr')) {
+            atributoEditandoID = id;
+            document.getElementById('titulo-painel-attr').textContent = 'Editar Atributo';
+
+            const a = atributosObj.find(x => x.id === id);
+            document.getElementById('input-nome-atributo').value = a.nome;
+            document.getElementById('input-abrev-atributo').value = a.abrev;
+            document.getElementById('input-valor-atributo').value = a.valor;
+            botoesValorAttr.forEach(b => {
+                b.classList.toggle('ativo', b.getAttribute('data-valor') === a.valor);
+            });
+        }
+    });
+
+    document.getElementById('container-listas-status-defesa').addEventListener('click', (e) => {
+        const id = e.target.dataset.id;
+        const tipo = e.target.dataset.tipo;
+        if (!id) return;
+
+        let isStatus = tipo === 'status';
+        let lista = isStatus ? statusObj : defesasObj;
+
+        if (e.target.classList.contains('btn-deletar-status')) {
+            if (isStatus) {
+                statusObj = statusObj.filter(s => s.id !== id);
+            } else {
+                defesasObj = defesasObj.filter(d => d.id !== id);
+            }
+            renderStatusEDefesas();
+            if (statusEditandoID === id) resetarFormStatus();
+        } else if (e.target.classList.contains('btn-editar-status')) {
+            statusEditandoID = id;
+            editandoTipo = tipo;
+            document.getElementById('titulo-painel-status').textContent = isStatus ? 'Editar Status' : 'Editar Defesa';
+
+            const item = lista.find(x => x.id === id);
+            document.getElementById('input-nome-status').value = item.nome;
+            document.getElementById('input-cor-status').value = item.cor;
+            document.getElementById('input-base-status').value = item.base;
+            atualizarBotoesBaseStatus();
+        }
+    });
+
+    renderAtributos();
+    renderStatusEDefesas();
+
+
+    // ABA 4: COMPONENTES (Carrossel e Modal)
+    // =======================================================
+    // (As variáveis foram movidas para o topo para escopo global)
+    // =======================================================
+
+
+    let abaCompAtual = 0;
+    let catAtiva = 'CLASSES';
+    let compEditandoID = null;
+
+    const trackComp = document.getElementById('track-comp');
+    const botoesMenuComp = document.querySelectorAll('.btn-comp-aba');
+    const paineisCategoria = document.querySelectorAll('.painel-categoria');
+    const contadorCompEl = document.getElementById('contador-comp-atual');
+
+    botoesMenuComp.forEach((btn, index) => {
+        btn.addEventListener('click', () => {
+            botoesMenuComp.forEach(b => b.classList.remove('ativa'));
+            btn.classList.add('ativa');
+            abaCompAtual = index;
+            catAtiva = btn.textContent.trim();
+
+            trackComp.style.transform = `translateX(-${abaCompAtual * (100 / 6)}%)`;
+            atualizarUIComponentes();
+        });
+    });
+
+    const atualizarUIComponentes = () => {
+        const catData = componentesDb[catAtiva];
+        contadorCompEl.textContent = `${catData.items.length}/${catData.limit}`;
+        paineisCategoria[abaCompAtual].innerHTML = '';
+
+        catData.items.forEach(comp => {
+            const isMonstro = catAtiva === 'MONSTROS';
+            paineisCategoria[abaCompAtual].insertAdjacentHTML('beforeend', `
+                <div class="item-comp">
+                    <h3 class="titulo-comp">${comp.nome}</h3>
+                    <div class="item-comp-info">
+                        <div class="item-comp-col">
+                            <span class="lbl">${catData.labels[0]}</span>
+                            <span class="val">${comp.val1}</span> 
+                        </div>
+                        <div class="item-comp-col">
+                            <span class="lbl">${catData.labels[1]}</span>
+                            <span class="val">${comp.val2}</span> 
+                        </div>
+                    </div>
+                    ${!isMonstro ? `<button type="button" class="btn-pilula btn-editar-comp" data-id="${comp.id}">EDITAR</button>` : `<span style="color:var(--premium-accent); font-size:0.7rem; font-weight:800; opacity:0.6;">(Adicionado)</span>`}
+                </div>
+            `);
+        });
+    };
+
+    const modalComp = document.getElementById('modal-comp');
+    const btnExcluirModal = document.getElementById('btn-excluir-modal');
+
+    const abrirModalComp = () => modalComp.classList.add('ativo');
+    const fecharModalComp = () => {
+        modalComp.classList.remove('ativo');
+        compEditandoID = null;
+        document.getElementById('modal-input-nome').value = '';
+        document.getElementById('modal-input-val1').value = '';
+        document.getElementById('modal-input-val2').value = '';
+    };
+
+    document.getElementById('btn-fechar-modal').addEventListener('click', fecharModalComp);
+
+    document.getElementById('btn-criar-comp').addEventListener('click', () => {
+        const catData = componentesDb[catAtiva];
+        if (catData.items.length >= catData.limit) return alert(`Limite atingido!`);
+
+        if (catAtiva === 'AMEAÇAS' || catAtiva === 'MONSTROS') {
+            // Renderiza atributos dinamicamente
+            const grid = document.getElementById('grid-atributos-monstro');
+            grid.innerHTML = '';
+            atributosObj.forEach(at => {
+                grid.insertAdjacentHTML('beforeend', `
+                    <div class="input-premium-group" style="margin-bottom: 0; display: flex; flex-direction: column;">
+                        <label class="input-premium-label" style="text-align: center; margin: 0 0 5px 0; font-size: 0.6rem; color: #888; font-weight: 800;">${at.abrev}</label>
+                        <input type="number" class="input-premium-field attr-input-premium" data-id="${at.id}" value="0" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 8px; border-radius: 8px; text-align: center; font-weight: 900; font-family: 'Montserrat', sans-serif; outline: none;">
+                    </div>
+                `);
+            });
+            document.getElementById('modal-criar-monstro').classList.add('ativo');
+            return;
+        }
+
+        compEditandoID = null;
+        document.getElementById('modal-comp-titulo').textContent = `Criar Nova`;
+        document.getElementById('lbl-val1').textContent = catData.labels[0];
+        document.getElementById('lbl-val2').textContent = catData.labels[1];
+        btnExcluirModal.style.display = 'none';
+        abrirModalComp();
+    });
+
+    document.getElementById('btn-salvar-modal').addEventListener('click', () => {
+        const nome = document.getElementById('modal-input-nome').value.toUpperCase();
+        const val1 = document.getElementById('modal-input-val1').value;
+        const val2 = document.getElementById('modal-input-val2').value;
+
+        if (!nome) return alert("O Nome é obrigatório!");
+
+        if (compEditandoID) {
+            const item = componentesDb[catAtiva].items.find(c => c.id === compEditandoID);
+            item.nome = nome; item.val1 = val1; item.val2 = val2;
+        } else {
+            componentesDb[catAtiva].items.push({ id: gerarIDComp(), nome, val1, val2 });
+        }
+
+        fecharModalComp();
+        atualizarUIComponentes();
+    });
+
+    trackComp.addEventListener('click', (e) => {
+        if (e.target.classList.contains('btn-editar-comp')) {
+            const id = e.target.dataset.id;
+            const catData = componentesDb[catAtiva];
+            const comp = catData.items.find(c => c.id === id);
+
+            if (!comp) return;
+
+            compEditandoID = id;
+            document.getElementById('modal-comp-titulo').textContent = `Editar ${catAtiva}`;
+            document.getElementById('lbl-val1').textContent = catData.labels[0];
+            document.getElementById('lbl-val2').textContent = catData.labels[1];
+
+            document.getElementById('modal-input-nome').value = comp.nome;
+            document.getElementById('modal-input-val1').value = comp.val1;
+            document.getElementById('modal-input-val2').value = comp.val2;
+
+            // Sempre mostra o botão EXCLUIR ao editar
+            btnExcluirModal.style.display = 'block';
+
+            abrirModalComp();
+        }
+    });
+
+    btnExcluirModal.addEventListener('click', () => {
+        if (confirm("Tem certeza que deseja excluir?")) {
+            componentesDb[catAtiva].items = componentesDb[catAtiva].items.filter(c => c.id !== compEditandoID);
+            fecharModalComp();
+            atualizarUIComponentes();
+        }
+    });
+
+    atualizarUIComponentes();
+});
+
+// Funções globais para o Modal Premium de Monstros
+function fecharModal(id) {
+    document.getElementById(id).classList.remove('ativo');
+}
+
+function previewImagemMonstro(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const container = document.getElementById('preview-monstro-container');
+            container.innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function salvarMonstro() {
+    const nome = document.getElementById('m-nome').value.toUpperCase();
+    const tipo = document.getElementById('m-tipo').value || 'Criatura';
+    const vd = document.getElementById('m-vd').value || 0;
+    const vida = document.getElementById('m-vida').value || 0;
+    const defesa = document.getElementById('m-defesa').value || 0;
+    const xp = document.getElementById('m-xp').value || 0;
+    const desc = document.getElementById('m-desc').value || '';
+
+    if(!nome) return alert('Dê um nome à criatura!');
+
+    const atributos = [];
+    document.querySelectorAll('.attr-input-premium').forEach(input => {
+        atributos.push({
+            id_atributo_temp: input.getAttribute('data-id'),
+            valor: input.value || 0
+        });
+    });
+
+    const gerarIDComp = () => '_' + Math.random().toString(36).substr(2, 9);
+
+    // Salva na memória da aba Componentes
+    componentesDb['AMEAÇAS'].items.push({
+        id: gerarIDComp(),
+        nome: nome,
+        val1: tipo,
+        val2: vd,
+        desc: desc,
+        vida: vida,
+        defesa: defesa,
+        xp: xp,
+        atributos_monstro: atributos
+    });
+
+    fecharModal('modal-criar-monstro');
+    
+    // Atualiza a listagem
+    const abaCompAtual = document.querySelector('.btn-comp-aba.ativa').getAttribute('data-index');
+    document.getElementById('contador-comp-atual').textContent = `${componentesDb['MONSTROS'].items.length}/${componentesDb['MONSTROS'].limit}`;
+    
+    const painelCat = document.querySelectorAll('.painel-categoria')[abaCompAtual];
+    painelCat.innerHTML = '';
+    componentesDb['AMEAÇAS'].items.forEach(comp => {
+        painelCat.insertAdjacentHTML('beforeend', `
+            <div class="item-comp">
+                <h3 class="titulo-comp">${comp.nome}</h3>
+                <div class="item-comp-info">
+                    <div class="item-comp-col">
+                        <span class="lbl">${componentesDb['MONSTROS'].labels[0]}</span>
+                        <span class="val">${comp.val1}</span> 
+                    </div>
+                    <div class="item-comp-col">
+                        <span class="lbl">${componentesDb['MONSTROS'].labels[1]}</span>
+                        <span class="val">${comp.val2}</span> 
+                    </div>
+                </div>
+                <span style="color:var(--premium-accent); font-size:0.7rem; font-weight:800; opacity:0.6;">(Adicionado)</span>
+            </div>
+        `);
+    });
+
+    // Limpar modal
+    document.getElementById('m-nome').value = '';
+    document.getElementById('m-tipo').value = '';
+    document.getElementById('m-vd').value = '';
+    document.getElementById('m-vida').value = '';
+    document.getElementById('m-defesa').value = '';
+    document.getElementById('m-xp').value = '';
+    document.getElementById('m-desc').value = '';
+    document.getElementById('preview-monstro-container').innerHTML = `
+        <i class="fas fa-cloud-upload-alt" style="font-size: 2rem; color: var(--premium-accent); opacity: 0.5;"></i>
+        <span style="position: absolute; bottom: 10px; font-size: 0.6rem; color: #aaa; font-weight: 800; text-transform: uppercase;">Imagem</span>
+    `;
+}
