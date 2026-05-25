@@ -271,3 +271,38 @@ body.pagina-autenticacao {
         background-position: 0% 50%;
     }
 }
+
+/* RESPONSIVIDADE */
+@media (max-width: 768px) {
+    .autenticacao-wrapper {
+        padding: 1rem;
+    }
+
+    .autenticacao-caixa {
+        padding: 25px;
+        border-radius: 30px;
+    }
+
+    .autenticacao-caixa h2 {
+        font-size: 1.6em;
+        text-align: center;
+    }
+
+    .autenticacao-caixa .logotipo {
+        width: 180px;
+    }
+}
+
+@media (max-width: 480px) {
+    .autenticacao-caixa {
+        padding: 20px 15px;
+    }
+
+    .grupo-formulario label {
+        font-size: 0.9em;
+    }
+
+    .grupo-formulario input {
+        font-size: 0.9em;
+    }
+}

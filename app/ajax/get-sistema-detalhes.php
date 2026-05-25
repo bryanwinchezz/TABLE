@@ -46,13 +46,31 @@ try {
     $stmt->execute([$id_sistema]);
     $origens = $stmt->fetchAll();
 
+    // 6. Itens (Equipamentos)
+    $stmt = $pdo->prepare("SELECT nm_item, ds_item, tp_item FROM tb_item WHERE id_sistema = ?");
+    $stmt->execute([$id_sistema]);
+    $itens = $stmt->fetchAll();
+
+    // 7. Habilidades (Poderes)
+    $stmt = $pdo->prepare("SELECT nm_habilidade, ds_habilidade, tp_habilidade FROM tb_habilidade WHERE id_sistema = ?");
+    $stmt->execute([$id_sistema]);
+    $habilidades = $stmt->fetchAll();
+
+    // 8. Status e Defesas
+    $stmt = $pdo->prepare("SELECT * FROM tb_sistema_status WHERE id_sistema = ?");
+    $stmt->execute([$id_sistema]);
+    $status = $stmt->fetchAll();
+
     echo json_encode([
         'success' => true,
         'sistema' => $sistema,
         'atributos' => $atributos,
         'classes' => $classes,
         'pericias' => $pericias,
-        'origens' => $origens
+        'origens' => $origens,
+        'itens' => $itens,
+        'habilidades' => $habilidades,
+        'status' => $status
     ]);
 
 } catch (Exception $e) {

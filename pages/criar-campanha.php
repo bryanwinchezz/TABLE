@@ -8,6 +8,30 @@ session_start();
 define('DDDICE_API_KEY',   'Insira sua API Key do DDDice aqui');
 define('DDDICE_ROOM_SLUG', 'Insira seu room slug do DDDice aqui');
 
+require_once __DIR__ . '/../app/config/database.php';
+$pdo = Database::getConexao();
+
+try {
+    $stmtCheckCol = $pdo->query("SHOW COLUMNS FROM tb_campanha_personagem LIKE 'fl_publico'");
+    if ($stmtCheckCol->rowCount() === 0) {
+        $pdo->exec("ALTER TABLE tb_campanha_personagem ADD COLUMN fl_publico TINYINT(1) NOT NULL DEFAULT 0");
+    }
+} catch (Exception $e) {
+    // Silencioso
+}
+
+// ============================================================
+// FUNÇÕES
+// ============================================================
+
+/** Gera UUID v4 (36 chars) conforme RFC 4122. */
+function guidv4(): string {
+    $data    = random_bytes(16);
+    $data[6] = chr(ord($data[6]) & 0x0f | 0x40);
+    $data[8] = chr(ord($data[8]) & 0x3f | 0x80);
+    return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
+}
+
 // ---- Endpoint AJAX: ?action=roll_escudo (POST) ----
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['action'] ?? '') === 'roll_escudo') {
     header('Content-Type: application/json');
@@ -74,25 +98,93 @@ if (($_GET['action'] ?? '') === 'themes_escudo') {
     exit;
 }
 
+// ---- Endpoint AJAX: ?action=get_personagens_escudo (GET) ----
+if (($_GET['action'] ?? '') === 'get_personagens_escudo') {
+    header('Content-Type: application/json');
+    if (!isset($_SESSION['usuario'])) {
+        echo json_encode(['sucesso' => false, 'error' => 'Não autorizado']);
+        exit;
+    }
+    $campaign_id = (int)($_GET['id_campanha'] ?? 0);
+    $usuario_id = (int)$_SESSION['usuario']['id'];
+
+    // Validar se o usuário é o mestre da campanha
+    $stmt = $pdo->prepare("SELECT id_campanha FROM tb_campanha WHERE id_campanha = ? AND id_usuario_mestre = ?");
+    $stmt->execute([$campaign_id, $usuario_id]);
+    if (!$stmt->fetch()) {
+        echo json_encode(['sucesso' => false, 'error' => 'Acesso negado']);
+        exit;
+    }
+
+    // Buscar Personagens vinculados à campanha
+    $stmt = $pdo->prepare("
+        SELECT DISTINCT p.*, s.nm_sistema, cp.fl_publico
+          FROM tb_campanha_personagem cp
+          JOIN tb_personagem p ON cp.id_personagem = p.id_personagem
+          LEFT JOIN tb_sistema s ON p.id_sistema = s.id_sistema
+         WHERE cp.id_campanha = ?
+    ");
+    $stmt->execute([$campaign_id]);
+    $personagens = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach ($personagens as &$p) {
+        // Buscar Atributos
+        $stmtAttr = $pdo->prepare("
+            SELECT a.nm_atributo, a.ds_abreviacao, pa.qt_valor
+              FROM tb_personagem_atributo pa
+              JOIN tb_atributo a ON pa.id_atributo = a.id_atributo
+             WHERE pa.id_personagem = ?
+        ");
+        $stmtAttr->execute([$p['id_personagem']]);
+        $p['atributos'] = $stmtAttr->fetchAll(PDO::FETCH_ASSOC);
+
+        // Buscar Classe
+        $stmtCl = $pdo->prepare("SELECT c.nm_classe FROM tb_classe c JOIN tb_personagem_classe pc ON c.id_classe = pc.id_classe WHERE pc.id_personagem = ? LIMIT 1");
+        $stmtCl->execute([$p['id_personagem']]);
+        $cl = $stmtCl->fetch();
+        $p['nm_classe'] = $cl ? $cl['nm_classe'] : 'Mundano';
+
+        // Buscar Origem
+        $stmtOr = $pdo->prepare("SELECT o.nm_origem FROM tb_origem o JOIN tb_personagem_origem po ON o.id_origem = po.id_origem WHERE po.id_personagem = ? LIMIT 1");
+        $stmtOr->execute([$p['id_personagem']]);
+        $or = $stmtOr->fetch();
+        $p['nm_origem'] = $or ? $or['nm_origem'] : 'Cidadão';
+
+        // Buscar Itens do Personagem (Inventário) para o Escudo
+        $stmtItens = $pdo->prepare("
+            SELECT i.*, pi.qt_quantidade
+            FROM tb_personagem_item pi
+            JOIN tb_item i ON pi.id_item = i.id_item
+            WHERE pi.id_personagem = ?
+        ");
+        $stmtItens->execute([$p['id_personagem']]);
+        $p['itens'] = $stmtItens->fetchAll(PDO::FETCH_ASSOC);
+
+        // Buscar Habilidades/Rituais/Poderes do Personagem para o Escudo
+        $stmtHabs = $pdo->prepare("
+            SELECT h.*
+            FROM tb_habilidade_personagem hp
+            JOIN tb_habilidade h ON hp.id_habilidade = h.id_habilidade
+            WHERE hp.id_personagem = ?
+        ");
+        $stmtHabs->execute([$p['id_personagem']]);
+        $p['habilidades'] = $stmtHabs->fetchAll(PDO::FETCH_ASSOC);
+
+        // Bloqueio / Esquiva fallbacks
+        $p['qt_bloqueio'] = $p['qt_bloqueio'] ?? 0;
+        $p['qt_esquiva'] = $p['qt_esquiva'] ?? ($p['qt_defesa'] ?? 10);
+    }
+    unset($p);
+
+    echo json_encode(['sucesso' => true, 'personagens' => $personagens]);
+    exit;
+}
+
 if (!isset($_SESSION['usuario'])) {
     header('Location: index.php');
     exit;
 }
 
-require_once __DIR__ . '/../app/config/database.php';
-$pdo = Database::getConexao();
-
-// ============================================================
-// FUNÇÕES
-// ============================================================
-
-/** Gera UUID v4 (36 chars) conforme RFC 4122. */
-function guidv4(): string {
-    $data    = random_bytes(16);
-    $data[6] = chr(ord($data[6]) & 0x0f | 0x40);
-    $data[8] = chr(ord($data[8]) & 0x3f | 0x80);
-    return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
-}
 
 // ============================================================
 // ENDPOINTS AJAX (POST)
@@ -128,8 +220,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             VALUES (?, ?, 'pendente', NOW(), DATE_ADD(NOW(), INTERVAL 7 DAY))
         ")->execute([$campaign_id, $token]);
 
-        $link = 'https://' . $_SERVER['HTTP_HOST'] . '/TABLE-main/pages/invite.php?token=' . $token;
+        $link = 'https://' . $_SERVER['HTTP_HOST'] . '/TABLE%20-%2012052026/TABLE-main/pages/invite.php?token=' . $token;
         echo json_encode(['sucesso' => true, 'link' => $link, 'token' => $token]);
+        exit;
+    }
+
+    if ($_POST['action'] === 'remover_personagem') {
+        $campaign_id = (int) ($_POST['campaign_id'] ?? 0);
+        $personagem_id = (int) ($_POST['personagem_id'] ?? 0);
+
+        // Verifica permissão: mestre da campanha ou dono do personagem
+        $stmt = $pdo->prepare("
+            SELECT c.id_usuario_mestre, p.id_usuario as id_dono
+            FROM tb_campanha c
+            JOIN tb_campanha_personagem cp ON c.id_campanha = cp.id_campanha
+            JOIN tb_personagem p ON cp.id_personagem = p.id_personagem
+            WHERE c.id_campanha = ? AND p.id_personagem = ?
+        ");
+        $stmt->execute([$campaign_id, $personagem_id]);
+        $vinculo = $stmt->fetch();
+
+        if ($vinculo && ($vinculo['id_usuario_mestre'] == $usuario_id || $vinculo['id_dono'] == $usuario_id)) {
+            $pdo->prepare("DELETE FROM tb_campanha_personagem WHERE id_campanha = ? AND id_personagem = ?")
+                ->execute([$campaign_id, $personagem_id]);
+            echo json_encode(['sucesso' => true]);
+        } else {
+            echo json_encode(['sucesso' => false, 'mensagem' => 'Permissão negada.']);
+        }
+        exit;
+    }
+
+    if ($_POST['action'] === 'sair_campanha') {
+        $campaign_id = (int) ($_POST['campaign_id'] ?? 0);
+
+        // Segurança: verifica se o usuário logado ainda possui personagem na campanha
+        $stmtCheck = $pdo->prepare("
+            SELECT COUNT(*) as total 
+              FROM tb_campanha_personagem cp
+              JOIN tb_personagem p ON cp.id_personagem = p.id_personagem
+             WHERE cp.id_campanha = ? AND p.id_usuario = ?
+        ");
+        $stmtCheck->execute([$campaign_id, $usuario_id]);
+        $res = $stmtCheck->fetch();
+
+        if ($res && (int)$res['total'] > 0) {
+            echo json_encode(['sucesso' => false, 'mensagem' => 'Por favor, retire primeiro o seu personagem da campanha clicando no botão "Sair" do seu personagem.']);
+            exit;
+        }
+
+        // Se não tem personagem vinculado à campanha, remove o usuário da campanha
+        $pdo->prepare("
+            DELETE FROM tb_campanha_usuario
+             WHERE id_campanha = ? AND id_usuario = ?
+        ")->execute([$campaign_id, $usuario_id]);
+
+        echo json_encode(['sucesso' => true]);
         exit;
     }
 
@@ -140,18 +285,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 // ============================================================
 // DADOS DA PÁGINA
 // ============================================================
-$stmt     = $pdo->query("SELECT id_sistema, nm_sistema FROM tb_sistema ORDER BY nm_sistema ASC");
+$stmt = $pdo->prepare("
+    SELECT DISTINCT s.id_sistema, s.nm_sistema 
+    FROM tb_sistema s
+    LEFT JOIN tb_usuario u ON s.id_usuario_criador = u.id_usuario
+    LEFT JOIN tb_usuario_sistema us ON s.id_sistema = us.id_sistema
+    WHERE s.id_usuario_criador = ? 
+       OR u.tp_cargo = 'admin' 
+       OR s.id_usuario_criador IS NULL 
+       OR us.id_usuario = ?
+    ORDER BY s.nm_sistema ASC
+");
+$stmt->execute([$_SESSION['usuario']['id'], $_SESSION['usuario']['id']]);
 $sistemas = $stmt->fetchAll();
 
 $campanhaDados       = null;
 $PersonagemsCampanha = [];
 $combatesCampanha    = [];
 $atributosSistema    = [];
+$jogadoresCampanha   = [];
 
 $id_campanha = $_GET['id'] ?? null;
 if ($id_campanha) {
     $stmt = $pdo->prepare("
-        SELECT c.*, s.nm_sistema
+        SELECT c.*, s.nm_sistema, s.ds_background
           FROM tb_campanha c
           LEFT JOIN tb_sistema s ON c.id_sistema = s.id_sistema
          WHERE c.id_campanha = ?
@@ -161,14 +318,10 @@ if ($id_campanha) {
 
     if ($campanhaDados) {
         $stmt = $pdo->prepare("
-            SELECT p.*, s.nm_sistema, cl.nm_classe, o.nm_origem
+            SELECT DISTINCT p.*, s.nm_sistema, p.id_usuario as id_dono, cp.fl_publico
               FROM tb_campanha_personagem cp
               JOIN tb_personagem p  ON cp.id_personagem = p.id_personagem
               LEFT JOIN tb_sistema s ON p.id_sistema = s.id_sistema
-              LEFT JOIN tb_personagem_classe pc ON p.id_personagem = pc.id_personagem
-              LEFT JOIN tb_classe cl ON pc.id_classe = cl.id_classe
-              LEFT JOIN tb_personagem_origem po ON p.id_personagem = po.id_personagem
-              LEFT JOIN tb_origem o ON po.id_origem = o.id_origem
              WHERE cp.id_campanha = ?
         ");
         $stmt->execute([$id_campanha]);
@@ -183,7 +336,40 @@ if ($id_campanha) {
             ");
             $stmtAttr->execute([$Personagem['id_personagem']]);
             $Personagem['atributos'] = $stmtAttr->fetchAll();
+
+            // Buscar Classe para o Escudo
+            $stmtCl = $pdo->prepare("SELECT c.nm_classe FROM tb_classe c JOIN tb_personagem_classe pc ON c.id_classe = pc.id_classe WHERE pc.id_personagem = ? LIMIT 1");
+            $stmtCl->execute([$Personagem['id_personagem']]);
+            $cl = $stmtCl->fetch();
+            $Personagem['nm_classe'] = $cl ? $cl['nm_classe'] : 'Mundano';
+
+            // Buscar Origem para o Escudo
+            $stmtOr = $pdo->prepare("SELECT o.nm_origem FROM tb_origem o JOIN tb_personagem_origem po ON o.id_origem = po.id_origem WHERE po.id_personagem = ? LIMIT 1");
+            $stmtOr->execute([$Personagem['id_personagem']]);
+            $or = $stmtOr->fetch();
+            $Personagem['nm_origem'] = $or ? $or['nm_origem'] : 'Cidadão';
+
+            // Buscar Itens do Personagem (Inventário) para o Escudo
+            $stmtItens = $pdo->prepare("
+                SELECT i.*, pi.qt_quantidade
+                FROM tb_personagem_item pi
+                JOIN tb_item i ON pi.id_item = i.id_item
+                WHERE pi.id_personagem = ?
+            ");
+            $stmtItens->execute([$Personagem['id_personagem']]);
+            $Personagem['itens'] = $stmtItens->fetchAll();
+
+            // Buscar Habilidades/Rituais/Poderes do Personagem para o Escudo
+            $stmtHabs = $pdo->prepare("
+                SELECT h.*
+                FROM tb_habilidade_personagem hp
+                JOIN tb_habilidade h ON hp.id_habilidade = h.id_habilidade
+                WHERE hp.id_personagem = ?
+            ");
+            $stmtHabs->execute([$Personagem['id_personagem']]);
+            $Personagem['habilidades'] = $stmtHabs->fetchAll();
         }
+        unset($Personagem);
 
         $stmtSisAttr = $pdo->prepare("SELECT * FROM tb_atributo WHERE id_sistema = ? ORDER BY id_atributo ASC");
         $stmtSisAttr->execute([$campanhaDados['id_sistema']]);
@@ -191,7 +377,7 @@ if ($id_campanha) {
 
         $stmt = $pdo->prepare("
             SELECT c.*,
-                   (SELECT SUM(m.qt_vida)
+                   (SELECT SUM(m.qt_vd * cm.qt_quantidade)
                       FROM tb_monstro m
                       JOIN tb_combate_monstro cm ON m.id_monstro = cm.id_monstro
                      WHERE cm.id_combate = c.id_combate) AS vd_total
@@ -199,6 +385,88 @@ if ($id_campanha) {
         ");
         $stmt->execute([$id_campanha]);
         $combatesCampanha = $stmt->fetchAll();
+
+        foreach ($combatesCampanha as &$comb) {
+            $stmtM = $pdo->prepare("
+                SELECT m.* 
+                FROM tb_monstro m
+                JOIN tb_combate_monstro cm ON m.id_monstro = cm.id_monstro
+                WHERE cm.id_combate = ?
+            ");
+            $stmtM->execute([$comb['id_combate']]);
+            $comb['monstros'] = $stmtM->fetchAll();
+        }
+        unset($comb);
+
+        // Buscar participantes da campanha (Mestre + Jogadores) e seus personagens vinculados
+        $stmtJog = $pdo->prepare("
+            SELECT DISTINCT 
+                   u.id_usuario, 
+                   u.nm_exibicao, 
+                   u.nm_usuario, 
+                   u.ds_foto as foto_usuario,
+                   u.ds_email,
+                   u.dt_nascimento,
+                   u.ds_bio,
+                   CASE WHEN u.id_usuario = c.id_usuario_mestre THEN 'mestre' ELSE 'jogador' END as papel_campanha,
+                   p.id_personagem, 
+                   p.nm_personagem, 
+                   p.ds_foto as foto_personagem,
+                   cp.fl_publico
+              FROM tb_usuario u
+              JOIN tb_campanha c ON c.id_campanha = ?
+              LEFT JOIN tb_campanha_usuario cu ON u.id_usuario = cu.id_usuario AND cu.id_campanha = c.id_campanha
+              LEFT JOIN tb_personagem p ON p.id_usuario = u.id_usuario AND p.fl_ativo = 1 AND p.id_personagem IN (
+                  SELECT cp2.id_personagem FROM tb_campanha_personagem cp2 WHERE cp2.id_campanha = c.id_campanha
+              )
+              LEFT JOIN tb_campanha_personagem cp ON cp.id_personagem = p.id_personagem AND cp.id_campanha = c.id_campanha
+             WHERE u.id_usuario = c.id_usuario_mestre OR cu.id_usuario IS NOT NULL
+        ");
+        $stmtJog->execute([$id_campanha]);
+        $jogadoresCampanha = $stmtJog->fetchAll(PDO::FETCH_ASSOC);
+
+        $jogadoresAgrupados = [];
+        foreach ($jogadoresCampanha as $row) {
+            $uid = (int)$row['id_usuario'];
+            if (!isset($jogadoresAgrupados[$uid])) {
+                $jogadoresAgrupados[$uid] = [
+                    'id_usuario'     => $row['id_usuario'],
+                    'nm_exibicao'    => $row['nm_exibicao'],
+                    'nm_usuario'     => $row['nm_usuario'],
+                    'foto_usuario'   => $row['foto_usuario'],
+                    'ds_email'       => $row['ds_email'],
+                    'dt_nascimento'  => $row['dt_nascimento'],
+                    'ds_bio'         => $row['ds_bio'],
+                    'papel_campanha' => $row['papel_campanha'],
+                    'personagens'    => []
+                ];
+            }
+            if (!empty($row['id_personagem'])) {
+                $jogadoresAgrupados[$uid]['personagens'][] = [
+                    'id_personagem'   => $row['id_personagem'],
+                    'nm_personagem'   => $row['nm_personagem'],
+                    'foto_personagem' => $row['foto_personagem'],
+                    'fl_publico'      => $row['fl_publico'] ?? 0
+                ];
+            }
+        }
+    }
+}
+
+// ------------------------------------------------------------------
+// Lógica de Permissão e Customização Visual (Background)
+// ------------------------------------------------------------------
+$isMaster = false;
+$classeBackground = '';
+
+if ($campanhaDados) {
+    $isMaster = ((int)$campanhaDados['id_usuario_mestre'] === (int)$_SESSION['usuario']['id']);
+    
+    // Tutorial: Para adicionar novos temas, basta adicionar um "case" ou "if" 
+    // verificando o nome do sistema e definindo uma classe CSS correspondente.
+    $nomeSistemaLower = strtolower($campanhaDados['nm_sistema'] ?? '');
+    if (strpos($nomeSistemaLower, 'ordem paranormal') !== false) {
+        $classeBackground = 'tema-ordem-paranormal';
     }
 }
 ?>
@@ -207,15 +475,52 @@ if ($id_campanha) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TABLE | Criar Campanha</title>
+    <title>TABLE | <?= $campanhaDados ? htmlspecialchars($campanhaDados['nm_campanha']) : 'Nova Campanha' ?></title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="shortcut icon" href="../img/logo_icone.png" type="image/x-icon">
     <link rel="stylesheet" href="../css/nav-footer.css">
     <link rel="stylesheet" href="../css/criar-campanha.css?v=2.2">
+    <link rel="stylesheet" href="../css/table-modal.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <!-- SDK dddice para animação 3D no Escudo do Mestre -->
     <script src="https://cdn.dddice.com/js/dddice-latest.js"></script>
+    <script src="../js/table-modal.js"></script>
     <style>
+        /* ── CORREÇÕES DE DESIGN - EXPANSÃO DAS FICHAS NO ESCUDO ── */
+        .card-agente-compacto {
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            overflow: hidden !important;
+            max-height: 600px !important;
+            cursor: pointer !important;
+        }
+        .card-agente-compacto.recolhido {
+            max-height: 85px !important;
+            border-color: rgba(255,255,255,0.06) !important;
+        }
+        .card-agente-compacto.recolhido .toggle-escudo-ficha {
+            transform: rotate(0deg) !important;
+        }
+        .card-agente-compacto:not(.recolhido) .toggle-escudo-ficha {
+            transform: rotate(180deg) !important;
+            color: var(--premium-accent) !important;
+        }
+        .card-agente-compacto.recolhido .atributos-agente-p1,
+        .card-agente-compacto.recolhido .status-bars-p1,
+        .card-agente-compacto.recolhido .compacto-footer {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            transition: opacity 0.2s ease !important;
+        }
+        .card-agente-compacto:not(.recolhido) .atributos-agente-p1,
+        .card-agente-compacto:not(.recolhido) .status-bars-p1,
+        .card-agente-compacto:not(.recolhido) .compacto-footer {
+            opacity: 1 !important;
+            transition: opacity 0.4s ease 0.1s !important;
+        }
+
         /* ── CANVAS dddice — fullscreen overlay durante a animação ── */
         #dddice-canvas-escudo {
             position: fixed;
@@ -263,6 +568,16 @@ if ($id_campanha) {
             transition: transform 0.38s cubic-bezier(0.34,1.56,0.64,1);
             min-width: 300px;
             cursor: pointer;
+        }
+        
+        @media (max-width: 768px) {
+            #escudo-result-card {
+                padding: 30px 20px;
+                min-width: 260px;
+            }
+            #escudo-result-total {
+                font-size: 4.5rem !important;
+            }
         }
         #escudo-result-popup.show #escudo-result-card { transform: scale(1) translateY(0); }
 
@@ -378,6 +693,8 @@ if ($id_campanha) {
         }
         #escudo-status-dot.ok      { background: #2ecc71; box-shadow: 0 0 7px #2ecc71; }
         #escudo-status-dot.loading { background: var(--premium-accent); animation: blink 0.9s infinite; }
+        #escudo-status-dot.local   { background: #3498db; box-shadow: 0 0 7px #3498db; }
+        #escudo-status-dot.error   { background: #e74c3c; box-shadow: 0 0 7px #e74c3c; }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
 
         /* Resumo da seleção */
@@ -463,6 +780,22 @@ if ($id_campanha) {
             pointer-events: none;
         }
         #escudo-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* Card jogador clicável premium */
+        .card-jogador-clicavel {
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+        }
+        .card-jogador-clicavel:hover {
+            transform: translateY(-4px) scale(1.01);
+            background: rgba(139, 92, 246, 0.08) !important;
+            border-color: rgba(139, 92, 246, 0.3) !important;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.5), 0 0 20px rgba(139, 92, 246, 0.15) !important;
+        }
+        body.tema-ordem-paranormal .card-jogador-clicavel:hover {
+            background: rgba(255, 50, 50, 0.08) !important;
+            border-color: rgba(255, 50, 50, 0.3) !important;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.5), 0 0 20px rgba(255, 50, 50, 0.15) !important;
+        }
     </style>
     <style>
         .sistema-showcase { margin-bottom:30px; background:rgba(255,255,255,.05); border-radius:15px; padding:25px; border:1px solid rgba(255,255,255,.1); animation:slideDown .4s ease-out; }
@@ -503,9 +836,236 @@ if ($id_campanha) {
         .btn-card-ficha { background:none; border:1px solid #fff; color:#fff; padding:5px 12px; border-radius:4px; font-weight:700; font-size:.7rem; text-transform:uppercase; cursor:pointer; }
         .btn-card-add   { background:#cd1d1d; border:none; color:#fff; padding:5px 12px; border-radius:4px; font-weight:700; font-size:.7rem; text-transform:uppercase; cursor:pointer; }
         .lista-ameacas-cards { display:flex; flex-direction:column; gap:5px; }
+
+        /* Vitrine de Sistema Estilo Clean (Sem Blocos) */
+        .sistema-showcase-clean {
+            padding: 10px 0;
+            margin-bottom: 30px;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .sistema-clean-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .cartaz-sistema-clean {
+            width: 150px;
+            height: 85px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            flex-shrink: 0;
+        }
+
+        .sistema-clean-header h2 {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #fff;
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: -1px;
+        }
+
+        .sistema-clean-descricao {
+            font-size: 1.05rem;
+            color: #ccc;
+            line-height: 1.6;
+            margin: 0;
+            max-width: 900px;
+        }
+
+        @media (max-width: 768px) {
+            .sistema-clean-header {
+                flex-direction: column;
+                text-align: center;
+                gap: 10px;
+            }
+            .cartaz-sistema-clean {
+                width: 100%;
+                height: 180px;
+            }
+            .sistema-clean-header h2 {
+                font-size: 1.8rem;
+            }
+            .sistema-clean-descricao {
+                text-align: center;
+                font-size: 0.95rem;
+            }
+        }
+
+        /* TEMAS DINÂMICOS - PREMIUM EXPERIENCE */
+        /* Tema: Ordem Paranormal */
+        /* Forçar Cinzel em TUDO no tema Ordem Paranormal, EXCETO ícones */
+        body.tema-ordem-paranormal,
+        body.tema-ordem-paranormal *:not(i):not([class^="fa-"]):not([class*=" fa-"]) {
+            font-family: 'Cinzel', serif !important;
+            font-optical-sizing: auto !important;
+        }
+
+        body.tema-ordem-paranormal {
+            --premium-accent: #ff3232 !important;
+            --cor-destaque-claro: #ff4d4d !important;
+            --fundo-cartao-escuro: rgba(10, 5, 5, 0.98) !important;
+            --cor-primaria: #ff3232 !important;
+            
+            background: #050202 !important;
+            color: #fff !important;
+            letter-spacing: 1px;
+        }
+
+        /* Glow e Estilo para Títulos/Botões */
+        body.tema-ordem-paranormal h1, 
+        body.tema-ordem-paranormal h2, 
+        body.tema-ordem-paranormal h3, 
+        body.tema-ordem-paranormal h4,
+        body.tema-ordem-paranormal .btn-escudo-rolar,
+        body.tema-ordem-paranormal .btn-criar-campanha,
+        body.tema-ordem-paranormal .btn-confirmar-rolagem {
+            font-weight: 700 !important;
+            color: white !important;
+            text-shadow: 0 0 10px rgba(255,255,255,0.8) !important;
+            letter-spacing: 2px !important;
+        }
+
+        /* Background Dinâmico - Posicionado debaixo da navbar */
+        body.tema-ordem-paranormal::before {
+            content: '';
+            position: fixed;
+            top: 80px; /* Debaixo da navbar */
+            left: 0; 
+            width: 100%; 
+            height: calc(100vh - 80px);
+            background: radial-gradient(circle at center, transparent 0%, #000 90%),
+                        var(--tema-background, url('../img/ordem_paranormal_background.webp')) center/cover no-repeat;
+            opacity: 0.55;
+            z-index: -1;
+            pointer-events: none;
+            filter: grayscale(0.2) contrast(1.1);
+        }
+    
+        /* Borda da foto de capa e sistema */
+        body.tema-ordem-paranormal .banner-campanha,
+        body.tema-ordem-paranormal .img-sistema-grande {
+            border: 3px solid #ff3232 !important;
+            box-shadow: 0 0 25px rgba(255, 50, 50, 0.5) !important;
+        }
+
+        /* Scrollbars Temáticas - Sangue e Escuridão */
+        body.tema-ordem-paranormal::-webkit-scrollbar,
+        body.tema-ordem-paranormal *::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        body.tema-ordem-paranormal::-webkit-scrollbar-track,
+        body.tema-ordem-paranormal *::-webkit-scrollbar-track {
+            background: #0a0606;
+        }
+        body.tema-ordem-paranormal::-webkit-scrollbar-thumb,
+        body.tema-ordem-paranormal *::-webkit-scrollbar-thumb {
+            background: #8b0000;
+            border-radius: 10px;
+            border: 2px solid #0a0606;
+            transition: background 0.3s;
+        }
+        body.tema-ordem-paranormal::-webkit-scrollbar-thumb:hover,
+        body.tema-ordem-paranormal *::-webkit-scrollbar-thumb:hover {
+            background: #ff3232;
+        }
+
+        /* Overrides de UI Elements */
+        body.tema-ordem-paranormal .btn-escudo-rolar,
+        body.tema-ordem-paranormal .btn-criar-campanha,
+        body.tema-ordem-paranormal .btn-confirmar-rolagem {
+            background: linear-gradient(135deg, #660000 0%, #ff3232 100%) !important;
+            box-shadow: 0 8px 25px rgba(255, 50, 50, 0.2) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+
+        body.tema-ordem-paranormal .btn-escudo-rolar:hover,
+        body.tema-ordem-paranormal .btn-criar-campanha:hover {
+            box-shadow: 0 10px 30px rgba(255, 50, 50, 0.4) !important;
+            filter: brightness(1.2);
+        }
+
+        body.tema-ordem-paranormal .card-formulario-campanha,
+        body.tema-ordem-paranormal .modal-box {
+            border: 1px solid rgba(255, 50, 50, 0.15) !important;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.9), inset 0 0 40px rgba(255, 50, 50, 0.05) !important;
+        }
+
+        body.tema-ordem-paranormal .input-campanha,
+        body.tema-ordem-paranormal .textarea-campanha,
+        body.tema-ordem-paranormal .editor-container,
+        body.tema-ordem-paranormal .editor-toolbar {
+            background: rgba(20, 10, 10, 0.8) !important;
+            border-color: rgba(255, 50, 50, 0.2) !important;
+        }
+
+        body.tema-ordem-paranormal .input-campanha:focus {
+            border-color: #ff3232 !important;
+            box-shadow: 0 0 15px rgba(255, 50, 50, 0.2) !important;
+        }
+
+        body.tema-ordem-paranormal .campanha-info-wrapper,
+        body.tema-ordem-paranormal .card-Personagem {
+            background: rgba(15, 5, 5, 0.6) !important;
+            border: 1px solid rgba(255, 50, 50, 0.1) !important;
+            backdrop-filter: blur(5px);
+        }
+
+        body.tema-ordem-paranormal .descricao-campanha-display {
+            border-left-color: #ff3232 !important;
+        }
+
+        body.tema-ordem-paranormal .btn-ver-ficha:hover {
+            background-color: #ff3232 !important;
+            color: #fff !important;
+            border-color: #ff3232 !important;
+        }
+
+        body.tema-ordem-paranormal .escudo-bolinha {
+            background-color: #ff3232 !important;
+            box-shadow: 0 0 15px rgba(255, 50, 50, 0.6) !important;
+        }
+
+        body.tema-ordem-paranormal #escudo-result-card {
+            border-color: #ff3232 !important;
+            box-shadow: 0 0 80px rgba(255, 50, 50, 0.2) !important;
+        }
+
+        body.tema-ordem-paranormal #escudo-result-total {
+            text-shadow: 0 0 35px rgba(255, 50, 50, 0.8) !important;
+        }
+
+        body.tema-ordem-paranormal .btn-acao.especial {
+            border-color: #ff3232 !important;
+            color: #ff3232 !important;
+            background: rgba(255, 50, 50, 0.1) !important;
+        }
+
+        body.tema-ordem-paranormal .btn-acao.especial:hover {
+            background: #ff3232 !important;
+            color: #fff !important;
+        }
+
+        body.tema-ordem-paranormal .header-sistema-premium {
+            background: linear-gradient(to right, rgba(20, 5, 5, 0.95), rgba(255, 50, 50, 0.1)) !important;
+            border-color: rgba(255, 50, 50, 0.2) !important;
+        }
     </style>
 </head>
-<body class="body-criar-campanha">
+<?php
+$estiloBackground = '';
+if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
+    $bg = htmlspecialchars($campanhaDados['ds_background']);
+    $estiloBackground = "style=\"background-image: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url('$bg'); background-size: cover; background-position: center; background-attachment: fixed;\"";
+}
+?>
+<body class="body-criar-campanha <?= $classeBackground ?>" <?= $estiloBackground ?>>
 
     <!-- Canvas dddice — fullscreen, sobrepõe a tela durante a animação do Escudo -->
     <canvas id="dddice-canvas-escudo"></canvas>
@@ -521,32 +1081,61 @@ if ($id_campanha) {
         </div>
     </div>
 
-    <!-- Toast do Escudo -->
-    <div id="escudo-toast"></div>
-
     <header>
         <div class="logotipo">
             <a href="index.php"><img src="../img/logo_horizontal.png" alt="Logo TABLE"></a>
         </div>
-        <nav>
+
+        <!-- BOTÃO MENU MOBILE (HAMBURGER) -->
+        <div class="menu-toggle" id="mobile-menu-btn">
+            <i class="fas fa-bars"></i>
+        </div>
+
+        <nav id="nav-menu">
             <ul>
                 <li><a href="index.php">Início</a></li>
                 <li><a href="cm-jogar.php">Como Jogar</a></li>
-                <li><a href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a></li>
+                <li><a href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a>
+                </li>
                 <li><a href="criar-mapa.php">Mundos</a></li>
-                <li><a href="rolador-de-dados.php">Dados</a></li>
+                <li><a href="rolagem-de-dados.php">Dados</a></li>
                 <li><a href="sobre-nos.php">Sobre Nós</a></li>
             </ul>
+
+            <!-- BOTÕES MOBILE -->
+            <div class="nav-mobile-footer">
+                <?php if (isset($_SESSION['usuario'])): ?>
+                    <div class="usuario-logado-nav" onclick="window.location.href='perfil.php'">
+                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
+                            alt="Avatar Navbar" class="avatar-nav">
+                        <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
+                    </div>
+                <?php else: ?>
+                    <a href="login.php" class="botao-entrar">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </a>
+                    <a href="cadastro.php" class="botao-cadastrar">
+                        <i class="fas fa-user-plus"></i> Cadastre-se
+                    </a>
+                <?php endif; ?>
+            </div>
         </nav>
+
         <?php if (isset($_SESSION['usuario'])): ?>
-            <div class="usuario-logado-nav" id="nav-logado" onclick="window.location.href='perfil.php'" title="Ir para o Perfil">
-                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>" alt="Avatar Navbar" class="avatar-nav">
+            <div class="usuario-logado-nav desktop-only" id="nav-logado" onclick="window.location.href='perfil.php'"
+                title="Ir para o Perfil">
+                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
+                    alt="Avatar Navbar" class="avatar-nav">
                 <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
             </div>
         <?php else: ?>
-            <div class="botoes-navegacao" id="nav-deslogado">
-                <a href="login.php"    class="botao-entrar"><i class="fas fa-sign-in-alt"></i> Login</a>
-                <a href="cadastro.php" class="botao-cadastrar"><i class="fas fa-user-plus"></i> Cadastre-se</a>
+            <div class="botoes-navegacao desktop-only" id="nav-deslogado">
+                <a href="login.php" class="botao-entrar">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </a>
+                <a href="cadastro.php" class="botao-cadastrar">
+                    <i class="fas fa-user-plus"></i> Cadastre-se
+                </a>
             </div>
         <?php endif; ?>
     </header>
@@ -599,40 +1188,96 @@ if ($id_campanha) {
             <!-- TELA 02: DETALHES -->
             <div id="sessao-detalhes" class="sessao-detalhes">
                 <h1 id="display-nome-campanha" class="titulo-campanha-criada">Nome da campanha</h1>
-                <div id="banner-campanha-display" class="banner-campanha escondido"></div>
-                <div class="descricao-campanha-display" id="display-descricao-campanha"><p>Sua campanha aparecerá aqui...</p></div>
+                <div class="campanha-info-wrapper">
+                    <div id="banner-campanha-display" class="banner-campanha escondido"></div>
+                    <div class="descricao-campanha-display" id="display-descricao-campanha"><p>Sua campanha aparecerá aqui...</p></div>
+                </div>
 
                 <div class="barra-acoes">
-                    <button class="btn-acao" onclick="abrirModal('modal-foto-capa')"><i class="fas fa-image"></i> Foto de Capa</button>
+                    <?php if ($isMaster): ?>
+                        <button class="btn-acao" onclick="abrirModal('modal-foto-capa')"><i class="fas fa-image"></i> Foto de Capa</button>
+                    <?php endif; ?>
+
                     <button class="btn-acao" onclick="abrirModalPersonagens()"><i class="fas fa-user-plus"></i> Adicionar Personagem</button>
-                    <button class="btn-acao" onclick="abrirModalConvite()"><i class="fas fa-link"></i> Convidar Jogadores</button>
-                    <button class="btn-acao" onclick="irParaEditar()"><i class="fas fa-edit"></i> Editar Campanha</button>
-                    <button class="btn-acao" onclick="irParaCombate()"><i class="fas fa-skull-crossbones"></i> Criar Combate</button>
-                    <button class="btn-acao especial" onclick="irParaEscudo()"><i class="fas fa-shield-halved"></i> Escudo do Mestre</button>
+
+                    <?php if ($isMaster): ?>
+                        <button class="btn-acao" onclick="abrirModalConvite()"><i class="fas fa-link"></i> Convidar Jogadores</button>
+                    <?php endif; ?>
+
+                    <?php if (!$isMaster): ?>
+                        <button class="btn-acao" style="background: rgba(255, 77, 77, 0.1); border-color: rgba(255, 77, 77, 0.3); color: #ff4d4d;" onclick="sairDaCampanha()"><i class="fas fa-sign-out-alt"></i> Sair da Campanha</button>
+                    <?php endif; ?>
+
+                    <?php if ($isMaster): ?>
+                        <button class="btn-acao" onclick="irParaEditar()"><i class="fas fa-edit"></i> Editar Campanha</button>
+                        <button class="btn-acao" onclick="novoCombate()"><i class="fas fa-skull-crossbones"></i> Criar Combate</button>
+                        <button class="btn-acao especial" onclick="irParaEscudo()"><i class="fas fa-shield-halved"></i> Escudo do Mestre</button>
+                    <?php endif; ?>
                 </div>
 
                 <div class="sub-nav-campanha">
                     <a href="javascript:void(0)" class="link-sub-nav ativa" id="aba-personagens" onclick="switchDashboardTab('personagens')">Personagens</a>
                     <a href="javascript:void(0)" class="link-sub-nav" id="aba-combates" onclick="switchDashboardTab('combates')">Combates</a>
+                    <a href="javascript:void(0)" class="link-sub-nav" id="aba-jogadores" onclick="switchDashboardTab('jogadores')">Jogadores</a>
                 </div>
 
                 <div class="lista-Personagems" id="lista-Personagems">
                     <?php if (empty($PersonagemsCampanha)): ?>
                         <p style="text-align:center;opacity:.5;margin-top:20px;">Nenhum personagem na campanha ainda.</p>
                     <?php endif; ?>
-                    <?php foreach ($PersonagemsCampanha as $Personagem): ?>
+                    <?php foreach ($PersonagemsCampanha as $Personagem): 
+                        $isMaster = ((int)$campanhaDados['id_usuario_mestre'] === (int)$_SESSION['usuario']['id']);
+                        $isOwner  = ((int)$Personagem['id_dono'] === (int)$_SESSION['usuario']['id']);
+                        $flPublico = (int)($Personagem['fl_publico'] ?? 0);
+                        $podeVerFicha = $isMaster || $isOwner || ($flPublico === 1);
+                    ?>
                         <div class="card-Personagem">
                             <div class="avatar-Personagem">
                                 <img src="<?= !empty($Personagem['ds_foto']) ? $Personagem['ds_foto'] : '../img/uploads/perfil/avatar1.png' ?>" alt="Avatar">
                             </div>
                             <div class="info-Personagem">
-                                <h3><?= htmlspecialchars($Personagem['nm_personagem']) ?></h3>
-                                <p><?= htmlspecialchars($Personagem['nm_sistema'] . ' - ' . $Personagem['nm_classe']) ?></p>
-                                <span>Nexus: <?= $Personagem['qt_nivel'] ?>%</span>
+                                <h3 style="display: flex; align-items: center; gap: 8px;">
+                                    <?= htmlspecialchars($Personagem['nm_personagem']) ?>
+                                    <?php if ((int)$Personagem['id_dono'] === (int)$campanhaDados['id_usuario_mestre']): ?>
+                                        <span style="background: rgba(255, 77, 77, 0.15); color: #ff4d4d; font-weight: 800; font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(255,77,77,0.2);">NPC</span>
+                                    <?php endif; ?>
+                                </h3>
+                                <p><?= htmlspecialchars($Personagem['nm_sistema'] ?? 'Sistema Desconhecido') ?></p>
                             </div>
-                            <button class="btn-ver-ficha" onclick="window.location.href='exibir-ficha.php?id=<?= $Personagem['id_personagem'] ?>'">
-                                <i class="fas fa-eye"></i> Ver Ficha
-                            </button>
+                            <div class="acoes-Personagem-card" style="display: flex; gap: 10px; align-items: center;">
+                                <?php if ($podeVerFicha): ?>
+                                    <button class="btn-ver-ficha" onclick="window.location.href='exibir-ficha.php?id=<?= $Personagem['id_personagem'] ?>'">
+                                        <i class="fas fa-eye"></i> Ver
+                                    </button>
+                                <?php else: ?>
+                                    <button class="btn-ver-ficha desabilitado" style="opacity: 0.4; cursor: not-allowed; display: flex; align-items: center; gap: 6px;" title="Esta ficha está privada somente para o Mestre.">
+                                        <i class="fas fa-eye-slash"></i> Privada
+                                    </button>
+                                <?php endif; ?>
+
+                                <?php if ($isOwner && !$isMaster): ?>
+                                    <!-- Botão de Visibilidade para o Dono -->
+                                    <button class="btn-visibilidade" 
+                                            onclick="toggleVisibilidade(<?= $Personagem['id_personagem'] ?>, <?= $flPublico === 1 ? 0 : 1 ?>)" 
+                                            style="border-radius: 20px; font-weight: 600; font-size: 0.8rem; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 6px; padding: 8px 15px; border: 1px solid <?= $flPublico === 1 ? 'rgba(0, 200, 100, 0.3)' : 'rgba(255, 255, 255, 0.15)' ?>; background: <?= $flPublico === 1 ? 'rgba(0, 200, 100, 0.05)' : 'rgba(255, 255, 255, 0.03)' ?>; color: <?= $flPublico === 1 ? '#00c864' : '#bbb' ?>;"
+                                            title="Clique para alternar a visibilidade da ficha">
+                                        <i class="fas <?= $flPublico === 1 ? 'fa-globe' : 'fa-lock' ?>"></i> 
+                                        <?= $flPublico === 1 ? 'Pública' : 'Privada' ?>
+                                    </button>
+                                <?php elseif (!$isOwner && !$isMaster && $flPublico === 1): ?>
+                                    <span style="font-size: 0.75rem; color: #00c864; background: rgba(0, 200, 100, 0.1); padding: 4px 10px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">
+                                        <i class="fas fa-globe"></i> Pública
+                                    </span>
+                                <?php endif; ?>
+
+                                <?php if ($isMaster || $isOwner): ?>
+                                    <button class="btn-remover-personagem" 
+                                            onclick="removerPersonagem(<?= $Personagem['id_personagem'] ?>, '<?= $isOwner && !$isMaster ? 'sair' : 'remover' ?>')"
+                                            style="color: #ff4d4d; border: 1px solid rgba(255,77,77,0.3); padding: 8px 15px; border-radius: 20px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 6px; background: rgba(255,77,77,0.05);">
+                                        <i class="fas fa-sign-out-alt"></i> <?= $isOwner && !$isMaster ? 'Sair' : 'Tirar' ?>
+                                    </button>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -644,10 +1289,93 @@ if ($id_campanha) {
                     <?php foreach ($combatesCampanha as $combate): ?>
                         <div class="card-combate">
                             <h3><?= htmlspecialchars($combate['nm_combate']) ?></h3>
-                            <p>VD: <?= $combate['vd_total'] ?: 0 ?> (vida total)</p>
+                            <p>VD Total: <?= $combate['vd_total'] ?: 0 ?></p>
                             <div class="card-combate-footer">
                                 <button class="btn-remover-combate" onclick="removerCombate(<?= $combate['id_combate'] ?>, this)"><i class="fas fa-trash"></i> Remover</button>
-                                <button class="btn-editar-combate"><i class="fas fa-edit"></i> Editar</button>
+                                <button class="btn-editar-combate" onclick="editarCombate(<?= $combate['id_combate'] ?>)"><i class="fas fa-edit"></i> Editar</button>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+
+                <div class="lista-Personagems escondido" id="lista-jogadores">
+                    <?php if (empty($jogadoresAgrupados)): ?>
+                        <p style="text-align:center;opacity:.5;margin-top:20px;">Nenhum participante na campanha ainda.</p>
+                    <?php endif; ?>
+                    <?php foreach ($jogadoresAgrupados as $jog): 
+                        $fotoUsuario = !empty($jog['foto_usuario']) ? $jog['foto_usuario'] : '../img/uploads/perfil/avatar1.png';
+                        $nomeUsuario = htmlspecialchars(!empty($jog['nm_exibicao']) ? $jog['nm_exibicao'] : $jog['nm_usuario']);
+                        $eMestre = $jog['papel_campanha'] === 'mestre';
+                    ?>
+                        <div class="card-Personagem card-jogador-clicavel" 
+                             style="flex-direction: column; align-items: stretch; gap: 15px; padding: 20px; cursor: pointer;"
+                             onclick="abrirModalJogador(this)"
+                             data-foto="<?= $fotoUsuario ?>"
+                             data-nome="<?= $nomeUsuario ?>"
+                             data-papel="<?= $jog['papel_campanha'] ?>"
+                             data-username="<?= htmlspecialchars($jog['nm_usuario']) ?>"
+                             data-email="<?= htmlspecialchars($jog['ds_email'] ?? 'Não cadastrado') ?>"
+                             data-nascimento="<?= $jog['dt_nascimento'] ? date('d/m/Y', strtotime($jog['dt_nascimento'])) : 'Não cadastrada' ?>"
+                             data-bio="<?= htmlspecialchars($jog['ds_bio'] ?? 'Esse jogador não escreveu nenhuma biografia ainda...') ?>">
+                            <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                                <div style="display: flex; align-items: center; gap: 15px;">
+                                    <div class="avatar-Personagem" style="margin: 0;">
+                                        <img src="<?= $fotoUsuario ?>" alt="Avatar de <?= $nomeUsuario ?>">
+                                    </div>
+                                    <div class="info-Personagem" style="margin: 0; display: flex; flex-direction: column; gap: 4px;">
+                                        <h3 style="margin: 0;"><?= $nomeUsuario ?></h3>
+                                        <div>
+                                            <?php if ($eMestre): ?>
+                                                <span style="background: rgba(157, 122, 255, 0.15); color: var(--cor-destaque-claro); font-weight: 700; font-size: 0.75rem; padding: 3px 10px; border-radius: 20px; border: 1px solid rgba(157,122,255,0.3); display: inline-flex; align-items: center; gap: 4px;">
+                                                    <i class="fas fa-crown" style="font-size: 0.7rem;"></i> Mestre
+                                                </span>
+                                            <?php else: ?>
+                                                <span style="background: rgba(0, 200, 100, 0.15); color: #00c864; font-weight: 700; font-size: 0.75rem; padding: 3px 10px; border-radius: 20px; border: 1px solid rgba(0,200,100,0.3); display: inline-flex; align-items: center; gap: 4px;">
+                                                    <i class="fas fa-user" style="font-size: 0.7rem;"></i> Jogador
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Lista de Personagens/NPCs do participante -->
+                            <div style="background: rgba(0, 0, 0, 0.2); padding: 15px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.05);" onclick="event.stopPropagation();">
+                                <?php if (empty($jog['personagens'])): ?>
+                                    <p style="font-size: 0.85rem; color: #777; font-style: italic; margin: 0;">Nenhum personagem adicionado</p>
+                                <?php else: ?>
+                                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                                        <?php 
+                                        $totalPers = count($jog['personagens']);
+                                        foreach ($jog['personagens'] as $index => $pers): 
+                                            $isLast = ($index === $totalPers - 1);
+                                            $borderStyle = !$isLast ? 'border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 10px;' : '';
+                                            
+                                            $idDonoPers = (int)$jog['id_usuario'];
+                                            $isOwnerPers = ($idDonoPers === (int)$_SESSION['usuario']['id']);
+                                            $flPublicoPers = (int)($pers['fl_publico'] ?? 0);
+                                            $podeVerPers = $isMaster || $isOwnerPers || ($flPublicoPers === 1);
+                                        ?>
+                                            <div style="display: flex; align-items: center; justify-content: space-between; <?= $borderStyle ?>">
+                                                <p style="font-size: 0.9rem; color: #ccc; margin: 0; display: flex; align-items: center; gap: 8px;">
+                                                    Personagem: <strong style="color: #fff;"><?= htmlspecialchars($pers['nm_personagem']) ?></strong>
+                                                    <?php if ($eMestre): ?>
+                                                        <span style="background: rgba(255, 77, 77, 0.15); color: #ff4d4d; font-weight: 800; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(255,77,77,0.2);">NPC</span>
+                                                    <?php endif; ?>
+                                                </p>
+                                                <?php if ($podeVerPers): ?>
+                                                    <button class="btn-ver-ficha" onclick="event.stopPropagation(); window.location.href='exibir-ficha.php?id=<?= $pers['id_personagem'] ?>'" style="margin: 0; padding: 5px 12px; font-size: 0.8rem;">
+                                                        <i class="fas fa-eye"></i> Ver <?= $eMestre ? 'NPC' : 'Personagem' ?>
+                                                    </button>
+                                                <?php else: ?>
+                                                    <button class="btn-ver-ficha desabilitado" onclick="event.stopPropagation();" style="margin: 0; padding: 5px 12px; font-size: 0.8rem; opacity: 0.4; cursor: not-allowed; display: flex; align-items: center; gap: 6px;" title="Esta ficha está privada somente para o Mestre.">
+                                                        <i class="fas fa-eye-slash"></i> Privado
+                                                    </button>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -716,14 +1444,14 @@ if ($id_campanha) {
                     <div class="catalogo-ameacas">
                         <div class="area-banners-combate">
                             <div class="banners-flex">
-                                <div class="banner-card banner-ordem"><img src="../img/ordem-paranormal-icon.png" alt="Ordem Logo"></div>
-                                <div class="banner-card banner-table"><img src="../img/logo_branco.png" alt="TABLE Logo"><span>TABLE</span></div>
-                                <div class="banner-card banner-novas"><span>CRIAR NOVAS CRIATURAS!</span></div>
+                                <div class="banner-card banner-ordem ativo" onclick="selecionarOrigemCriatura('oficial', this)"><img src="../img/ordem-paranormal-icon.png" alt="Ordem Logo"></div>
+                                <div class="banner-card banner-table" onclick="selecionarOrigemCriatura('custom', this)"><img src="../img/logo_branco.png" alt="TABLE Logo"><span>TABLE</span></div>
+                                <div class="banner-card banner-novas" onclick="redirecionarNovaCriatura()"><span>CRIAR NOVAS CRIATURAS!</span></div>
                             </div>
                             <p class="banner-subtexto">Conteúdo oficial da TABLE. Veja mais <a href="#">aqui</a> em breve!</p>
                         </div>
                         <div class="lista-ameacas-header">
-                            <label>Lista de Ameaças</label>
+                            <label>Lista de Criaturas</label>
                             <div class="search-container">
                                 <i class="fas fa-search"></i>
                                 <input type="text" id="busca-ameaca" placeholder="Buscar..." oninput="renderCatalogo()">
@@ -734,13 +1462,13 @@ if ($id_campanha) {
                                 <button class="btn-filtro"        onclick="filtrarPorElemento('Morte',this)">Morte</button>
                                 <button class="btn-filtro"        onclick="filtrarPorElemento('Sangue',this)">Sangue</button>
                                 <button class="btn-filtro"        onclick="filtrarPorElemento('Medo',this)">Medo</button>
-                                <button class="btn-filtro"        onclick="filtrarPorElemento('Realidade',this)">Realidade</button>
+                                <button class="btn-filtro"        onclick="filtrarPorElemento('Energia',this)">Energia</button>
                             </div>
                         </div>
                         <div class="lista-ameacas-cards" id="catalogo-cards"></div>
                     </div>
                     <div class="ameacas-selecionadas">
-                        <h2 class="titulo-ameacas-selecionadas">Ameaças Adicionadas</h2>
+                        <h2 class="titulo-ameacas-selecionadas">Criaturas Adicionadas</h2>
                         <div class="lista-ameacas-cards" id="selecionadas-cards"></div>
                     </div>
                 </div>
@@ -779,16 +1507,17 @@ if ($id_campanha) {
                         </div>
 
                         <!-- Personagens -->
-                        <div id="escudo-tab-personagens" class="escudo-Personagems-grid">
+                        <div id="escudo-tab-personagens" class="escudo-agentes-grid">
                             <?php foreach ($PersonagemsCampanha as $Personagem): ?>
-                                <div class="card-Personagem-compacto">
+                                <div class="card-agente-compacto recolhido" data-id-personagem="<?= $Personagem['id_personagem'] ?>">
                                     <div class="card-compacto-header">
+                                        <i class="fas fa-chevron-down toggle-escudo-ficha" style="float: right; color: rgba(255,255,255,0.4); font-size: 0.8rem; margin-top: 10px; transition: transform 0.3s;"></i>
                                         <h3><?= htmlspecialchars($Personagem['nm_personagem']) ?></h3>
                                         <p><?= htmlspecialchars($Personagem['nm_classe'] ?: 'Mundano') ?> • <?= htmlspecialchars($Personagem['nm_origem'] ?? 'Acadêmico') ?></p>
                                         <span>NEX: <?= $Personagem['qt_nivel'] ?>%</span>
                                     </div>
-                                    <div class="atributos-Personagem-p1">
-                                        <?php foreach (array_slice($Personagem['atributos'], 0, 5) as $attr): ?>
+                                    <div class="atributos-agente-p1">
+                                        <?php foreach ($Personagem['atributos'] as $attr): ?>
                                             <div class="attr-p1-box">
                                                 <span><?= htmlspecialchars($attr['ds_abreviacao']) ?></span>
                                                 <strong><?= $attr['qt_valor'] ?></strong>
@@ -845,8 +1574,8 @@ if ($id_campanha) {
                                     <div class="header-iniciativa">
                                         <h2>Iniciativa</h2>
                                         <div class="controles-turno">
-                                            <button class="btn-turno">Voltar Turno</button>
-                                            <button class="btn-turno">Próximo Turno</button>
+                                            <button class="btn-turno" onclick="voltarTurnoEscudo()">Voltar Turno</button>
+                                            <button class="btn-turno" onclick="proximoTurnoEscudo()">Próximo Turno</button>
                                         </div>
                                     </div>
                                     <div id="lista-iniciativa-escudo"></div>
@@ -865,25 +1594,20 @@ if ($id_campanha) {
                                     <button class="btn-adicionar-investigacao" onclick="novaFichaInvestigacao()">Adicionar</button>
                                 </div>
                                 <div class="investigacao-lista">
-                                    <div class="item-investigacao">
-                                        <h3>Nova Ficha de Investigação</h3>
-                                        <div class="acoes-investigacao">
-                                            <button class="btn-inv-del">Deletar</button>
-                                            <button class="btn-inv-abrir" onclick="abrirFichaInvestigacao()">Abrir</button>
-                                        </div>
-                                    </div>
+                                    <!-- Carregado via LocalStorage JS -->
                                 </div>
                             </div>
                             <div id="inv-modo-detalhe" class="escondido">
-                                <div style="display:flex;justify-content:flex-end;margin-bottom:20px;">
-                                    <button class="btn-voltar-investigacao" onclick="voltarListaInvestigacao()">Voltar</button>
+                                <div style="display:flex;justify-content:flex-end;margin-bottom:20px;gap:10px;">
+                                    <button class="btn-voltar-investigacao" onclick="voltarListaInvestigacao()" style="background:none;border:1px solid rgba(255,255,255,0.2);color:#fff;padding:8px 20px;border-radius:20px;cursor:pointer;">Voltar</button>
+                                    <button class="btn-combate-salvar" onclick="salvarFichaInvestigacao()" style="background:#27ae60;color:#fff;border:none;padding:8px 25px;border-radius:20px;cursor:pointer;font-weight:700;">Salvar Caso</button>
                                 </div>
                                 <div class="form-investigacao" style="background:rgba(0,0,0,.3);padding:30px;border-radius:20px;">
-                                    <div class="campo-investigacao"><label>Nome do caso</label><input type="text" placeholder="Nome do caso"></div>
-                                    <div class="campo-investigacao"><label>Resumo:</label><div class="textarea-p1" contenteditable="true" placeholder="..."></div></div>
-                                    <div class="campo-investigacao"><label>Objetivo:</label><div class="textarea-p1" contenteditable="true" placeholder="..."></div></div>
-                                    <div class="campo-investigacao"><label>Perguntas:</label><div class="textarea-p1" contenteditable="true" placeholder="..."></div></div>
-                                    <div class="campo-investigacao"><label>Pistas:</label><div class="textarea-p1" contenteditable="true" placeholder="..."></div></div>
+                                    <div class="campo-investigacao"><label>Nome do caso</label><input type="text" id="inv-nome-input" placeholder="Nome do caso"></div>
+                                    <div class="campo-investigacao"><label>Resumo:</label><div class="textarea-p1" id="inv-resumo-input" contenteditable="true" placeholder="..."></div></div>
+                                    <div class="campo-investigacao"><label>Objetivo:</label><div class="textarea-p1" id="inv-objetivo-input" contenteditable="true" placeholder="..."></div></div>
+                                    <div class="campo-investigacao"><label>Perguntas:</label><div class="textarea-p1" id="inv-perguntas-input" contenteditable="true" placeholder="..."></div></div>
+                                    <div class="campo-investigacao"><label>Pistas:</label><div class="textarea-p1" id="inv-pistas-input" contenteditable="true" placeholder="..."></div></div>
                                 </div>
                             </div>
                         </div>
@@ -896,28 +1620,23 @@ if ($id_campanha) {
                                     <button class="btn-adicionar-investigacao" onclick="novoRelatorioMissao()">Adicionar</button>
                                 </div>
                                 <div class="investigacao-lista">
-                                    <div class="item-investigacao">
-                                        <h3>Nova Ficha de Investigação</h3>
-                                        <div class="acoes-investigacao">
-                                            <button class="btn-inv-del">Deletar</button>
-                                            <button class="btn-inv-abrir" onclick="abrirRelatorioMissao()">Abrir</button>
-                                        </div>
-                                    </div>
+                                    <!-- Carregado via LocalStorage JS -->
                                 </div>
                             </div>
                             <div id="rel-modo-detalhe" class="escondido">
-                                <div style="display:flex;justify-content:flex-end;margin-bottom:20px;">
-                                    <button class="btn-voltar-investigacao" onclick="voltarListaRelatorio()">Voltar</button>
+                                <div style="display:flex;justify-content:flex-end;margin-bottom:20px;gap:10px;">
+                                    <button class="btn-voltar-investigacao" onclick="voltarListaRelatorio()" style="background:none;border:1px solid rgba(255,255,255,0.2);color:#fff;padding:8px 20px;border-radius:20px;cursor:pointer;">Voltar</button>
+                                    <button class="btn-combate-salvar" onclick="salvarFichaRelatorio()" style="background:#27ae60;color:#fff;border:none;padding:8px 25px;border-radius:20px;cursor:pointer;font-weight:700;">Salvar Relatório</button>
                                 </div>
                                 <div class="form-investigacao" style="background:rgba(0,0,0,.3);padding:30px;border-radius:20px;">
-                                    <div class="form-relatorio-row">
-                                        <div class="campo-investigacao"><label>Missão:</label><input type="text" placeholder="Nome do relatório..."></div>
-                                        <div class="campo-investigacao"><label>Equipe:</label><input type="text" placeholder="Nome da equipe..."></div>
+                                    <div class="form-relatorio-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:15px;">
+                                        <div class="campo-investigacao" style="margin-bottom:0;"><label>Missão:</label><input type="text" id="rel-missao-input" placeholder="Nome do relatório..."></div>
+                                        <div class="campo-investigacao" style="margin-bottom:0;"><label>Equipe:</label><input type="text" id="rel-equipe-input" placeholder="Nome da equipe..."></div>
                                     </div>
-                                    <div class="campo-investigacao"><label>Personagens Envolvidos:</label><input type="text" placeholder="..."></div>
-                                    <div class="campo-investigacao"><label>Pistas Encontradas</label><div class="textarea-p1" contenteditable="true" placeholder="Todas as pistas..."></div></div>
-                                    <div class="campo-investigacao"><label>Causalidades</label><div class="textarea-p1" contenteditable="true" placeholder="Mortes, perda de itens..."></div></div>
-                                    <div class="campo-investigacao"><label>Resumo da Missão:</label><div class="textarea-p1" contenteditable="true" placeholder="Resumo e conclusão..."></div></div>
+                                    <div class="campo-investigacao"><label>Personagens Envolvidos:</label><input type="text" id="rel-personagens-input" placeholder="..."></div>
+                                    <div class="campo-investigacao"><label>Pistas Encontradas</label><div class="textarea-p1" id="rel-pistas-input" contenteditable="true" placeholder="Todas as pistas..."></div></div>
+                                    <div class="campo-investigacao"><label>Causalidades</label><div class="textarea-p1" id="rel-casualidades-input" contenteditable="true" placeholder="Mortes, perda de itens..."></div></div>
+                                    <div class="campo-investigacao"><label>Resumo da Missão:</label><div class="textarea-p1" id="rel-resumo-input" contenteditable="true" placeholder="Resumo e conclusão..."></div></div>
                                     <div class="campo-investigacao">
                                         <label>Resultado:</label>
                                         <div class="status-toggle-group">
@@ -972,9 +1691,9 @@ if ($id_campanha) {
                         <!-- Anotações -->
                         <div id="escudo-tab-anotacoes" class="escondido">
                             <div class="form-investigacao" style="background:rgba(0,0,0,.3);padding:30px;border-radius:20px;">
-                                <div class="secao-anotacao"><h3>GERAL:</h3><div class="textarea-p1" contenteditable="true" placeholder="Informações gerais ao longo da sessão..."></div></div>
-                                <div class="secao-anotacao"><h3>Sessões Futuras:</h3><div class="textarea-p1" contenteditable="true" placeholder="Notas de possíveis eventos futuros..."></div></div>
-                                <div class="secao-anotacao"><h3>Sessões Anteriores:</h3><div class="textarea-p1" contenteditable="true" placeholder="Eventos importantes que ocorreram..."></div></div>
+                                <div class="secao-anotacao"><h3>GERAL:</h3><div class="textarea-p1" id="anot-geral-input" contenteditable="true" placeholder="Informações gerais ao longo da sessão..."></div></div>
+                                <div class="secao-anotacao" style="margin-top:20px;"><h3>Sessões Futuras:</h3><div class="textarea-p1" id="anot-futuras-input" contenteditable="true" placeholder="Notas de possíveis eventos futuros..."></div></div>
+                                <div class="secao-anotacao" style="margin-top:20px;"><h3>Sessões Anteriores:</h3><div class="textarea-p1" id="anot-anteriores-input" contenteditable="true" placeholder="Eventos importantes que ocorreram..."></div></div>
                             </div>
                         </div>
                     </section>
@@ -997,7 +1716,7 @@ if ($id_campanha) {
                     <li><a href="cm-jogar.php">Como Jogar</a></li>
                     <li><a href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a></li>
                     <li><a href="criar-mapa.php">Mundos</a></li>
-                    <li><a href="rolador-de-dados.php">Dados</a></li>
+                    <li><a href="rolagem-de-dados.php">Dados</a></li>
                     <li><a href="sobre-nos.php">Sobre Nós</a></li>
                 </ul>
             </div>
@@ -1043,7 +1762,7 @@ if ($id_campanha) {
             <i class="fas fa-times modal-close" onclick="fecharModal('modal-adc-Personagems')"></i>
             <h2 style="color:#fff;text-transform:uppercase;letter-spacing:1px;">Adicionar Personagens</h2>
             <p style="color:#888;font-size:.85rem;margin-bottom:20px;">Escolha um personagem para integrar à sua campanha:</p>
-            <div class="modal-lista-Personagems" id="modal-meus-personagens" style="max-height:400px;overflow-y:auto;">
+            <div class="modal-lista-Personagems" id="modal-meus-personagens">
                 <p style="text-align:center;padding:20px;color:#888;">Carregando grimório de personagens...</p>
             </div>
         </div>
@@ -1099,6 +1818,48 @@ if ($id_campanha) {
              style="width:600px;padding:0;background:#0c0816;overflow:hidden;border:1px solid var(--premium-accent);"></div>
     </div>
 
+    <!-- 5. DETALHES DO JOGADOR -->
+    <div class="modal-overlay" id="modal-detalhes-jogador" onclick="fecharModal('modal-detalhes-jogador')">
+        <div class="modal-box" onclick="event.stopPropagation()" style="width: 550px; padding: 0; background: #0c0816; overflow: hidden; border: 1px solid var(--premium-accent); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.8);">
+            <div style="background: linear-gradient(135deg, #1e0b3a, #311c61); padding: 30px 25px; border-bottom: 1px solid rgba(255,255,255,0.1); position: relative;">
+                <button onclick="fecharModal('modal-detalhes-jogador')" style="position: absolute; top: 20px; right: 20px; background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer; opacity: 0.7; transition: opacity 0.2s;"><i class="fas fa-times"></i></button>
+                <div style="display: flex; align-items: center; gap: 20px;">
+                    <div style="width: 90px; height: 90px; border-radius: 50%; border: 3px solid var(--premium-accent); overflow: hidden; box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);">
+                        <img id="player-modal-foto" src="../img/uploads/perfil/avatar1.png" alt="Foto do Jogador" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <div>
+                        <h2 id="player-modal-nome" style="color: #fff; font-weight: 800; font-size: 1.6rem; margin: 0 0 5px 0;">Nome do Jogador</h2>
+                        <span id="player-modal-papel" style="background: rgba(157, 122, 255, 0.15); color: var(--cor-destaque-claro); font-weight: 700; font-size: 0.75rem; padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(157,122,255,0.3); display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fas fa-crown"></i> Mestre
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="padding: 30px 25px; display: flex; flex-direction: column; gap: 20px;">
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <label style="color: var(--premium-accent); font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;">Nome de Usuário (Username):</label>
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 12px 15px; border-radius: 10px; color: #fff; font-weight: 500;" id="player-modal-username">—</div>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <label style="color: var(--premium-accent); font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;">E-mail:</label>
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 12px 15px; border-radius: 10px; color: #fff; font-weight: 500;" id="player-modal-email">—</div>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <label style="color: var(--premium-accent); font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;">Data de Nascimento:</label>
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 12px 15px; border-radius: 10px; color: #fff; font-weight: 500;" id="player-modal-nascimento">—</div>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <label style="color: var(--premium-accent); font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;">Biografia:</label>
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 15px; border-radius: 10px; color: #ccc; font-size: 0.95rem; line-height: 1.5; min-height: 80px; white-space: pre-wrap;" id="player-modal-bio">Esse jogador não escreveu nenhuma biografia ainda...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="../js/nav-global.js" defer></script>
     <script>
     // ============================================================
@@ -1106,12 +1867,28 @@ if ($id_campanha) {
     // ============================================================
     const campanhaInicial            = <?= json_encode($campanhaDados) ?>;
     const campanhaInicialPersonagems = <?= json_encode($PersonagemsCampanha) ?>;
+    const combatesCampanha           = <?= json_encode($combatesCampanha) ?>;
     const idCampanha                 = <?= $id_campanha ? (int)$id_campanha : 'null' ?>;
+    const usuarioLogadoId            = <?= (int)$_SESSION['usuario']['id'] ?>;
+    const isMasterLogado             = <?= $isMaster ? 'true' : 'false' ?>;
 
     // ============================================================
     // INICIALIZAÇÃO
     // ============================================================
     document.addEventListener('DOMContentLoaded', () => {
+        // Lógica de Tema Dinâmico para Seleção de Sistema
+        const selectSistema = document.getElementById('selecao-sistema');
+        if (selectSistema) {
+            selectSistema.addEventListener('change', function() {
+                const texto = this.options[this.selectedIndex].text.toLowerCase();
+                if (texto.includes('ordem paranormal')) {
+                    document.body.classList.add('tema-ordem-paranormal');
+                } else {
+                    document.body.classList.remove('tema-ordem-paranormal');
+                }
+            });
+        }
+
         if (campanhaInicial) {
             document.getElementById('display-nome-campanha').textContent    = campanhaInicial.nm_campanha;
             document.getElementById('display-descricao-campanha').innerHTML = campanhaInicial.ds_descricao;
@@ -1119,6 +1896,19 @@ if ($id_campanha) {
                 const banner = document.getElementById('banner-campanha-display');
                 banner.style.backgroundImage = `url('${campanhaInicial.ds_imagem}')`;
                 banner.classList.remove('escondido');
+            }
+
+            // Inicializar funcionalidades do Escudo do Mestre
+            inicializarFichasEscudo();
+            renderInvestigacoes();
+            renderRelatorios();
+            inicializarAnotacoes();
+
+            // Redirecionamento de abas via query params
+            const urlParams = new URLSearchParams(window.location.search);
+            const activeTab = urlParams.get('tab');
+            if (activeTab === 'combates') {
+                switchDashboardTab('combates');
             }
         }
 
@@ -1162,14 +1952,36 @@ if ($id_campanha) {
             if (data.success) {
                 const sis = data.sistema;
                 showcase.innerHTML = `
-                    <div class="system-hero">
-                        <img src="${sis.ds_imagem||'../img/logo_icone.png'}" alt="${sis.nm_sistema}" class="system-img">
-                        <div class="system-text">
+                    <div class="sistema-showcase-clean">
+                        <div class="sistema-clean-header">
+                            <img src="${sis.ds_imagem||'../img/logo_icone.png'}" alt="${sis.nm_sistema}" class="cartaz-sistema-clean">
                             <h2>${sis.nm_sistema}</h2>
-                            <p>${sis.ds_descricao||'Sem descrição disponível.'}</p>
                         </div>
+                        <p class="sistema-clean-descricao">${sis.ds_descricao||'Sem descrição disponível.'}</p>
                     </div>`;
                 showcase.classList.remove('escondido');
+
+                // Mudar fundo se o sistema tiver um background oficial definido no banco
+                if(sis.ds_background) {
+                    document.body.style.setProperty('--tema-background', `url('${sis.ds_background}')`);
+                    document.body.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url('${sis.ds_background}')`;
+                    document.body.style.backgroundSize = 'cover';
+                    document.body.style.backgroundPosition = 'center';
+                    document.body.style.backgroundAttachment = 'fixed';
+                    document.body.style.transition = 'background 0.5s ease-in-out';
+                } else {
+                    document.body.style.removeProperty('--tema-background');
+                    document.body.style.backgroundImage = 'none';
+                    document.body.style.backgroundColor = '#311c61';
+                }
+
+                // Garantir aplicação robusta do tema oficial de Ordem Paranormal com base no nome do sistema
+                const nomeSisLower = (sis.nm_sistema || '').toLowerCase();
+                if (nomeSisLower.includes('ordem paranormal')) {
+                    document.body.classList.add('tema-ordem-paranormal');
+                } else {
+                    document.body.classList.remove('tema-ordem-paranormal');
+                }
             }
         } catch(e) { console.error('Erro ao carregar sistema:', e); }
     }
@@ -1192,6 +2004,39 @@ if ($id_campanha) {
     function abrirModal(id)  { const m=document.getElementById(id); if(m) m.classList.add('ativo'); }
     function fecharModal(id) { const m=document.getElementById(id); if(m) m.classList.remove('ativo'); }
 
+    function abrirModalJogador(card) {
+        const foto = card.dataset.foto;
+        const nome = card.dataset.nome;
+        const papel = card.dataset.papel;
+        const username = card.dataset.username;
+        const email = card.dataset.email;
+        const nascimento = card.dataset.nascimento;
+        const bio = card.dataset.bio;
+
+        document.getElementById('player-modal-foto').src = foto;
+        document.getElementById('player-modal-nome').textContent = nome;
+        
+        const papelBadge = document.getElementById('player-modal-papel');
+        if (papel === 'mestre') {
+            papelBadge.style.background = 'rgba(157, 122, 255, 0.15)';
+            papelBadge.style.color = 'var(--cor-destaque-claro)';
+            papelBadge.style.borderColor = 'rgba(157,122,255,0.3)';
+            papelBadge.innerHTML = '<i class="fas fa-crown"></i> Mestre';
+        } else {
+            papelBadge.style.background = 'rgba(0, 200, 100, 0.15)';
+            papelBadge.style.color = '#00c864';
+            papelBadge.style.borderColor = 'rgba(0,200,100,0.3)';
+            papelBadge.innerHTML = '<i class="fas fa-user"></i> Jogador';
+        }
+
+        document.getElementById('player-modal-username').textContent = username;
+        document.getElementById('player-modal-email').textContent = email;
+        document.getElementById('player-modal-nascimento').textContent = nascimento;
+        document.getElementById('player-modal-bio').textContent = bio && bio.trim() !== '' ? bio : 'Esse jogador não escreveu nenhuma biografia ainda...';
+
+        abrirModal('modal-detalhes-jogador');
+    }
+
     function irParaEditar() {
         document.getElementById('nome-campanha-edit').value         = document.getElementById('display-nome-campanha').textContent;
         document.getElementById('descricao-campanha-edit').innerHTML = document.getElementById('display-descricao-campanha').innerHTML;
@@ -1204,8 +2049,137 @@ if ($id_campanha) {
     }
 
     function irParaCombate() { showSection('sessao-combate'); renderCatalogo(); }
-    function irParaEscudo()  { document.getElementById('escudo-titulo-campanha').textContent = document.getElementById('display-nome-campanha').textContent; showSection('sessao-escudo'); if (!escudoDddiceSDK) { initEscudoSDK(); inicializarEventosDadosEscudo(); } }
-    function fecharEscudo()  { showSection('sessao-detalhes'); }
+    function irParaEscudo()  { document.getElementById('escudo-titulo-campanha').textContent = document.getElementById('display-nome-campanha').textContent; showSection('sessao-escudo'); if (!escudoDddiceSDK) { initEscudoSDK(); inicializarEventosDadosEscudo(); } iniciarEscudoPolling(); }
+    function fecharEscudo()  { showSection('sessao-detalhes'); pararEscudoPolling(); }
+
+    let escudoPollInterval = null;
+
+    function iniciarEscudoPolling() {
+        if (escudoPollInterval) clearInterval(escudoPollInterval);
+        
+        // Executa imediatamente e depois a cada 3 segundos
+        atualizarFichasEscudoEmTempoReal();
+        escudoPollInterval = setInterval(atualizarFichasEscudoEmTempoReal, 3000);
+    }
+
+    function pararEscudoPolling() {
+        if (escudoPollInterval) {
+            clearInterval(escudoPollInterval);
+            escudoPollInterval = null;
+        }
+    }
+
+    async function atualizarFichasEscudoEmTempoReal() {
+        if (!idCampanha) return;
+        try {
+            const res = await fetch(`criar-campanha.php?action=get_personagens_escudo&id_campanha=${idCampanha}`);
+            const data = await res.json();
+            if (data.sucesso && data.personagens) {
+                // 1. Atualizar array global local
+                campanhaInicialPersonagems = data.personagens;
+                
+                // 2. Atualizar UI do escudo (Aba de Personagens)
+                data.personagens.forEach(p => {
+                    const card = document.querySelector(`.card-agente-compacto[data-id-personagem="${p.id_personagem}"]`);
+                    if (card) {
+                        // Atualizar cabeçalho (NEX, Classe, Origem)
+                        const header = card.querySelector('.card-compacto-header');
+                        if (header) {
+                            const pClasseOrigem = header.querySelector('p');
+                            if (pClasseOrigem) {
+                                pClasseOrigem.textContent = `${p.nm_classe || 'Mundano'} • ${p.nm_origem || 'Cidadão'}`;
+                            }
+                            const spanNex = header.querySelector('span');
+                            if (spanNex) {
+                                spanNex.textContent = `NEX: ${p.qt_nivel}%`;
+                            }
+                        }
+                        
+                        // Atualizar todos os atributos dinamicamente
+                        const attrArea = card.querySelector('.atributos-agente-p1');
+                        if (attrArea && p.atributos) {
+                            attrArea.innerHTML = p.atributos.map(attr => `
+                                <div class="attr-p1-box">
+                                    <span>${attr.ds_abreviacao || attr.nm_atributo.substring(0,3).toUpperCase()}</span>
+                                    <strong>${attr.qt_valor}</strong>
+                                </div>
+                            `).join('');
+                        }
+                        
+                        // Atualizar barras de status
+                        const statusArea = card.querySelector('.status-bars-p1');
+                        if (statusArea) {
+                            const statusConfig = [
+                                { label: 'VIDA', cur: 'qt_vida', max: 'qt_vida_maxima', cls: 'fill-vida-p1' },
+                                { label: 'SANIDADE', cur: 'qt_sanidade', max: 'qt_sanidade_maxima', cls: 'fill-sanidade-p1' },
+                                { label: 'ESFORÇO', cur: 'qt_esforco', max: 'qt_esforco_maximo', cls: 'fill-esforco-p1' }
+                            ];
+                            
+                            statusArea.innerHTML = statusConfig.map(cfg => {
+                                const curVal = parseInt(p[cfg.cur]) || 0;
+                                const maxVal = parseInt(p[cfg.max]) || 1;
+                                const pct = maxVal > 0 ? Math.min(100, Math.max(0, (curVal / maxVal) * 100)) : 0;
+                                return `
+                                    <div class="barra-p1-container">
+                                        <div class="barra-p1-label">${cfg.label}</div>
+                                        <div class="barra-p1-bg">
+                                            <div class="barra-p1-fill ${cfg.cls}" style="width:${pct}%"></div>
+                                            <div class="barra-p1-text">${curVal}/${maxVal}</div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('');
+                        }
+                        
+                        // Atualizar valores do footer compacto (Defesa, Esquiva, Bloqueio)
+                        const footer = card.querySelector('.compacto-footer');
+                        if (footer) {
+                            const statsGrid = footer.querySelector('.footer-stats-grid');
+                            if (statsGrid) {
+                                statsGrid.innerHTML = `
+                                    <div class="footer-stat-item"><span>PE/T</span><strong>1</strong></div>
+                                    <div class="footer-stat-item"><span>DESL</span><strong>9m</strong></div>
+                                    <div class="footer-stat-item"><span>DEF</span><strong>${p.qt_defesa || 10}</strong></div>
+                                    <div class="footer-stat-item"><span>BLQ</span><strong>${p.qt_bloqueio || 0}</strong></div>
+                                    <div class="footer-stat-item"><span>ESQ</span><strong>${p.qt_esquiva || p.qt_defesa || 10}</strong></div>
+                                `;
+                            }
+                        }
+                    }
+                    
+                    // 3. Sincronizar em tempo real com o Combate Ativo (Iniciativa + Detalhes)
+                    if (iniciativaLista && iniciativaLista.length > 0) {
+                        const participante = iniciativaLista.find(part => part.tipo === 'Personagem' && part.id_personagem == p.id_personagem);
+                        if (participante) {
+                            participante.qt_vida = parseInt(p.qt_vida) || 0;
+                            participante.qt_vida_maxima = parseInt(p.qt_vida_maxima) || 1;
+                            participante.qt_sanidade = parseInt(p.qt_sanidade) || 0;
+                            participante.qt_sanidade_maxima = parseInt(p.qt_sanidade_maxima) || 1;
+                            participante.qt_esforco = parseInt(p.qt_esforco) || 0;
+                            participante.qt_esforco_maximo = parseInt(p.qt_esforco_maximo) || 1;
+                            participante.qt_defesa = parseInt(p.qt_defesa) || 10;
+                            participante.atributos = p.atributos;
+                            participante.itens = p.itens;
+                            participante.habilidades = p.habilidades;
+                            participante.nm_classe = p.nm_classe;
+                            participante.nm_origem = p.nm_origem;
+                            
+                            // Re-renderizar track de iniciativa do combate ativo
+                            renderListaIniciativa();
+                            
+                            // Se o participante selecionado for este personagem, atualizar o painel de detalhes na hora
+                            if (participanteSelecionado && participanteSelecionado.id_personagem == p.id_personagem) {
+                                participanteSelecionado = participante;
+                                renderDetalheParticipante();
+                            }
+                        }
+                    }
+                });
+            }
+        } catch (e) {
+            console.error('Erro na sincronização das fichas no Escudo:', e);
+        }
+    }
 
     // ============================================================
     // CRIAR / EDITAR CAMPANHA
@@ -1310,11 +2284,20 @@ if ($id_campanha) {
     // PERSONAGENS
     // ============================================================
     function switchDashboardTab(tab) {
-        ['personagens','combates'].forEach(t => {
+        ['personagens','combates','jogadores'].forEach(t => {
             const aba   = document.getElementById('aba-'+t);
-            const lista = document.getElementById('lista-'+(t==='personagens'?'Personagems':'combates'));
-            if (t === tab) { if(aba) aba.classList.add('ativa');    if(lista) lista.classList.remove('escondido'); }
-            else           { if(aba) aba.classList.remove('ativa'); if(lista) lista.classList.add('escondido'); }
+            let listId = 'lista-combates';
+            if (t === 'personagens') listId = 'lista-Personagems';
+            if (t === 'jogadores') listId = 'lista-jogadores';
+            
+            const lista = document.getElementById(listId);
+            if (t === tab) { 
+                if(aba) aba.classList.add('ativa');    
+                if(lista) lista.classList.remove('escondido'); 
+            } else { 
+                if(aba) aba.classList.remove('ativa'); 
+                if(lista) lista.classList.add('escondido'); 
+            }
         });
     }
 
@@ -1337,15 +2320,31 @@ if ($id_campanha) {
     }
 
     async function vincularPersonagem(idP) {
+        // Se não for o mestre, limita a no máximo 1 personagem na campanha
+        if (!isMasterLogado) {
+            const meusPersonagens = campanhaInicialPersonagems.filter(p => parseInt(p.id_dono) === usuarioLogadoId);
+            if (meusPersonagens.length >= 1) {
+                alert('Você já possui 1 personagem nesta campanha. Por favor, remova o seu personagem atual para poder adicionar outro.');
+                return;
+            }
+        }
+
         try {
             const res  = await fetch('../app/ajax/adicionar-Personagem-campanha.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id_campanha:idCampanha,id_personagem:idP})});
             const data = await res.json();
-            if (data.success) location.reload(); else alert('Erro: '+data.error);
-        } catch(e) { console.error(e); }
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erro: ' + (data.error || 'Não foi possível adicionar o personagem.'));
+            }
+        } catch(e) { 
+            console.error(e); 
+            alert('Erro de conexão ao tentar adicionar o personagem.');
+        }
     }
 
     async function removerPersonagem(idP) {
-        if (!confirm('Deseja remover este Personagem da campanha?')) return;
+        if (!await TableModal.confirm('Deseja remover este Personagem da campanha?', 'Remover Personagem', 'warning')) return;
         try {
             const res  = await fetch('../app/ajax/remover-Personagem-campanha.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id_campanha:idCampanha,id_personagem:idP})});
             const data = await res.json();
@@ -1354,37 +2353,79 @@ if ($id_campanha) {
     }
 
     async function removerCombate(idComb) {
-        if (!confirm('Deseja excluir este combate?')) return;
+        if (!await TableModal.confirm('Deseja excluir este combate?', 'Excluir Combate', 'warning')) return;
         try {
             const res  = await fetch('../app/ajax/remover-combate.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id_combate:idComb})});
             const data = await res.json();
-            if (data.success) location.reload();
+            if (data.success) {
+                window.location.href = `criar-campanha.php?id=${idCampanha}&tab=combates`;
+            }
         } catch(e) { console.error(e); }
     }
 
     // ============================================================
-    // COMBATE
+    // COMBATE (CRIATURAS E CATÁLOGO)
     // ============================================================
     let ameacasCatalogo = [], ameacasSelecionadas = [], filtroAtual = 'Todos';
+    let origemCriaturaFiltro = 'oficial'; // 'oficial' ou 'custom'
+    let idCombateSendoEditado = null;
 
     async function renderCatalogo() {
         const container = document.getElementById('catalogo-cards');
         const idSis = <?= $campanhaDados ? $campanhaDados['id_sistema'] : 'null' ?>;
+        
         if (ameacasCatalogo.length === 0 && idSis) {
             try {
-                const res  = await fetch(`../app/ajax/get-monstros.php?id_sistema=${idSis}`);
-                const data = await res.json();
-                if (data.success) ameacasCatalogo = data.monstros;
+                // 1. Carrega criaturas oficiais do sistema 1 (Ordem Paranormal)
+                const resOficial = await fetch(`../app/ajax/get-monstros.php?id_sistema=1`);
+                const dataOficial = await resOficial.json();
+                let monstros = [];
+                if (dataOficial.success) {
+                    monstros = dataOficial.monstros;
+                }
+                
+                // 2. Se o sistema da campanha for diferente de 1, carrega também as criaturas do sistema da campanha
+                if (idSis !== 1) {
+                    const resCamp = await fetch(`../app/ajax/get-monstros.php?id_sistema=${idSis}`);
+                    const dataCamp = await resCamp.json();
+                    if (dataCamp.success) {
+                        const idsExistentes = new Set(monstros.map(m => parseInt(m.id_monstro)));
+                        dataCamp.monstros.forEach(m => {
+                            if (!idsExistentes.has(parseInt(m.id_monstro))) {
+                                monstros.push(m);
+                            }
+                        });
+                    }
+                }
+                ameacasCatalogo = monstros;
             } catch(e) { console.error(e); }
         }
+        
         const busca = document.getElementById('busca-ameaca').value.toLowerCase();
-        const filtrados = ameacasCatalogo.filter(a =>
-            a.nm_monstro.toLowerCase().includes(busca) &&
-            (filtroAtual==='Todos' || a.tp_monstro===filtroAtual)
-        );
+        
+        const filtrados = ameacasCatalogo.filter(a => {
+            const bateBusca = a.nm_monstro.toLowerCase().includes(busca);
+            const bateFiltro = (filtroAtual === 'Todos' || a.tp_monstro === filtroAtual);
+            
+            const idMonstroInt = parseInt(a.id_monstro);
+            const idSistemaInt = parseInt(a.id_sistema);
+            
+            let bateOrigem = false;
+            if (origemCriaturaFiltro === 'oficial') {
+                // Criaturas nativas/tradicionais (ID do sistema é 1 e ID do monstro é <= 68)
+                bateOrigem = (idSistemaInt === 1 && idMonstroInt <= 68);
+            } else {
+                // Criaturas criadas pelo mestre no exibir-sistema.php
+                // (Qualquer criatura com ID > 68 ou que pertença ao sistema da campanha se for diferente de 1)
+                bateOrigem = (idSistemaInt === idSis && idMonstroInt > 68) || (idSistemaInt === idSis && idSis !== 1);
+            }
+            
+            return bateBusca && bateFiltro && bateOrigem;
+        });
+        
         container.innerHTML = filtrados.map(a=>`
             <div class="card-ameaca-premium">
-                <img src="${a.ds_imagem||'../img/logo_icone.png'}" class="card-ameaca-img">
+                <img src="${(a.ds_imagem && a.ds_imagem !== '../img/logo_icone.png') ? a.ds_imagem : '../img/uploads/perfil/avatar1.png'}" class="card-ameaca-img">
                 <div class="card-ameaca-body">
                     <h4>${a.nm_monstro}</h4>
                     <div class="card-ameaca-details">
@@ -1393,10 +2434,24 @@ if ($id_campanha) {
                     </div>
                 </div>
                 <div class="card-ameaca-actions">
-                    <button class="btn-card-ficha" onclick="verFichaMonstro(${a.id_monstro})">Ficha</button>
+                    <button class="btn-card-ficha" onclick="verFichaMonstro(${a.id_monstro})">Ficha da Criatura</button>
                     <button class="btn-card-add"   onclick="adicionarAmeaca(${a.id_monstro})">Adicionar</button>
                 </div>
             </div>`).join('');
+    }
+
+    function selecionarOrigemCriatura(origem, element) {
+        origemCriaturaFiltro = origem;
+        document.querySelectorAll('.banners-flex .banner-card').forEach(b => b.classList.remove('ativo'));
+        element.classList.add('ativo');
+        renderCatalogo();
+    }
+
+    function redirecionarNovaCriatura() {
+        const idSis = <?= $campanhaDados ? $campanhaDados['id_sistema'] : 'null' ?>;
+        if (idSis) {
+            window.location.href = `exibir-sistema.php?id=${idSis}&action=criar_criatura`;
+        }
     }
 
     function filtrarPorElemento(el, btn) {
@@ -1421,13 +2476,44 @@ if ($id_campanha) {
         document.getElementById('vd-total-valor').textContent = vd;
     }
 
+    function novoCombate() {
+        idCombateSendoEditado = null;
+        document.getElementById('nome-combate-input').value = '';
+        ameacasSelecionadas = [];
+        renderSelecionadas();
+        irParaCombate();
+    }
+
+    function editarCombate(id) {
+        const combate = combatesCampanha.find(c => parseInt(c.id_combate) === id);
+        if (!combate) return;
+        idCombateSendoEditado = id;
+        document.getElementById('nome-combate-input').value = combate.nm_combate;
+        ameacasSelecionadas = combate.monstros ? [...combate.monstros] : [];
+        renderSelecionadas();
+        irParaCombate();
+    }
+
     async function salvarCombate() {
         const nome = document.getElementById('nome-combate-input').value;
         if (!nome) { alert('Dê um nome ao combate!'); return; }
         try {
-            const res  = await fetch('../app/ajax/salvar-combate.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id_campanha:idCampanha,nome,monstros:ameacasSelecionadas.map(a=>a.id_monstro)})});
+            const payload = {
+                id_campanha: idCampanha,
+                nome: nome,
+                monstros: ameacasSelecionadas.map(a => a.id_monstro)
+            };
+            if (idCombateSendoEditado) {
+                payload.id_combate = idCombateSendoEditado;
+            }
+            const res  = await fetch('../app/ajax/salvar-combate.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
             const data = await res.json();
-            if (data.success) location.reload(); else alert('Erro: '+data.error);
+            if (data.success) {
+                idCombateSendoEditado = null;
+                window.location.href = `criar-campanha.php?id=${idCampanha}&tab=combates`;
+            } else {
+                alert('Erro: '+data.error);
+            }
         } catch(e) { console.error(e); }
     }
 
@@ -1497,14 +2583,64 @@ if ($id_campanha) {
         });
     }
 
+    function inicializarFichasEscudo() {
+        document.querySelectorAll('.card-agente-compacto').forEach(card => {
+            const header = card.querySelector('.card-compacto-header');
+            if (header) {
+                header.style.cursor = 'pointer';
+                header.addEventListener('click', () => {
+                    card.classList.toggle('recolhido');
+                    const chevron = card.querySelector('.toggle-escudo-ficha');
+                    if (chevron) {
+                        if (card.classList.contains('recolhido')) {
+                            chevron.style.transform = 'rotate(0deg)';
+                        } else {
+                            chevron.style.transform = 'rotate(180deg)';
+                        }
+                    }
+                });
+            }
+        });
+    }
+
     function iniciarCombateEscudo(id, nome) {
+        const combate = combatesCampanha.find(c => parseInt(c.id_combate) === id);
+        if (!combate) return;
+
         document.getElementById('escudo-combates-lista').classList.add('escondido');
         document.getElementById('escudo-combate-ativo').classList.remove('escondido');
-        iniciativaLista = [
-            ...campanhaInicialPersonagems.map(a=>({...a,tipo:'Personagem',iniciativa:Math.floor(Math.random()*20)+10})),
-            {nm_personagem:'Criatura de Sangue',qt_vida:60,qt_vida_maxima:60,tipo:'monstro',iniciativa:15,ds_foto:'../img/logo_icone.png'}
-        ].sort((a,b)=>b.iniciativa-a.iniciativa);
+        
+        // Personagens reais da campanha
+        const persList = campanhaInicialPersonagems.map(p => ({
+            ...p,
+            tipo: 'Personagem',
+            iniciativa: Math.floor(Math.random() * 20) + 1,
+            qt_vida: parseInt(p.qt_vida) || 0,
+            qt_vida_maxima: parseInt(p.qt_vida_maxima) || 1,
+            qt_sanidade: parseInt(p.qt_sanidade) || 0,
+            qt_sanidade_maxima: parseInt(p.qt_sanidade_maxima) || 1,
+            qt_esforco: parseInt(p.qt_esforco) || 0,
+            qt_esforco_maximo: parseInt(p.qt_esforco_maximo) || 1,
+            ds_foto: p.ds_foto || '../img/uploads/perfil/avatar1.png'
+        }));
+        
+        // Monstros reais do combate
+        const monstList = (combate.monstros || []).map(m => ({
+            ...m,
+            nm_personagem: m.nm_monstro,
+            tipo: 'monstro',
+            iniciativa: Math.floor(Math.random() * 20) + 1,
+            qt_vida: parseInt(m.qt_vida) || 0,
+            qt_vida_maxima: parseInt(m.qt_vida) || 1,
+            ds_foto: m.ds_imagem && m.ds_imagem !== '../img/logo_icone.png' ? m.ds_imagem : '../img/uploads/perfil/avatar1.png'
+        }));
+        
+        iniciativaLista = [...persList, ...monstList].sort((a, b) => b.iniciativa - a.iniciativa);
+        indexTurno = 0;
+        participanteSelecionado = iniciativaLista[0] || null;
+        
         renderListaIniciativa();
+        renderDetalheParticipante();
     }
 
     function renderListaIniciativa() {
@@ -1524,6 +2660,22 @@ if ($id_campanha) {
     }
 
     function selecionarParticipanteEscudo(i) { indexTurno=i; participanteSelecionado=iniciativaLista[i]; renderListaIniciativa(); renderDetalheParticipante(); }
+
+    function voltarTurnoEscudo() {
+        if (iniciativaLista.length === 0) return;
+        indexTurno = (indexTurno - 1 + iniciativaLista.length) % iniciativaLista.length;
+        participanteSelecionado = iniciativaLista[indexTurno];
+        renderListaIniciativa();
+        renderDetalheParticipante();
+    }
+
+    function proximoTurnoEscudo() {
+        if (iniciativaLista.length === 0) return;
+        indexTurno = (indexTurno + 1) % iniciativaLista.length;
+        participanteSelecionado = iniciativaLista[indexTurno];
+        renderListaIniciativa();
+        renderDetalheParticipante();
+    }
 
     function renderDetalheParticipante() {
         const p=participanteSelecionado; if(!p) return;
@@ -1554,37 +2706,428 @@ if ($id_campanha) {
         </div>`;
     }
 
-    function ajustarRecurso(tipo, val) {
+    async function ajustarRecurso(tipo, val) {
         if (!participanteSelecionado) return;
         const f=tipo==='vida'?'qt_vida':(tipo==='sanidade'?'qt_sanidade':'qt_esforco');
         const m=f+(tipo==='esforco'?'_maximo':'_maxima');
+        
         participanteSelecionado[f]=Math.max(0,Math.min(participanteSelecionado[m]||1,(parseInt(participanteSelecionado[f])||0)+val));
-        renderDetalheParticipante(); renderListaIniciativa();
+        
+        renderDetalheParticipante(); 
+        renderListaIniciativa();
+
+        // Se for um personagem real da campanha, atualiza no banco de dados via AJAX
+        if (participanteSelecionado.tipo === 'Personagem') {
+            const mappedCampo = tipo === 'vida' ? 'VIDA' : (tipo === 'sanidade' ? 'SANIDADE' : 'ESFORÇO');
+            try {
+                await fetch('../app/ajax/atualizar-ficha.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id_personagem: participanteSelecionado.id_personagem,
+                        tipo: 'stat',
+                        campo: mappedCampo,
+                        valor: participanteSelecionado[f]
+                    })
+                });
+            } catch (e) {
+                console.error('Erro ao sincronizar recurso do personagem:', e);
+            }
+        }
+    }
+
+    function rolarDadoEscudoRapido(formula, label) {
+        const match = formula.match(/(\d+)d(\d+)/i);
+        if (!match) return;
+        const qtd = parseInt(match[1]) || 1;
+        const lados = parseInt(match[2]) || 20;
+        
+        let valores = [];
+        let total = 0;
+        for (let i = 0; i < qtd; i++) {
+            const v = Math.floor(Math.random() * lados) + 1;
+            valores.push({ value: v, type: `d${lados}` });
+            total += v;
+        }
+        
+        mostrarResultadoEscudo(total, valores, `${qtd}D${lados} (${label})`);
+        adicionarAoHistoricoEscudo(total, `${qtd}D${lados} • ${label}`);
+        showEscudoToast(`Rolou ${qtd}D${lados} para ${label}: total ${total}`);
     }
 
     function renderSubAbaContent(p) {
-        if (subTabAtiva==='atributos') {
-            const attrs=(p.atributos&&p.atributos.length)?p.atributos:[{ds_abreviacao:'AGI',qt_valor:p.qt_agilidade||0},{ds_abreviacao:'FOR',qt_valor:p.qt_forca||0},{ds_abreviacao:'INT',qt_valor:p.qt_intelecto||0},{ds_abreviacao:'PRE',qt_valor:p.qt_presenca||0},{ds_abreviacao:'VIG',qt_valor:p.qt_vigor||0}];
-            return `<div class="diagrama-atributos-real">${attrs.map((a,i)=>{const angle=(i*2*Math.PI/attrs.length)-(Math.PI/2),r=90,x=150+r*Math.cos(angle),y=150+r*Math.sin(angle);return `<div class="hex-atributo" style="top:${y}px;left:${x}px;transform:translate(-50%,-50%);"><span>${a.ds_abreviacao||a.nm_atributo}</span><strong>${a.qt_valor}</strong></div>`;}).join('')}<div class="texto-central-atributos" style="color:#666;font-size:.7rem;">Atributos</div></div>`;
+        if (subTabAtiva === 'atributos') {
+            const attrs = (p.atributos && p.atributos.length) ? p.atributos : [
+                { ds_abreviacao: 'AGI', qt_valor: p.qt_agilidade || 0 },
+                { ds_abreviacao: 'FOR', qt_valor: p.qt_forca || 0 },
+                { ds_abreviacao: 'INT', qt_valor: p.qt_intelecto || 0 },
+                { ds_abreviacao: 'PRE', qt_valor: p.qt_presenca || 0 },
+                { ds_abreviacao: 'VIG', qt_valor: p.qt_vigor || 0 }
+            ];
+            return `
+                <div class="diagrama-atributos-real" style="position:relative; width:300px; height:300px; margin:0 auto; background:radial-gradient(circle, rgba(139,92,246,0.1) 0%, transparent 70%);">
+                    ${attrs.map((a, i) => {
+                        const angle = (i * 2 * Math.PI / attrs.length) - (Math.PI / 2);
+                        const r = 90;
+                        const x = 150 + r * Math.cos(angle);
+                        const y = 150 + r * Math.sin(angle);
+                        return `
+                            <div class="hex-atributo" style="top:${y}px;left:${x}px;transform:translate(-50%,-50%); position:absolute; background:rgba(12,8,22,0.9); border:2px solid var(--premium-accent); border-radius:10px; width:55px; height:55px; display:flex; flex-direction:column; align-items:center; justify-content:center; box-shadow:0 0 15px rgba(139,92,246,0.2);">
+                                <span style="font-size:0.65rem; color:#888; text-transform:uppercase; font-weight:700;">${a.ds_abreviacao || a.nm_atributo}</span>
+                                <strong style="font-size:1.2rem; color:#fff; font-weight:900;">${a.qt_valor}</strong>
+                            </div>
+                        `;
+                    }).join('')}
+                    <div class="texto-central-atributos" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; pointer-events:none;">
+                        <span style="color:var(--premium-accent); font-size:0.75rem; font-weight:900; letter-spacing:1px; text-transform:uppercase; display:block;">STATUS</span>
+                        <span style="color:#666; font-size:0.6rem; font-weight:700;">DEFESA: ${p.qt_defesa || 10}</span>
+                    </div>
+                </div>
+            `;
         }
-        if (subTabAtiva==='combates') return `<div style="padding:20px;"><h4 style="color:#fff;margin-bottom:15px;font-size:.9rem;text-transform:uppercase;">Ataques e Habilidades</h4><div style="background:rgba(255,255,255,.03);padding:15px;border-radius:12px;border-left:4px solid var(--premium-accent);"><h5 style="margin:0;color:#fff;font-size:.9rem;">Ataque Básico</h5><p style="margin:5px 0 0;font-size:.8rem;color:#888;">Teste: D20 + Pontaria | Dano: 1d10</p></div></div>`;
-        return `<div style="padding:20px;color:#888;font-size:.85rem;">Nenhum ritual ou habilidade especial encontrado.</div>`;
+        
+        if (p.tipo === 'Personagem') {
+            if (subTabAtiva === 'combates') {
+                const itens = p.itens || [];
+                if (itens.length === 0) {
+                    return `<div style="padding:20px; text-align:center; color:#888; font-size:0.85rem;"><i class="fas fa-box-open" style="font-size:1.5rem; display:block; margin-bottom:10px; color:#444;"></i> O inventário deste personagem está vazio.</div>`;
+                }
+                
+                return `
+                    <div style="padding:15px; display:flex; flex-direction:column; gap:10px; max-height:280px; overflow-y:auto; scrollbar-width:thin;">
+                        <h4 style="color:#fff; margin:0 0 5px 0; font-size:0.85rem; text-transform:uppercase; letter-spacing:1px; font-weight:800; color:var(--premium-accent);">Armas e Equipamentos</h4>
+                        ${itens.map(item => `
+                            <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-left:4px solid var(--premium-accent); padding:12px; border-radius:8px; display:flex; flex-direction:column; gap:6px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <h5 style="margin:0; color:#fff; font-size:0.85rem; font-weight:800;">${item.nm_item} <span style="font-size:0.7rem; color:#888; font-weight:400;">(x${item.qt_quantidade})</span></h5>
+                                    <span style="font-size:0.7rem; color:#aaa; font-weight:700; background:rgba(255,255,255,0.05); padding:2px 8px; border-radius:10px;">${item.ds_categoria || 'Item'}</span>
+                                </div>
+                                <p style="margin:0; font-size:0.75rem; color:#aaa; line-height:1.4;">${item.ds_item || 'Sem descrição cadastrada.'}</p>
+                                <div style="display:flex; gap:10px; margin-top:4px;">
+                                    <button class="btn-ajuste" onclick="rolarDadoEscudoRapido('1d20', 'Ataque - ${item.nm_item}')" style="background:rgba(139,92,246,0.15); color:var(--premium-accent); border:1px solid rgba(139,92,246,0.3); padding:4px 10px; border-radius:6px; font-size:0.7rem; cursor:pointer; font-weight:700;"><i class="fas fa-dice-d20"></i> Testar Ataque</button>
+                                    ${item.ds_item && item.ds_item.match(/\d+d\d+/i) ? `
+                                        <button class="btn-ajuste" onclick="rolarDadoEscudoRapido('${item.ds_item.match(/\d+d\d+/i)[0]}', 'Dano - ${item.nm_item}')" style="background:rgba(231,76,60,0.15); color:#e74c3c; border:1px solid rgba(231,76,60,0.3); padding:4px 10px; border-radius:6px; font-size:0.7rem; cursor:pointer; font-weight:700;"><i class="fas fa-fire"></i> Rolar Dano (${item.ds_item.match(/\d+d\d+/i)[0]})</button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            if (subTabAtiva === 'rituais') {
+                const habs = p.habilidades || [];
+                if (habs.length === 0) {
+                    return `<div style="padding:20px; text-align:center; color:#888; font-size:0.85rem;"><i class="fas fa-magic" style="font-size:1.5rem; display:block; margin-bottom:10px; color:#444;"></i> Nenhuma habilidade, poder ou ritual encontrado.</div>`;
+                }
+                
+                return `
+                    <div style="padding:15px; display:flex; flex-direction:column; gap:10px; max-height:280px; overflow-y:auto; scrollbar-width:thin;">
+                        <h4 style="color:#fff; margin:0 0 5px 0; font-size:0.85rem; text-transform:uppercase; letter-spacing:1px; font-weight:800; color:var(--premium-accent);">Habilidades, Poderes e Rituais</h4>
+                        ${habs.map(h => {
+                            const isPoder = (h.tp_habilidade || '').toLowerCase() === 'poder';
+                            const accentColor = isPoder ? '#ff9f43' : '#a855f7';
+                            return `
+                                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-left:4px solid ${accentColor}; padding:12px; border-radius:8px;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                        <h5 style="margin:0; color:#fff; font-size:0.85rem; font-weight:800;">${h.nm_habilidade}</h5>
+                                        <span style="font-size:0.65rem; color:#fff; font-weight:800; background:${accentColor}; padding:2px 8px; border-radius:4px; text-transform:uppercase;">${h.tp_habilidade || 'Habilidade'}</span>
+                                    </div>
+                                    <p style="margin:0; font-size:0.75rem; color:#aaa; line-height:1.4;">${h.ds_habilidade || 'Sem descrição cadastrada.'}</p>
+                                    ${h.ds_habilidade && h.ds_habilidade.match(/\d+d\d+/i) ? `
+                                        <div style="margin-top:8px;">
+                                            <button class="btn-ajuste" onclick="rolarDadoEscudoRapido('${h.ds_habilidade.match(/\d+d\d+/i)[0]}', 'Efeito - ${h.nm_habilidade}')" style="background:rgba(168,85,247,0.15); color:#a855f7; border:1px solid rgba(168,85,247,0.3); padding:4px 10px; border-radius:6px; font-size:0.7rem; cursor:pointer; font-weight:700;"><i class="fas fa-dice"></i> Rolar Efeito (${h.ds_habilidade.match(/\d+d\d+/i)[0]})</button>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            }
+        } else {
+            if (subTabAtiva === 'combates' || subTabAtiva === 'rituais') {
+                return `
+                    <div style="padding:20px; max-height:280px; overflow-y:auto; scrollbar-width:thin;">
+                        <h4 style="color:#fff; margin:0 0 10px 0; font-size:0.85rem; text-transform:uppercase; letter-spacing:1px; font-weight:800; color:#ff4d4d;"><i class="fas fa-skull"></i> Habilidades e Ataques do Monstro</h4>
+                        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-left:4px solid #ff4d4d; padding:15px; border-radius:10px;">
+                            <p style="margin:0; font-size:0.8rem; color:#ccc; line-height:1.6; white-space:pre-wrap;">${p.ds_monstro || 'Nenhum detalhe de ataque cadastrado.'}</p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        return `<div style="padding:20px;color:#888;font-size:.85rem;">Nenhum detalhe encontrado.</div>`;
     }
 
     function switchEscudoSubTab(tab) { subTabAtiva=tab; renderDetalheParticipante(); }
 
     // ============================================================
-    // INVESTIGAÇÕES / RELATÓRIOS
+    // INVESTIGAÇÕES (Persistência Local)
     // ============================================================
+    let indexInvestigacaoEditando = null;
+
+    function obterInvestigacoesLocal() {
+        const key = `campanha_${idCampanha}_investigacoes`;
+        return JSON.parse(localStorage.getItem(key)) || [];
+    }
+
+    function salvarInvestigacoesLocal(lista) {
+        const key = `campanha_${idCampanha}_investigacoes`;
+        localStorage.setItem(key, JSON.stringify(lista));
+    }
+
+    function renderInvestigacoes() {
+        const lista = obterInvestigacoesLocal();
+        const container = document.querySelector('#escudo-tab-investigacoes .investigacao-lista');
+        if (!container) return;
+        
+        if (lista.length === 0) {
+            container.innerHTML = '<p style="text-align:center;padding:20px;color:#888;font-style:italic;">Nenhuma investigação criada ainda.</p>';
+            return;
+        }
+        
+        container.innerHTML = lista.map((inv, idx) => `
+            <div class="card-combate-escudo" style="background:rgba(255,255,255,0.03);padding:20px;border-radius:12px;margin-bottom:15px;display:flex;justify-content:space-between;align-items:center;border:1px solid rgba(255,255,255,0.05);">
+                <div>
+                    <h3 style="font-size:1.1rem;margin:0 0 5px 0;color:#fff;">${inv.nome || 'Caso sem nome'}</h3>
+                    <p style="color:#aaa;font-size:0.8rem;margin:0;max-width:450px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${inv.resumo || 'Sem resumo...'}</p>
+                </div>
+                <div style="display:flex;gap:10px;">
+                    <button onclick="abrirInvestigacao(${idx})" style="background:var(--premium-accent);color:#fff;border:none;padding:6px 15px;border-radius:15px;cursor:pointer;font-weight:700;font-size:0.8rem;"><i class="fas fa-edit"></i> Abrir</button>
+                    <button onclick="deletarInvestigacao(${idx})" style="background:rgba(255,77,77,0.15);color:#ff4d4d;border:1px solid rgba(255,77,77,0.3);padding:6px 12px;border-radius:15px;cursor:pointer;font-weight:700;font-size:0.8rem;"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+        `).join('');
+    }
+
     function abrirFichaInvestigacao()  { document.getElementById('inv-modo-lista').classList.add('escondido');    document.getElementById('inv-modo-detalhe').classList.remove('escondido'); }
     function voltarListaInvestigacao() { document.getElementById('inv-modo-lista').classList.remove('escondido'); document.getElementById('inv-modo-detalhe').classList.add('escondido'); }
-    function novaFichaInvestigacao()   { abrirFichaInvestigacao(); }
-    function abrirRelatorioMissao()    { document.getElementById('rel-modo-lista').classList.add('escondido');    document.getElementById('rel-modo-detalhe').classList.remove('escondido'); }
-    function voltarListaRelatorio()    { document.getElementById('rel-modo-lista').classList.remove('escondido'); document.getElementById('rel-modo-detalhe').classList.add('escondido'); }
-    function novoRelatorioMissao()     { abrirRelatorioMissao(); }
+    
+    function novaFichaInvestigacao() {
+        indexInvestigacaoEditando = null;
+        document.getElementById('inv-nome-input').value = '';
+        document.getElementById('inv-resumo-input').innerHTML = '';
+        document.getElementById('inv-objetivo-input').innerHTML = '';
+        document.getElementById('inv-perguntas-input').innerHTML = '';
+        document.getElementById('inv-pistas-input').innerHTML = '';
+        abrirFichaInvestigacao();
+    }
+
+    function abrirInvestigacao(idx) {
+        const lista = obterInvestigacoesLocal();
+        const inv = lista[idx];
+        if (!inv) return;
+        indexInvestigacaoEditando = idx;
+        document.getElementById('inv-nome-input').value = inv.nome || '';
+        document.getElementById('inv-resumo-input').innerHTML = inv.resumo || '';
+        document.getElementById('inv-objetivo-input').innerHTML = inv.objetivo || '';
+        document.getElementById('inv-perguntas-input').innerHTML = inv.perguntas || '';
+        document.getElementById('inv-pistas-input').innerHTML = inv.pistas || '';
+        abrirFichaInvestigacao();
+    }
+
+    function salvarFichaInvestigacao() {
+        const nome = document.getElementById('inv-nome-input').value.trim();
+        if (!nome) {
+            alert('Digite pelo menos o Nome do Caso para salvar!');
+            return;
+        }
+        const inv = {
+            nome: nome,
+            resumo: document.getElementById('inv-resumo-input').innerHTML,
+            objetivo: document.getElementById('inv-objetivo-input').innerHTML,
+            perguntas: document.getElementById('inv-perguntas-input').innerHTML,
+            pistas: document.getElementById('inv-pistas-input').innerHTML
+        };
+        
+        const lista = obterInvestigacoesLocal();
+        if (indexInvestigacaoEditando === null) {
+            lista.push(inv);
+        } else {
+            lista[indexInvestigacaoEditando] = inv;
+        }
+        salvarInvestigacoesLocal(lista);
+        renderInvestigacoes();
+        voltarListaInvestigacao();
+    }
+
+    async function deletarInvestigacao(idx) {
+        if (!await TableModal.confirm('Deseja realmente deletar este caso de investigação?', 'Deletar Investigação', 'warning')) return;
+        const lista = obterInvestigacoesLocal();
+        lista.splice(idx, 1);
+        salvarInvestigacoesLocal(lista);
+        renderInvestigacoes();
+    }
+
+    // ============================================================
+    // RELATÓRIOS (Persistência Local)
+    // ============================================================
+    let indexRelatorioEditando = null;
+    let statusRelatorioSelecionado = 'aberto';
+
     function setRelStatus(btn) {
         btn.closest('.status-toggle-group').querySelectorAll('.btn-status-rel').forEach(b=>b.classList.remove('ativo'));
         btn.classList.add('ativo');
+        statusRelatorioSelecionado = btn.dataset.status;
+    }
+
+    function obterRelatoriosLocal() {
+        const key = `campanha_${idCampanha}_relatorios`;
+        return JSON.parse(localStorage.getItem(key)) || [];
+    }
+
+    function salvarRelatoriosLocal(lista) {
+        const key = `campanha_${idCampanha}_relatorios`;
+        localStorage.setItem(key, JSON.stringify(lista));
+    }
+
+    function renderRelatorios() {
+        const lista = obterRelatoriosLocal();
+        const container = document.querySelector('#escudo-tab-relatorios .investigacao-lista');
+        if (!container) return;
+        
+        if (lista.length === 0) {
+            container.innerHTML = '<p style="text-align:center;padding:20px;color:#888;font-style:italic;">Nenhum relatório de missão criado ainda.</p>';
+            return;
+        }
+        
+        container.innerHTML = lista.map((rel, idx) => {
+            let statusBadge = '';
+            if (rel.status === 'sucesso') {
+                statusBadge = '<span style="background:rgba(46,204,113,0.15);color:#2ecc71;font-weight:700;font-size:0.75rem;padding:3px 10px;border-radius:10px;border:1px solid rgba(46,204,113,0.3);">Sucesso</span>';
+            } else if (rel.status === 'fracasso') {
+                statusBadge = '<span style="background:rgba(231,76,60,0.15);color:#e74c3c;font-weight:700;font-size:0.75rem;padding:3px 10px;border-radius:10px;border:1px solid rgba(231,76,60,0.3);">Fracasso</span>';
+            } else {
+                statusBadge = '<span style="background:rgba(241,196,15,0.15);color:#f1c40f;font-weight:700;font-size:0.75rem;padding:3px 10px;border-radius:10px;border:1px solid rgba(241,196,15,0.3);">Em aberto</span>';
+            }
+            
+            return `
+                <div class="card-combate-escudo" style="background:rgba(255,255,255,0.03);padding:20px;border-radius:12px;margin-bottom:15px;display:flex;justify-content:space-between;align-items:center;border:1px solid rgba(255,255,255,0.05);">
+                    <div>
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;">
+                            <h3 style="font-size:1.1rem;margin:0;color:#fff;">${rel.missao || 'Relatório sem nome'}</h3>
+                            ${statusBadge}
+                        </div>
+                        <p style="color:#aaa;font-size:0.8rem;margin:0;max-width:450px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Equipe: ${rel.equipe || 'Não informada'} • Personagens: ${rel.personagens || 'Nenhum...'}</p>
+                    </div>
+                    <div style="display:flex;gap:10px;">
+                        <button onclick="abrirRelatorio(${idx})" style="background:var(--premium-accent);color:#fff;border:none;padding:6px 15px;border-radius:15px;cursor:pointer;font-weight:700;font-size:0.8rem;"><i class="fas fa-edit"></i> Abrir</button>
+                        <button onclick="deletarRelatorio(${idx})" style="background:rgba(255,77,77,0.15);color:#ff4d4d;border:1px solid rgba(255,77,77,0.3);padding:6px 12px;border-radius:15px;cursor:pointer;font-weight:700;font-size:0.8rem;"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function abrirRelatorioMissao()    { document.getElementById('rel-modo-lista').classList.add('escondido');    document.getElementById('rel-modo-detalhe').classList.remove('escondido'); }
+    function voltarListaRelatorio()    { document.getElementById('rel-modo-lista').classList.remove('escondido'); document.getElementById('rel-modo-detalhe').classList.add('escondido'); }
+
+    function novoRelatorioMissao() {
+        indexRelatorioEditando = null;
+        document.getElementById('rel-missao-input').value = '';
+        document.getElementById('rel-equipe-input').value = '';
+        document.getElementById('rel-personagens-input').value = '';
+        document.getElementById('rel-pistas-input').innerHTML = '';
+        document.getElementById('rel-casualidades-input').innerHTML = '';
+        document.getElementById('rel-resumo-input').innerHTML = '';
+        statusRelatorioSelecionado = 'aberto';
+        
+        const btns = document.querySelectorAll('#rel-modo-detalhe .btn-status-rel');
+        btns.forEach(b => {
+            if (b.dataset.status === 'aberto') b.classList.add('ativo');
+            else b.classList.remove('ativo');
+        });
+        
+        abrirRelatorioMissao();
+    }
+
+    function abrirRelatorio(idx) {
+        const lista = obterRelatoriosLocal();
+        const rel = lista[idx];
+        if (!rel) return;
+        indexRelatorioEditando = idx;
+        
+        document.getElementById('rel-missao-input').value = rel.missao || '';
+        document.getElementById('rel-equipe-input').value = rel.equipe || '';
+        document.getElementById('rel-personagens-input').value = rel.personagens || '';
+        document.getElementById('rel-pistas-input').innerHTML = rel.pistas || '';
+        document.getElementById('rel-casualidades-input').innerHTML = rel.casualidades || '';
+        document.getElementById('rel-resumo-input').innerHTML = rel.resumo || '';
+        statusRelatorioSelecionado = rel.status || 'aberto';
+        
+        const btns = document.querySelectorAll('#rel-modo-detalhe .btn-status-rel');
+        btns.forEach(b => {
+            if (b.dataset.status === statusRelatorioSelecionado) b.classList.add('ativo');
+            else b.classList.remove('ativo');
+        });
+        
+        abrirRelatorioMissao();
+    }
+
+    function salvarFichaRelatorio() {
+        const missao = document.getElementById('rel-missao-input').value.trim();
+        if (!missao) {
+            alert('Digite pelo menos o Nome da Missão para salvar!');
+            return;
+        }
+        const rel = {
+            missao: missao,
+            equipe: document.getElementById('rel-equipe-input').value.trim(),
+            personagens: document.getElementById('rel-personagens-input').value.trim(),
+            pistas: document.getElementById('rel-pistas-input').innerHTML,
+            casualidades: document.getElementById('rel-casualidades-input').innerHTML,
+            resumo: document.getElementById('rel-resumo-input').innerHTML,
+            status: statusRelatorioSelecionado
+        };
+        
+        const lista = obterRelatoriosLocal();
+        if (indexRelatorioEditando === null) {
+            lista.push(rel);
+        } else {
+            lista[indexRelatorioEditando] = rel;
+        }
+        salvarRelatoriosLocal(lista);
+        renderRelatorios();
+        voltarListaRelatorio();
+    }
+
+    async function deletarRelatorio(idx) {
+        if (!await TableModal.confirm('Deseja realmente deletar este relatório de missão?', 'Deletar Relatório', 'warning')) return;
+        const lista = obterRelatoriosLocal();
+        lista.splice(idx, 1);
+        salvarRelatoriosLocal(lista);
+        renderRelatorios();
+    }
+
+    // ============================================================
+    // ANOTAÇÕES (Persistência Local com Autosave)
+    // ============================================================
+    function inicializarAnotacoes() {
+        const key = `campanha_${idCampanha}_anotacoes`;
+        const salvas = JSON.parse(localStorage.getItem(key)) || { geral: '', futuras: '', anteriores: '' };
+        
+        const inputGeral = document.getElementById('anot-geral-input');
+        const inputFuturas = document.getElementById('anot-futuras-input');
+        const inputAnteriores = document.getElementById('anot-anteriores-input');
+        
+        if (inputGeral) inputGeral.innerHTML = salvas.geral || '';
+        if (inputFuturas) inputFuturas.innerHTML = salvas.futuras || '';
+        if (inputAnteriores) inputAnteriores.innerHTML = salvas.anteriores || '';
+        
+        const salvarNotas = () => {
+            const dados = {
+                geral: inputGeral ? inputGeral.innerHTML : '',
+                futuras: inputFuturas ? inputFuturas.innerHTML : '',
+                anteriores: inputAnteriores ? inputAnteriores.innerHTML : ''
+            };
+            localStorage.setItem(key, JSON.stringify(dados));
+        };
+        
+        if (inputGeral) inputGeral.addEventListener('input', salvarNotas);
+        if (inputFuturas) inputFuturas.addEventListener('input', salvarNotas);
+        if (inputAnteriores) inputAnteriores.addEventListener('input', salvarNotas);
     }
 
     // ============================================================
@@ -1604,6 +3147,23 @@ if ($id_campanha) {
     async function initEscudoSDK() {
         if (escudoDddiceSDK) return;
         setEscudoStatus('loading');
+        
+        const isApiKeyPlaceholder = ESCUDO_API_KEY.includes('Insira sua');
+        if (isApiKeyPlaceholder || !ESCUDO_API_KEY) {
+            setEscudoStatus('local');
+            const btn = document.getElementById('escudo-btn-rolar');
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-dice"></i> Rolar Dados';
+                btn.disabled = false;
+            }
+            const select = document.getElementById('escudo-theme-select');
+            if (select) {
+                select.innerHTML = '<option value="local">Rolagem Local Premium</option>';
+                select.disabled = true;
+            }
+            return;
+        }
+        
         if (!window.ThreeDDice) { setEscudoStatus('error'); showEscudoToast('SDK dddice não carregou.'); return; }
         try {
             const canvas = document.getElementById('dddice-canvas-escudo');
@@ -1612,7 +3172,18 @@ if ($id_campanha) {
             await escudoDddiceSDK.connect(ESCUDO_ROOM_SLUG);
             await carregarTemasEscudo();
             setEscudoStatus('ok');
-        } catch (err) { console.error('initEscudoSDK:', err); setEscudoStatus('error'); showEscudoToast('Erro ao conectar ao dddice: ' + err.message); }
+        } catch (err) { 
+            console.error('initEscudoSDK:', err); 
+            setEscudoStatus('error'); 
+            showEscudoToast('Erro ao conectar ao dddice. Modo Local Ativo.'); 
+            const btn = document.getElementById('escudo-btn-rolar');
+            if (btn) btn.innerHTML = '<i class="fas fa-dice"></i> Rolar Dados';
+            const select = document.getElementById('escudo-theme-select');
+            if (select) {
+                select.innerHTML = '<option value="local">Rolagem Local Premium (Offline)</option>';
+                select.disabled = true;
+            }
+        }
     }
 
     async function carregarTemasEscudo() {
@@ -1678,7 +3249,9 @@ if ($id_campanha) {
 
     function atualizarBtnEscudo() {
         const temDados  = Object.values(escudoSelecao).some(q => q > 0);
-        const sdkPronto = !!escudoThemeId && !escudoRolling;
+        const dot = document.getElementById('escudo-status-dot');
+        const isLocal = dot && (dot.classList.contains('local') || dot.classList.contains('error'));
+        const sdkPronto = isLocal || (!!escudoThemeId && !escudoRolling);
         const btn = document.getElementById('escudo-btn-rolar');
         if (btn) btn.disabled = !(temDados && sdkPronto);
     }
@@ -1687,37 +3260,107 @@ if ($id_campanha) {
         if (escudoRolling) return;
         const entries = Object.entries(escudoSelecao).filter(([,q]) => q > 0);
         if (!entries.length) return showEscudoToast('Selecione ao menos um dado!');
-        if (!escudoThemeId) return showEscudoToast('Selecione um tema primeiro!');
+        
+        const dot = document.getElementById('escudo-status-dot');
+        const isLocal = dot && (dot.classList.contains('local') || dot.classList.contains('error'));
+        
+        if (!isLocal && !escudoThemeId) return showEscudoToast('Selecione um tema primeiro!');
+        
         escudoRolling = true;
         const btn = document.getElementById('escudo-btn-rolar');
         if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Rolando...'; }
 
-        const dddiceEntries = entries.filter(([l]) => ESCUDO_DDDICE_MAP[parseInt(l)]);
-        const jsEntries     = entries.filter(([l]) => !ESCUDO_DDDICE_MAP[parseInt(l)]);
-        const dddDice = [];
-        dddiceEntries.forEach(([lados, qtd]) => { const tipo = ESCUDO_DDDICE_MAP[parseInt(lados)]; for (let i = 0; i < qtd; i++) dddDice.push({ type: tipo, theme: escudoThemeId }); });
-        let jsTotal = 0, jsValues = [];
-        jsEntries.forEach(([lados, qtd]) => { for (let i = 0; i < qtd; i++) { const v = Math.floor(Math.random() * parseInt(lados)) + 1; jsTotal += v; jsValues.push({ value: v, type: `d${lados}` }); } });
         const label = entries.map(([l,q]) => `${q}D${l}`).join(' + ');
 
         try {
-            let finalTotal = jsTotal, finalValues = [...jsValues];
-            if (dddDice.length > 0) {
-                const [, phpResult] = await Promise.all([
-                    escudoDddiceSDK ? escudoDddiceSDK.roll(dddDice).catch(e => console.warn('SDK:', e)) : Promise.resolve(),
-                    fetch('?action=roll_escudo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dice: dddDice }) }).then(r => r.json()),
-                ]);
-                if (phpResult.error) { showEscudoToast('Erro dddice: ' + phpResult.error); escudoRolling = false; if (btn) btn.innerHTML = '<i class="fas fa-dice"></i> Rolar com dddice'; atualizarBtnEscudo(); return; }
-                finalTotal  += phpResult.total;
-                finalValues  = [...phpResult.values, ...jsValues];
-                setTimeout(() => { mostrarResultadoEscudo(finalTotal, finalValues, label); adicionarAoHistoricoEscudo(finalTotal, label); limparSelecaoEscudo(); }, 1200);
-            } else {
+            let finalTotal = 0;
+            let finalValues = [];
+            
+            if (isLocal || !escudoDddiceSDK) {
+                entries.forEach(([lados, qtd]) => {
+                    for (let i = 0; i < qtd; i++) {
+                        const v = Math.floor(Math.random() * parseInt(lados)) + 1;
+                        finalTotal += v;
+                        finalValues.push({ value: v, type: `d${lados}` });
+                    }
+                });
                 mostrarResultadoEscudo(finalTotal, finalValues, label);
                 adicionarAoHistoricoEscudo(finalTotal, label);
                 limparSelecaoEscudo();
+            } else {
+                const dddiceEntries = entries.filter(([l]) => ESCUDO_DDDICE_MAP[parseInt(l)]);
+                const jsEntries     = entries.filter(([l]) => !ESCUDO_DDDICE_MAP[parseInt(l)]);
+                const dddDice = [];
+                dddiceEntries.forEach(([lados, qtd]) => { 
+                    const tipo = ESCUDO_DDDICE_MAP[parseInt(lados)]; 
+                    for (let i = 0; i < qtd; i++) dddDice.push({ type: tipo, theme: escudoThemeId }); 
+                });
+                
+                let jsTotal = 0;
+                let jsValues = [];
+                jsEntries.forEach(([lados, qtd]) => { 
+                    for (let i = 0; i < qtd; i++) { 
+                        const v = Math.floor(Math.random() * parseInt(lados)) + 1; 
+                        jsTotal += v; 
+                        jsValues.push({ value: v, type: `d${lados}` }); 
+                    } 
+                });
+                
+                if (dddDice.length > 0) {
+                    const [, phpResult] = await Promise.all([
+                        escudoDddiceSDK.roll(dddDice).catch(e => console.warn('SDK:', e)),
+                        fetch('?action=roll_escudo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dice: dddDice }) }).then(r => r.json()),
+                    ]);
+                    if (phpResult.error) { 
+                        showEscudoToast('Erro dddice. Rolando local.'); 
+                        entries.forEach(([lados, qtd]) => {
+                            for (let i = 0; i < qtd; i++) {
+                                const v = Math.floor(Math.random() * parseInt(lados)) + 1;
+                                finalTotal += v;
+                                finalValues.push({ value: v, type: `d${lados}` });
+                            }
+                        });
+                        mostrarResultadoEscudo(finalTotal, finalValues, label);
+                        adicionarAoHistoricoEscudo(finalTotal, label);
+                        limparSelecaoEscudo();
+                    } else {
+                        finalTotal  = phpResult.total + jsTotal;
+                        finalValues  = [...phpResult.values, ...jsValues];
+                        setTimeout(() => { 
+                            mostrarResultadoEscudo(finalTotal, finalValues, label); 
+                            adicionarAoHistoricoEscudo(finalTotal, label); 
+                            limparSelecaoEscudo(); 
+                        }, 1200);
+                    }
+                } else {
+                    finalTotal = jsTotal;
+                    finalValues = jsValues;
+                    mostrarResultadoEscudo(finalTotal, finalValues, label);
+                    adicionarAoHistoricoEscudo(finalTotal, label);
+                    limparSelecaoEscudo();
+                }
             }
-        } catch (err) { console.error(err); showEscudoToast('Erro na rolagem: ' + err.message); }
-        finally { escudoRolling = false; if (btn) btn.innerHTML = '<i class="fas fa-dice"></i> Rolar com dddice'; atualizarBtnEscudo(); }
+        } catch (err) { 
+            console.error(err); 
+            showEscudoToast('Erro na rolagem. Modo Local ativo.');
+            let fallbackTotal = 0;
+            let fallbackValues = [];
+            entries.forEach(([lados, qtd]) => {
+                for (let i = 0; i < qtd; i++) {
+                    const v = Math.floor(Math.random() * parseInt(lados)) + 1;
+                    fallbackTotal += v;
+                    fallbackValues.push({ value: v, type: `d${lados}` });
+                }
+            });
+            mostrarResultadoEscudo(fallbackTotal, fallbackValues, label);
+            adicionarAoHistoricoEscudo(fallbackTotal, label);
+            limparSelecaoEscudo();
+        }
+        finally { 
+            escudoRolling = false; 
+            if (btn) btn.innerHTML = isLocal ? '<i class="fas fa-dice"></i> Rolar Dados' : '<i class="fas fa-dice"></i> Rolar com dddice'; 
+            atualizarBtnEscudo(); 
+        }
     }
 
     function mostrarResultadoEscudo(total, values, label) {
@@ -1759,7 +3402,112 @@ if ($id_campanha) {
     }
 
     document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharResultadoEscudo(); });
+
+    async function removerPersonagem(id_personagem, acao = 'remover') {
+        const confirmMsg = acao === 'sair' 
+            ? 'Tem certeza que deseja tirar seu personagem desta campanha?' 
+            : 'Tem certeza que deseja remover este personagem da campanha?';
+        
+        if (!await TableModal.confirm(confirmMsg, 'Tirar Personagem', 'warning')) return;
+
+        try {
+            const formData = new FormData();
+            formData.append('action', 'remover_personagem');
+            formData.append('campaign_id', '<?= (int)$id_campanha ?>');
+            formData.append('personagem_id', id_personagem);
+
+            const response = await fetch('', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            if (data.sucesso) {
+                window.location.reload();
+            } else {
+                await TableModal.alert('Erro: ' + (data.mensagem || 'Não foi possível realizar a ação.'), 'Falha ao Remover', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            await TableModal.alert('Erro de conexão ao tentar remover o personagem.', 'Erro de Conexão', 'error');
+        }
+    }
+
+    async function sairDaCampanha() {
+        // Verifica se há algum personagem que pertence ao usuário logado na lista de personagens da campanha
+        const temPersonagem = campanhaInicialPersonagems.some(p => parseInt(p.id_dono) === usuarioLogadoId);
+
+        if (temPersonagem) {
+            await TableModal.alert('Para sair da campanha, primeiro retire o seu personagem da campanha clicando em "Sair" no card do seu personagem.', 'Remova o Personagem Primeiro', 'warning');
+            return;
+        }
+
+        executarSaidaCampanha();
+    }
+
+    async function executarSaidaCampanha() {
+        if (!await TableModal.confirm('Deseja realmente sair desta campanha?', 'Sair da Campanha', 'warning')) return;
+
+        try {
+            const formData = new FormData();
+            formData.append('action', 'sair_campanha');
+            formData.append('campaign_id', idCampanha);
+
+            const response = await fetch('', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            if (data.sucesso) {
+                window.location.href = 'perfil.php';
+            } else {
+                await TableModal.alert('Erro: ' + (data.mensagem || 'Não foi possível sair da campanha.'), 'Falha ao Sair', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            await TableModal.alert('Erro de conexão ao tentar sair da campanha.', 'Erro de Conexão', 'error');
+        }
+    }
+
+    async function toggleVisibilidade(id_personagem, novo_estado) {
+        try {
+            const response = await fetch('../app/ajax/alterar-visibilidade-personagem.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    id_campanha: '<?= (int)$id_campanha ?>',
+                    id_personagem: id_personagem,
+                    fl_publico: novo_estado
+                })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert('Erro: ' + (data.error || 'Não foi possível alterar a visibilidade.'));
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Erro de conexão ao tentar alterar a visibilidade.');
+        }
+    }
     </script>
 
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const inputNomeCampanha = document.getElementById('nome-campanha');
+        if (inputNomeCampanha) {
+            inputNomeCampanha.addEventListener('input', function() {
+                let titulo = this.value.trim();
+                document.title = 'TABLE | ' + (titulo ? titulo : 'Nova Campanha');
+            });
+        }
+    });
+    </script>
 </body>
 </html>
+

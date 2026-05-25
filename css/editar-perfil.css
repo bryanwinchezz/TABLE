@@ -150,10 +150,29 @@ body.pagina-edicao {
     transition: border-color 0.3s;
 }
 
-.campo-edicao input:focus {
-    outline: none;
-    border-color: #7b4ff7;
-    background-color: #fff;
+.campo-edicao input:focus, 
+.campo-edicao textarea:focus {
+    outline: none !important;
+    border-color: #7b4ff7 !important;
+    background-color: #fff !important;
+    box-shadow: 0 0 0 3px rgba(123, 79, 247, 0.1) !important;
+}
+
+.campo-edicao textarea {
+    width: 100% !important;
+    padding: 12px 15px !important;
+    border: 1px solid #ccc !important;
+    border-radius: 8px !important;
+    background-color: #f8f9fa !important;
+    font-size: 1rem !important;
+    color: #333 !important;
+    font-family: inherit !important;
+    transition: all 0.3s ease !important;
+    resize: vertical !important;
+    min-height: 100px !important;
+    line-height: 1.5 !important;
+    box-sizing: border-box !important;
+    display: block !important;
 }
 
 .campo-edicao input:disabled {
@@ -235,3 +254,65 @@ body.pagina-edicao {
 }
 
 .botao-vermelho:hover { background-color: #c82333; }
+
+/* RESPONSIVIDADE EDITAR PERFIL - PREMIUM MOBILE FIRST */
+@media (max-width: 768px) {
+    .container-principal-edicao {
+        padding: 100px 12px 40px 12px !important;
+    }
+
+    .cartao-edicao {
+        padding: 24px 16px !important;
+        border-radius: 8px;
+    }
+
+    .cabecalho-edicao {
+        flex-direction: column !important;
+        text-align: center !important;
+        gap: 15px !important;
+    }
+
+    .foto-container {
+        width: 120px !important;
+        height: 120px !important;
+        flex-shrink: 0 !important;
+        margin: 0 auto;
+    }
+
+    .foto-perfil {
+        width: 120px !important;
+        height: 120px !important;
+        object-fit: cover !important;
+        border-radius: 50% !important;
+    }
+
+    .info-usuario h2 {
+        font-size: 1.4rem !important;
+    }
+
+    .classificacao-indicativa-box {
+        padding: 12px !important;
+        margin-top: 15px !important;
+    }
+
+    .classificacao-indicativa-box div {
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center !important;
+        gap: 10px !important;
+    }
+
+    .acoes-conta {
+        flex-direction: column !important;
+        gap: 12px !important;
+        width: 100% !important;
+        align-items: stretch !important;
+    }
+
+    .acoes-conta a, 
+    .acoes-conta button {
+        width: 100% !important;
+        justify-content: center !important;
+        box-sizing: border-box !important;
+    }
+}

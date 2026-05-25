@@ -7,7 +7,7 @@ if (isset($_SESSION['usuario'])) {
     exit;
 }
 
-require_once '../app/config/Database.php';
+require_once '../app/config/database.php';
 
 $erro = '';
 
@@ -49,6 +49,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'cargo' => $usuario['tp_cargo'],
                     'foto' => $usuario['ds_foto'],
                 ];
+
+                // Redireciona para o convite pendente se existir
+                if (isset($_SESSION['invite_token_pendente'])) {
+                    $tokenPend = $_SESSION['invite_token_pendente'];
+                    unset($_SESSION['invite_token_pendente']);
+                    header('Location: invite.php?token=' . urlencode($tokenPend));
+                    exit;
+                }
+
                 header('Location: index.php');
                 exit;
             }

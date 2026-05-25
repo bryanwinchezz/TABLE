@@ -7,7 +7,7 @@ if (isset($_SESSION['usuario'])) {
     exit;
 }
 
-require_once '../app/config/Database.php';
+require_once '../app/config/database.php';
 
 $erro = '';
 
@@ -28,12 +28,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $conn = Database::getConexao();
 
-            // Verifica se e-mail já existe
-            $check = $conn->prepare("SELECT id_usuario FROM tb_usuario WHERE ds_email = :email LIMIT 1");
-            $check->execute([':email' => $email]);
+            // Verifica se e-mail ou nome de usuário já existem
+            $checkEmail = $conn->prepare("SELECT id_usuario FROM tb_usuario WHERE ds_email = :email LIMIT 1");
+            $checkEmail->execute([':email' => $email]);
 
-            if ($check->fetch()) {
+            $checkUser = $conn->prepare("SELECT id_usuario FROM tb_usuario WHERE nm_usuario = :nome LIMIT 1");
+            $checkUser->execute([':nome' => $nome]);
+
+            if ($checkEmail->fetch()) {
                 $erro = "Este e-mail já está cadastrado. Tente fazer login.";
+            } elseif ($checkUser->fetch()) {
+                $erro = "Este nome de usuário já está em uso. Escolha outro.";
             } else {
                 // Criptografa a senha com bcrypt
                 $senhaCriptografada = password_hash($senha, PASSWORD_BCRYPT);
@@ -86,6 +91,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </a>
 
             <h2>Cadastro</h2>
+            <?php if (!empty($erro)): ?>
+                <div style="background:#ffe0e0; color:#c0392b; border:1px solid #e74c3c;
+                padding:10px 15px; border-radius:8px; margin-bottom:15px;
+                font-size:0.9rem; font-weight:600; text-align:left;">
+                    <i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($erro) ?>
+                </div>
+            <?php endif; ?>
 
             <form action="cadastro.php" method="post" id="form-cadastro">
                 <div class="grupo-formulario">

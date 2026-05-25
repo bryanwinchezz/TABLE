@@ -15,12 +15,13 @@
 .main-criar-campanha {
     padding-top: 80px; /* Offset for fixed header */
     min-height: calc(100vh - 100px);
-    background-color: var(--fundo-pagina-fim);
+    background-color: transparent; /* Permite ver o background do body */
     color: #fff;
     display: flex;
     flex-direction: column;
     align-items: center;
     padding-bottom: 50px;
+    transition: background 0.5s ease;
 }
 
 .conteudo-campanha {
@@ -407,27 +408,84 @@ button {
     margin-bottom: 30px;
 }
 
+.campanha-info-wrapper {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+    margin-bottom: 40px;
+    background: rgba(255, 255, 255, 0.02);
+    padding: 20px;
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
 .banner-campanha {
-    width: 100%;
-    height: 300px;
+    width: 380px; /* Tamanho médio */
+    height: 220px;
     background-color: rgba(0, 0, 0, 0.3);
-    border-radius: 20px;
-    margin-bottom: 20px;
+    border-radius: 18px;
     background-size: cover;
     background-position: center;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(157, 122, 255, 0.3);
+    flex-shrink: 0;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.4);
 }
 
 .descricao-campanha-display {
+    flex: 1;
     background: rgba(255, 255, 255, 0.03);
     border-left: 4px solid var(--cor-destaque-claro);
-    padding: 20px 30px;
+    padding: 20px 25px;
     border-radius: 0 15px 15px 0;
-    margin-bottom: 40px;
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     line-height: 1.6;
     color: #ddd;
     font-style: italic;
+    max-height: 220px; /* Mesma altura do banner */
+    overflow-y: auto;
+}
+
+/* Scrollbar para a descrição */
+.descricao-campanha-display::-webkit-scrollbar {
+    width: 6px;
+}
+
+.descricao-campanha-display::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+}
+
+.descricao-campanha-display::-webkit-scrollbar-thumb {
+    background: var(--cor-destaque-claro);
+    border-radius: 10px;
+}
+
+.descricao-campanha-display::-webkit-scrollbar-thumb:hover {
+    background: #b794ff;
+}
+
+/* Responsividade para o Info Wrapper */
+@media (max-width: 900px) {
+    .campanha-info-wrapper {
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        padding: 15px;
+    }
+
+    .banner-campanha {
+        width: 100%;
+        max-width: 450px;
+        height: 200px;
+    }
+
+    .descricao-campanha-display {
+        width: 100%;
+        border-left: none;
+        border-top: 4px solid var(--cor-destaque-claro);
+        border-radius: 0 0 15px 15px;
+        max-height: 300px;
+    }
 }
 
 .barra-acoes {
@@ -531,7 +589,7 @@ button {
 .lista-Personagems {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 25px; /* Aumentado para melhor separação */
     margin-top: 30px;
 }
 
@@ -543,13 +601,9 @@ button {
     align-items: center;
     gap: 20px;
     border: 1px solid rgba(255, 255, 255, 0.05);
-    transition: transform 0.2s ease;
 }
 
-.card-Personagem:hover {
-    transform: scale(1.01);
-    background-color: rgba(31, 26, 44, 0.8);
-}
+
 
 .avatar-Personagem {
     width: 60px;
@@ -568,6 +622,7 @@ button {
 
 .info-Personagem {
     flex: 1;
+    min-width: 0; /* Permite que o texto quebre ou encolha sem empurrar o container */
 }
 
 .info-Personagem h3 {
@@ -825,11 +880,15 @@ button {
     filter: brightness(1.1);
 }
 
-.modal-lista-agentes {
+.modal-lista-Personagems {
     width: 100%;
     max-height: 400px;
     overflow-y: auto;
+    overflow-x: hidden; /* Evita barra de rolagem horizontal */
     padding-right: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px; /* Separação entre personagens no modal */
 }
 
 /* TELA DE COMBATE */
@@ -981,7 +1040,6 @@ button {
     gap: 15px;
     margin-bottom: 10px;
 }
-
 .banner-card {
     flex: 1;
     height: 100px;
@@ -994,6 +1052,15 @@ button {
     padding: 10px;
     background-color: #1a1a1a;
     border: 1px solid rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    opacity: 0.6; /* Inativo por padrão */
+}
+
+.banner-card:hover {
+    transform: translateY(-2px);
+    opacity: 0.95;
+    border-color: rgba(255, 255, 255, 0.15);
 }
 
 .banner-card img {
@@ -1007,11 +1074,24 @@ button {
 }
 
 .banner-ordem { background-color: #120000; overflow: hidden; } /* Tema dark red */
+.banner-ordem.ativo {
+    opacity: 1;
+    border-color: #ff3232;
+    box-shadow: 0 0 20px rgba(255, 50, 50, 0.4);
+    filter: brightness(1.15);
+}
+
 .banner-table { background-color: #2a2438; }
+.banner-table.ativo {
+    opacity: 1;
+    border-color: var(--premium-accent, #9d7aff);
+    box-shadow: 0 0 20px rgba(157, 122, 255, 0.4);
+    filter: brightness(1.15);
+}
+
 .banner-card.banner-novas { 
     background-color: #2a164b; 
-    cursor: pointer;
-    transition: all 0.3s ease;
+    opacity: 0.85;
 }
 
 .banner-card.banner-novas:hover {
@@ -1019,9 +1099,8 @@ button {
     border-color: var(--cor-destaque-claro);
     transform: translateY(-2px);
     box-shadow: 0 0 15px rgba(157, 122, 255, 0.3);
-}
-
-.lista-ameacas-header {
+    opacity: 1;
+}.lista-ameacas-header {
     margin-bottom: 25px;
 }
 
@@ -2050,10 +2129,29 @@ button {
     transition: border-color 0.2s;
 }
 
-.campo-investigacao input:focus,
-.textarea-p1:focus {
-    border-color: var(--premium-accent);
-    box-shadow: 0 0 0 3px rgba(157, 122, 255, 0.15);
+.campo-edicao input:focus, 
+.campo-edicao textarea:focus {
+    outline: none !important;
+    border-color: #7b4ff7 !important;
+    background-color: #fff !important;
+    box-shadow: 0 0 0 3px rgba(123, 79, 247, 0.1) !important;
+}
+
+.campo-edicao textarea {
+    width: 100% !important;
+    padding: 12px 15px !important;
+    border: 1px solid #ccc !important;
+    border-radius: 8px !important;
+    background-color: #f8f9fa !important;
+    font-size: 1rem !important;
+    color: #333 !important;
+    font-family: inherit !important;
+    transition: all 0.3s ease !important;
+    resize: vertical !important;
+    min-height: 100px !important;
+    line-height: 1.5 !important;
+    box-sizing: border-box !important;
+    display: block !important;
 }
 
 .campo-investigacao input::placeholder {
@@ -2401,5 +2499,41 @@ button {
 
     .form-relatorio-row {
         flex-direction: column;
+    }
+
+    /* OTIMIZAÇÃO DE RESPONSIVIDADE DE CAMPANHA (PERSONAGENS, COMBATES E JOGADORES) */
+    .card-Personagem {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 25px 20px;
+        gap: 15px;
+    }
+
+    .acoes-Personagem-card {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 8px !important;
+    }
+
+    .acoes-Personagem-card button,
+    .acoes-Personagem-card span {
+        flex: 1;
+        min-width: 100px;
+        justify-content: center;
+        text-align: center;
+        padding: 8px 12px !important;
+        font-size: 0.8rem !important;
+    }
+
+    .lista-combates {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .card-combate {
+        border-left: 4px solid #7b4ff7;
+        padding: 20px;
     }
 }

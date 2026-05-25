@@ -1,3 +1,7 @@
+.nav-abas-mobile {
+    display: none;
+}
+
 /* ==========================================
    ESTRUTURA BASE E ABAS
 ========================================== */
@@ -264,18 +268,44 @@
     background-color: #18131b;
     padding: 30px;
     border-radius: 30px;
+    max-height: 450px; /* Reduzido para garantir que o scroll apareça mais cedo */
+    overflow-y: auto;
+}
+
+/* Scrollbar Customizada para Origens */
+.origens-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.origens-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    margin: 15px 0;
+}
+
+.origens-container::-webkit-scrollbar-thumb {
+    background: #C193FD;
+    border-radius: 10px;
+}
+
+.origens-container::-webkit-scrollbar-thumb:hover {
+    background: #a778e2;
 }
 
 .pesq-ori {
     display: flex;
-    background-color: #2e2637;
+    background-color: #18131b; /* Fundo igual ao container para não vazar itens no scroll */
     border-radius: 10px;
     overflow: hidden;
-    margin-bottom: 30px;
-    height: 45px;
+    margin-bottom: 20px;
+    height: 50px;
     align-items: center;
     padding: 0 15px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    position: sticky;
+    top: -30px; /* Ajustado para compensar o padding do container */
+    z-index: 15;
+    margin-top: -10px; /* Puxa um pouco para cima para alinhar melhor */
 }
 
 .pesq-ori .icon-pesq {
@@ -458,11 +488,29 @@
 }
 
 .trio-atri {
-    display: flex;
-    gap: 80px;
-    justify-content: center;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* 4 colunas fixas por linha */
+    gap: 25px 20px; /* 25px entre linhas, 20px entre colunas */
+    justify-items: center;
+    width: 100%;
+    max-width: 850px;
+    margin: 0 auto;
 }
+
+/* Ajuste para telas menores não quebrarem o layout */
+@media (max-width: 800px) {
+    .trio-atri {
+        grid-template-columns: repeat(2, 1fr); /* 2 por linha em telas médias */
+    }
+}
+
+@media (max-width: 450px) {
+    .trio-atri {
+        grid-template-columns: 1fr; /* 1 por linha em celulares pequenos */
+    }
+}
+
+
 
 .atributo-item {
     position: relative;
@@ -475,11 +523,11 @@
 .atributo-sigla {
     background-color: #ffffff;
     color: #311c61;
-    width: 100px;
+    width: 70px; /* Reduzido para ficar mais compacto */
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.8rem;
+    font-size: 1.4rem;
     font-weight: 900;
     border-radius: 12px 0 0 12px;
     cursor: help;
@@ -753,4 +801,112 @@
 .btn-concluir:hover {
     transform: translateY(-3px);
     box-shadow: 0 10px 25px rgba(139, 92, 246, 0.6);
+}
+
+/* ==========================================
+   RESPONSIVIDADE MOBILE
+   ========================================== */
+@media (max-width: 900px) {
+    .container-sistema {
+        padding: 100px 15px 40px 15px;
+    }
+
+    .menu-abas {
+        display: none;
+    }
+
+    .aba {
+        padding: 10px 15px;
+        font-size: 0.8rem;
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+
+    .indicador-aba {
+        display: none;
+    }
+
+    .aba.ativa {
+        background-color: #311c61;
+        color: white;
+    }
+
+    .origens-container {
+        padding: 15px;
+        border-radius: 15px;
+    }
+
+    .sistema-info {
+        padding: 15px;
+    }
+
+    .sistema-img-wrapper {
+        height: 120px;
+    }
+
+    .area-inputs-grid, 
+    .caracteristicas-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Navegação de Abas Mobile */
+    .nav-abas-mobile {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 30px;
+        padding: 0 10px;
+    }
+
+    .btn-nav-aba {
+        flex: 1;
+        padding: 15px;
+        border-radius: 12px;
+        border: none;
+        font-weight: 800;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-nav-aba.prox {
+        background: linear-gradient(135deg, #6539C7, #8b5cf6);
+        color: white;
+        box-shadow: 0 5px 15px rgba(101, 57, 199, 0.3);
+    }
+
+    .btn-nav-aba.ant {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .tri-class {
+        grid-template-columns: 1fr;
+    }
+
+    .desc h1 {
+        font-size: 1.5rem;
+    }
+
+    .desc p {
+        font-size: 0.95rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .botoes-nav-form {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .btn-form-nav, .btn-concluir {
+        width: 100%;
+        justify-content: center;
+    }
 }

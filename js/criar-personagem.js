@@ -4,6 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let sistemaSelecionadoId = "";
     let origemSelecionada = "";
     let classeSelecionada = "";
+    let totalOrigensSistema = 0;
+    let totalClassesSistema = 0;
     const inputOcultoSistema = document.getElementById('input-sistema');
     const inputOcultoOrigem = document.getElementById('input-origem');
     const inputOcultoClasse = document.getElementById('input-classe');
@@ -15,6 +17,10 @@ document.addEventListener('DOMContentLoaded', () => {
     cardsSistema.forEach(card => {
         card.addEventListener('click', function() {
             const id = this.getAttribute('data-id');
+            
+            // Se já estiver selecionado, não faz nada (evita re-load e bugs)
+            if (id === sistemaSelecionadoId) return;
+
             console.log("Sistema selecionado ID:", id);
             
             // UI Feedback
@@ -36,15 +42,40 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Pré-selecionar sistema se via URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const sysParam = urlParams.get('sys');
+    if (sysParam) {
+        const sysCard = document.querySelector(`.card-sistema-selecao[data-id="${sysParam}"]`);
+        if (sysCard) {
+            sysCard.click();
+            setTimeout(() => document.querySelector('.btn-proximo-aba').click(), 500);
+        }
+    }
+
     async function carregarDadosSistema(id) {
         try {
             const response = await fetch(`../app/ajax/get-sistema-detalhes.php?id=${id}`);
             const data = await response.json();
 
             if (data.success) {
+                totalOrigensSistema = data.origens.length;
+                totalClassesSistema = data.classes.length;
                 renderizarOrigens(data.origens);
                 renderizarAtributos(data.atributos);
                 renderizarClasses(data.classes);
+                
+                // Mudar fundo se o sistema tiver um background oficial definido no banco
+                if(data.sistema.ds_background) {
+                    document.body.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url('${data.sistema.ds_background}')`;
+                    document.body.style.backgroundSize = 'cover';
+                    document.body.style.backgroundPosition = 'center';
+                    document.body.style.backgroundAttachment = 'fixed';
+                } else {
+                    // Fundo padrão caso não tenha customizado
+                    document.body.style.backgroundImage = 'none';
+                    document.body.style.backgroundColor = '#311c61';
+                }
             } else {
                 console.error("Erro ao carregar detalhes do sistema:", data.error);
             }
@@ -118,6 +149,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         });
+
+        // === Lógica de Pesquisa/Filtro ===
+        const inputPesquisa = container.querySelector('.input-field');
+        const listaOrigens = container.querySelectorAll('.origem');
+
+        inputPesquisa.addEventListener('input', function() {
+            const termo = this.value.toLowerCase().trim();
+
+            listaOrigens.forEach(div => {
+                const nome = div.querySelector('h3').textContent.toLowerCase();
+                if (nome.includes(termo)) {
+                    div.style.display = 'block';
+                } else {
+                    div.style.display = 'none';
+                }
+            });
+        });
     }
 
     function renderizarAtributos(atributos) {
@@ -127,22 +175,17 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        let html = '<div class="atributos-section-flex">';
+        let html = '<div class="trio-atri">';
         
-        // Organizar em grupos de 3 para manter o design
-        for (let i = 0; i < atributos.length; i += 3) {
-            html += '<div class="trio-atri">';
-            for (let j = i; j < i + 3 && j < atributos.length; j++) {
-                const attr = atributos[j];
-                html += `
-                    <div class="atributo-item">
-                        <span class="atributo-sigla" data-tooltip="${attr.nm_atributo}">${attr.ds_abreviacao || attr.nm_atributo.substring(0,3).toUpperCase()}</span>
-                        <input type="number" class="atributo-input" name="attr_${attr.nm_atributo}" min="0" max="20" value="0">
-                    </div>
-                `;
-            }
-            html += '</div>';
-        }
+        atributos.forEach(attr => {
+            html += `
+                <div class="atributo-item">
+                    <span class="atributo-sigla" data-tooltip="${attr.nm_atributo}">${attr.ds_abreviacao || attr.nm_atributo.substring(0,3).toUpperCase()}</span>
+                    <input type="number" class="atributo-input" name="attr_${attr.nm_atributo}" min="0" max="20" value="0">
+                </div>
+            `;
+        });
+        
         html += '</div>';
 
         container.innerHTML = html;
@@ -194,6 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
+
 
 
     // === 3. LÓGICA DE ATRIBUTOS (DISTRIBUIÇÃO) ===
@@ -276,7 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 ativarAba(abas[0]);
                 return;
             }
-            if (index > 2 && origemSelecionada === "") {
+            if (index > 2 && origemSelecionada === "" && totalOrigensSistema > 0) {
                 alert("Selecione uma Origem primeiro!");
                 ativarAba(abas[2]);
                 return;
@@ -297,7 +341,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert("Selecione um Sistema antes de continuar!");
                 return;
             }
-            if (index === 2 && origemSelecionada === "") {
+            if (index === 2 && origemSelecionada === "" && totalOrigensSistema > 0) {
                 alert("Escolha uma Origem antes de avançar!");
                 return;
             }
@@ -326,8 +370,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const nomePers = document.getElementById('nome').value.trim();
             if (!sistemaSelecionadoId) return alert("Selecione um Sistema!");
             if (!nomePers) return alert("Dê um nome ao seu personagem!");
-            if (!origemSelecionada) return alert("Escolha uma Origem!");
-            if (!classeSelecionada) return alert("Selecione uma Classe!");
+            if (!origemSelecionada && totalOrigensSistema > 0) return alert("Escolha uma Origem!");
+            if (!classeSelecionada && totalClassesSistema > 0) return alert("Selecione uma Classe!");
 
             // Feedback de carregamento
             const originalTxt = btnSalvar.innerHTML;
@@ -346,7 +390,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.success) {
                     btnSalvar.innerHTML = 'Sucesso! <i class="fas fa-check-double"></i>';
                     btnSalvar.style.background = '#0c9447';
-                    setTimeout(() => window.location.href = "exibir-ficha.php?id=" + data.id_personagem, 1200);
+                    const inviteToken = document.getElementById('input-invite-token')?.value;
+                    if (inviteToken) {
+                        setTimeout(() => window.location.href = "invite.php?token=" + inviteToken + "&auto_join=" + data.id_personagem, 1200);
+                    } else {
+                        setTimeout(() => window.location.href = "exibir-ficha.php?id=" + data.id_personagem, 1200);
+                    }
                 } else {
                     alert("Erro: " + data.message);
                     btnSalvar.innerHTML = originalTxt;
@@ -362,4 +411,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (abas.length > 0) atualizarIndicador(abas[0]);
+
+    // Função global para navegação mobile via botões Próximo/Anterior
+    window.mudarAba = function(index) {
+        const abaAlvo = document.querySelector(`.aba[data-index="${index}"]`);
+        if (abaAlvo) {
+            abaAlvo.click();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
 });

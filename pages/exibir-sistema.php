@@ -19,7 +19,7 @@ try {
 
     // 1. Buscar dados do sistema e do criador
     $stmt = $pdo->prepare("
-        SELECT s.*, u.nm_usuario as criador_nome 
+        SELECT s.*, u.nm_usuario as criador_nome, u.tp_cargo
         FROM tb_sistema s
         LEFT JOIN tb_usuario u ON s.id_usuario_criador = u.id_usuario
         WHERE s.id_sistema = ?
@@ -32,7 +32,19 @@ try {
         exit;
     }
 
-    $criadorDisplay = $sistema['criador_nome'] ?? 'TABLE';
+    $isOficial = (empty($sistema['id_usuario_criador']) || (isset($sistema['tp_cargo']) && $sistema['tp_cargo'] === 'admin') || (isset($sistema['criador_nome']) && $sistema['criador_nome'] === 'Kauan Bryan'));
+    $isDono = ($sistema['id_usuario_criador'] == $_SESSION['usuario']['id']);
+
+    $stmtCheck = $pdo->prepare("SELECT 1 FROM tb_usuario_sistema WHERE id_usuario = ? AND id_sistema = ?");
+    $stmtCheck->execute([$_SESSION['usuario']['id'], $id_sistema]);
+    $isImportado = (bool)$stmtCheck->fetch();
+
+    // Se não for oficial, não for o dono e não tiver importado o sistema, redireciona
+    if (!$isOficial && !$isDono && !$isImportado) {
+        header('Location: perfil.php');
+        exit;
+    }
+    $criadorDisplay = $isOficial ? 'TABLE' : ($sistema['criador_nome'] ?? 'TABLE');
 
     // 2. Buscar Atributos
     $stmt = $pdo->prepare("SELECT * FROM tb_atributo WHERE id_sistema = ?");
@@ -53,6 +65,98 @@ try {
     $stmt = $pdo->prepare("SELECT * FROM tb_origem WHERE id_sistema = ?");
     $stmt->execute([$id_sistema]);
     $origens = $stmt->fetchAll();
+
+    // 6. Buscar Status e Defesas
+    $stmt = $pdo->prepare("SELECT * FROM tb_sistema_status WHERE id_sistema = ?");
+    $stmt->execute([$id_sistema]);
+    $status_do_sistema = $stmt->fetchAll();
+    
+    $barras_sistema = array_filter($status_do_sistema, fn($s) => $s['tp_status'] === 'barra');
+    $defesas_sistema = array_filter($status_do_sistema, fn($s) => $s['tp_status'] === 'defesa');
+
+    // Executa silenciosamente a atualização de cores pedida pelo usuário na base de dados
+    try {
+        $pdo->query("UPDATE tb_sistema_status SET ds_cor = '#a855f7' WHERE LOWER(nm_status) LIKE '%sanidade%'");
+        $pdo->query("UPDATE tb_sistema_status SET ds_cor = '#f97316' WHERE LOWER(nm_status) LIKE '%esforço%' OR LOWER(nm_status) LIKE '%esforco%'");
+        $pdo->query("UPDATE tb_sistema_status SET ds_cor = '#95a5a6' WHERE LOWER(nm_status) LIKE '%defesa%' OR LOWER(nm_status) LIKE '%proteção%' OR LOWER(nm_status) LIKE '%protecao%'");
+        
+        // --- MIGRAÇÃO SILENCIOSA E PATRONIZADA DOS MONSTROS DE ORDEM PARANORMAL (SISTEMA 1) ---
+        $elementos_monstros = [
+            'Sangue' => ['O Diabo', 'Aberração de Carne', 'Aniquilação', 'Carente', 'Dama de Sangue', 'Enpap-X', 'Kerberos', 'Minotauro', 'Mulher Afogada', 'Titã de Sangue', 'Zumbi de Sangue', 'Zumbi de Sangue Bestial'],
+            'Morte' => ['Aracnasita', 'Carniçal Preto da Morte', 'Ceifador Espiral', 'Enraizado', 'Escutado', 'Esqueleto de Lodo', 'Marionete', 'Múmia Xipófaga', 'Nidere', 'Sempiternal', 'Succ', 'O Deus da Morte'],
+            'Conhecimento' => ['Anjo', 'Bicho-Papão', 'Espreitador', 'Estrangeiro', 'Existido', 'Lembrado', 'Ocioso', 'Parasita de Culpa', 'Rastejador Sombrio', 'Silhueta', 'Vulto', 'Máscara do Desespero'],
+            'Energia' => ['Anárquico', 'Anárquico Descontrolado', 'Anomalia', 'Anomiático', 'Ciborgue', 'Infecticídio', 'Perturbado de Energia', 'Sukkalgir', 'Telopsia', 'Tempestuoso', 'Viajante', 'Anfitrião', 'Degolificada'],
+            'Medo' => ['Demogorgon']
+        ];
+
+        foreach ($elementos_monstros as $elemento => $nomes) {
+            $nomes_str = implode("', '", array_map('addslashes', $nomes));
+            $pdo->exec("UPDATE tb_monstro SET tp_monstro = '$elemento' WHERE id_sistema = 1 AND nm_monstro IN ('$nomes_str')");
+        }
+
+        // Garantir que as ameaças mundanas fiquem categorizadas como Mundano
+        $pdo->exec("UPDATE tb_monstro SET tp_monstro = 'Mundano' WHERE id_sistema = 1 AND (tp_monstro IS NULL OR tp_monstro = '' OR tp_monstro LIKE 'Pessoa%' OR tp_monstro LIKE 'Animal%')");
+
+        // Buscar os atributos do sistema 1
+        $stmtAttrsSist = $pdo->query("SELECT id_atributo, nm_atributo FROM tb_atributo WHERE id_sistema = 1");
+        $attrs_sistema1 = $stmtAttrsSist->fetchAll(PDO::FETCH_KEY_PAIR); // Retorna array ['Força' => id, ...]
+
+        if (!empty($attrs_sistema1)) {
+            // Buscar monstros do sistema 1
+            $stmtMonstros = $pdo->query("SELECT id_monstro, nm_monstro, qt_vd FROM tb_monstro WHERE id_sistema = 1");
+            $monstros_sistema1 = $stmtMonstros->fetchAll();
+
+            foreach ($monstros_sistema1 as $m) {
+                // Verificar se o monstro já possui atributos associados
+                $stmtCountAttrs = $pdo->prepare("SELECT COUNT(*) FROM tb_monstro_atributo WHERE id_monstro = ?");
+                $stmtCountAttrs->execute([$m['id_monstro']]);
+                if ($stmtCountAttrs->fetchColumn() == 0) {
+                    // Determinar valores de atributos coerentes com o VD da criatura
+                    $vd = $m['qt_vd'];
+                    
+                    // Escalar os atributos entre 1 e 5 baseado no VD
+                    $valBase = 1;
+                    if ($vd >= 300) $valBase = 5;
+                    elseif ($vd >= 180) $valBase = 4;
+                    elseif ($vd >= 80) $valBase = 3;
+                    elseif ($vd >= 30) $valBase = 2;
+
+                    // Mapeamento dinâmico de atributos
+                    foreach ($attrs_sistema1 as $nomeAttr => $idAttr) {
+                        $valor = $valBase;
+                        
+                        // Fazer pequenas variações temáticas baseadas na criatura
+                        $nomeLower = strtolower($m['nm_monstro']);
+                        if (strpos($nomeLower, 'zumbi') !== false || strpos($nomeLower, 'aberração') !== false) {
+                            if ($nomeAttr === 'Força' || $nomeAttr === 'Vigor') $valor = min(5, $valor + 1);
+                            if ($nomeAttr === 'Intelecto') $valor = max(0, $valor - 2);
+                        } elseif (strpos($nomeLower, 'anjo') !== false || strpos($nomeLower, 'espreitador') !== false || strpos($nomeLower, 'existido') !== false) {
+                            if ($nomeAttr === 'Intelecto' || $nomeAttr === 'Presença') $valor = min(5, $valor + 1);
+                        }
+
+                        $stmtInsertAttr = $pdo->prepare("INSERT INTO tb_monstro_atributo (id_monstro, id_atributo, qt_valor) VALUES (?, ?, ?)");
+                        $stmtInsertAttr->execute([$m['id_monstro'], $idAttr, $valor]);
+                    }
+                }
+            }
+        }
+    } catch (Exception $e) {
+        // Ignora silenciosamente em caso de restrições de escrita em tabelas de backup
+    }
+
+    // Fallback premium para sistemas oficiais ou sem status customizados no banco (ex: Ordem Paranormal)
+    if (empty($barras_sistema)) {
+        $barras_sistema = [
+            ['nm_status' => 'VIDA', 'ds_cor' => '#ff3232'],
+            ['nm_status' => 'SANIDADE', 'ds_cor' => '#a855f7'],
+            ['nm_status' => 'ESFORÇO', 'ds_cor' => '#f97316']
+        ];
+    }
+    if (empty($defesas_sistema)) {
+        $defesas_sistema = [
+            ['nm_status' => 'DEFESA', 'ds_cor' => '#95a5a6']
+        ];
+    }
 
     function getClassStyle($class)
     {
@@ -75,6 +179,13 @@ try {
     }
     $classStyle = getClassStyle($sistema['tp_classificacao'] ?? 'L');
 
+    // Lógica para Temas Dinâmicos
+    $nomeSistemaLower = strtolower($sistema['nm_sistema'] ?? '');
+    $classeBackground = '';
+    if (strpos($nomeSistemaLower, 'ordem paranormal') !== false) {
+        $classeBackground = 'tema-ordem-paranormal';
+    }
+
 } catch (Exception $e) {
     die("Erro ao carregar sistema: " . $e->getMessage());
 }
@@ -87,11 +198,16 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TABLE | <?= htmlspecialchars($sistema['nm_sistema']) ?></title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="../css/nav-footer.css?v=1.4">
-    <link rel="stylesheet" href="../css/ficha.css?v=2.4">
+    <link rel="stylesheet" href="../css/table-modal.css">
+    <link rel="stylesheet" href="../css/ficha.css?v=<?= time() ?>">
+    <script src="../js/table-modal.js"></script>
     <link rel="shortcut icon" href="../img/logo_icone.png" type="image/x-icon">
     <style>
         /* ============================================================ 
@@ -113,6 +229,7 @@ try {
             align-items: center;
             box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
             width: 100%;
+            position: relative;
         }
 
         .img-sistema-grande {
@@ -181,6 +298,7 @@ try {
             font-size: 1.05rem;
             color: #ccc;
             width: 100%;
+            position: relative;
         }
 
         .secao-descricao-completa h2 {
@@ -274,8 +392,7 @@ try {
             gap: 12px;
             margin-bottom: 30px;
             position: relative;
-            z-index: 999;
-            pointer-events: auto !important;
+            z-index: 100;
         }
 
         .btn-tab-sistema {
@@ -312,7 +429,8 @@ try {
         .tab-content-sistema {
             animation: premiumFadeIn 0.5s ease-out;
             position: relative;
-            z-index: 10;
+            z-index: 101;
+            pointer-events: auto !important;
         }
 
         @keyframes premiumFadeIn {
@@ -331,20 +449,38 @@ try {
             display: none !important;
         }
 
-        /* BESTIÁRIO PREMIUM */
         .card-ameaca-premium {
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
-            border-radius: 16px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
-            padding: 15px;
-            gap: 20px;
-            margin-bottom: 18px;
+            padding: 10px 15px;
+            gap: 15px;
+            margin-bottom: 12px;
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             position: relative;
             overflow: hidden;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .sistema-row-premium {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background 0.3s;
+            width: 100%;
+            box-sizing: border-box;
+            position: relative;
+            z-index: 1;
+        }
+        .sistema-row-premium:hover {
+            background: rgba(255, 255, 255, 0.02);
+            z-index: 100 !important;
         }
 
         .card-ameaca-premium::before {
@@ -366,9 +502,9 @@ try {
         }
 
         .card-ameaca-img {
-            width: 80px;
-            height: 80px;
-            border-radius: 12px;
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
             object-fit: cover;
             border: 2px solid rgba(255, 255, 255, 0.1);
             background: #000;
@@ -384,14 +520,15 @@ try {
             background: rgba(255, 50, 50, 0.1);
             color: #ff4d4d;
             border: 1px solid rgba(255, 50, 50, 0.2);
-            width: 38px;
-            height: 38px;
-            border-radius: 10px;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             transition: 0.3s;
+            font-size: 0.8rem;
         }
 
         .btn-card-delete:hover {
@@ -399,6 +536,29 @@ try {
             color: #fff;
             transform: scale(1.1) rotate(10deg);
             box-shadow: 0 5px 15px rgba(255, 77, 77, 0.4);
+        }
+
+        .btn-card-edit {
+            background: rgba(0, 209, 178, 0.1);
+            color: #00d1b2;
+            border: 1px solid rgba(0, 209, 178, 0.2);
+            font-size: 0.75rem;
+            padding: 6px 14px !important;
+            border-radius: 6px !important;
+            text-transform: uppercase;
+            font-weight: 800;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-card-edit:hover {
+            background: #00d1b2;
+            color: #fff;
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 8px 20px rgba(0, 209, 178, 0.4);
         }
 
         /* TOOLTIPS (BOLHAS) UNIFICADAS */
@@ -414,12 +574,10 @@ try {
             color: #fff;
             text-align: left;
             border-radius: 12px;
-            padding: 12px 18px;
+            padding: 8px 14px;
             position: absolute;
             z-index: 10000;
             top: 50%;
-            right: 40px;
-            transform: translateY(-50%) scale(0.9);
             opacity: 0;
             transition: all 0.2s ease-out;
             width: max-content;
@@ -430,10 +588,15 @@ try {
             backdrop-filter: blur(15px);
             pointer-events: none;
             line-height: 1.4;
-            font-weight: 500;
+            font-weight: 600;
         }
 
-        .tooltip::after {
+        /* Tooltip padrão para perícias (à esquerda com seta para a direita) */
+        .p-values .tooltip {
+            right: 40px;
+            transform: translateY(-50%) scale(0.9);
+        }
+        .p-values .tooltip::after {
             content: "";
             position: absolute;
             top: 50%;
@@ -443,12 +606,39 @@ try {
             border-style: solid;
             border-color: transparent transparent transparent var(--premium-accent);
         }
-
-        .premium-attr-box:hover .tooltip,
         .p-values:hover .tooltip {
             visibility: visible;
             opacity: 1;
             transform: translateY(-50%) scale(1);
+        }
+
+        /* Tooltip Premium para Atributos e Bolhas de Info (no topo com seta para baixo) */
+        .premium-attr-box .tooltip,
+        .info-icon-wrapper .tooltip {
+            left: 50%;
+            bottom: 135%;
+            top: auto; /* Desfaz o top: 50% geral */
+            transform: translateX(-50%) translateY(10px) scale(0.9);
+        }
+        .premium-attr-box .tooltip::after,
+        .info-icon-wrapper .tooltip::after {
+            content: "";
+            position: absolute;
+            top: 100%; /* Seta no rodapé da tooltip */
+            left: 50%;
+            margin-left: -6px;
+            border-width: 6px;
+            border-style: solid;
+            border-color: var(--premium-accent) transparent transparent transparent;
+        }
+        .premium-attr-box .attr-abbr {
+            cursor: help;
+        }
+        .premium-attr-box .attr-abbr:hover ~ .tooltip,
+        .info-icon-wrapper:hover .tooltip {
+            visibility: visible;
+            opacity: 1;
+            transform: translateX(-50%) translateY(0) scale(1);
         }
 
         .info-icon-wrapper {
@@ -482,7 +672,8 @@ try {
         .premium-col-right,
         .premium-col-left,
         .pericias-premium-container,
-        .tab-content-sistema {
+        .tab-content-sistema,
+        .pericias-premium-list {
             overflow: visible !important;
         }
 
@@ -524,35 +715,104 @@ try {
             }
         }
 
+        @media (max-width: 768px) {
+            .header-sistema-premium {
+                padding: 20px;
+                gap: 25px;
+            }
+
+            .img-sistema-grande {
+                width: 100%;
+                max-width: 400px;
+                height: auto;
+                aspect-ratio: 16 / 9;
+            }
+
+            .tab-nav-sistema {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 8px;
+            }
+
+            .btn-tab-sistema {
+                padding: 8px 18px;
+                font-size: 0.8rem;
+                flex: 1 1 calc(50% - 10px);
+                min-width: 140px;
+            }
+
+            .card-ameaca-premium {
+                flex-direction: column;
+                text-align: center;
+                padding: 20px;
+            }
+
+            .card-ameaca-actions {
+                margin: 15px 0 0 0;
+                width: 100%;
+                justify-content: center;
+            }
+
+            .attr-abbr {
+                width: 60px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .info-sistema-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .btn-tab-sistema {
+                flex: 1 1 100%;
+            }
+
+            .secao-descricao-completa {
+                padding: 20px;
+                font-size: 0.95rem;
+            }
+
+            .premium-attr-box {
+                height: 50px;
+            }
+
+            .attr-circle {
+                font-size: 1.3rem;
+            }
+        }
+
         /* CORREÇÕES GERAIS DE ESTRUTURA */
         body.ficha-body {
             display: flex;
             flex-direction: column;
             min-height: 100vh;
             margin: 0;
+            overflow-x: hidden;
+            width: 100%;
         }
 
         main.ficha-container-master {
             flex: 1;
         }
 
+        /* MODAIS */
         .modal-overlay {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(10px);
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(15px);
             display: none;
             align-items: center;
             justify-content: center;
-            z-index: 10000;
+            z-index: 99999 !important;
             padding: 20px;
+            opacity: 0;
+            transition: opacity 0.4s ease;
         }
 
         .modal-overlay.ativa {
             display: flex !important;
+            opacity: 1 !important;
         }
 
         /* ESTILIZAÇÃO PREMIUM DE INPUTS NO MODAL */
@@ -564,6 +824,65 @@ try {
             box-shadow: 0 25px 80px rgba(0, 0, 0, 0.8);
             position: relative;
             animation: modalPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            padding: 35px;
+            width: 95%;
+            box-sizing: border-box;
+        }
+
+        /* Estilo responsivo e estrutural para o form de Criar Ameaça */
+        .monstro-identidade-container {
+            display: flex;
+            gap: 25px;
+            align-items: stretch;
+            margin-bottom: 25px;
+        }
+
+        .monstro-identidade-inputs {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        @media (max-width: 600px) {
+            .modal-box {
+                padding: 25px 15px !important;
+                border-radius: 16px !important;
+                width: 100% !important;
+            }
+
+            .monstro-identidade-container {
+                flex-direction: column !important;
+                align-items: center !important;
+                gap: 15px !important;
+                margin-bottom: 15px !important;
+            }
+
+            #preview-monstro-container {
+                width: 110px !important;
+                height: 110px !important;
+            }
+
+            .monstro-identidade-inputs {
+                width: 100% !important;
+                gap: 12px !important;
+            }
+
+            #grid-atributos-monstro-form {
+                grid-template-columns: repeat(3, 1fr) !important;
+                gap: 8px !important;
+                padding: 10px !important;
+            }
+
+            .modal-box div[style*="grid-template-columns: repeat(2, 1fr)"] {
+                grid-template-columns: 1fr !important;
+                gap: 12px !important;
+            }
+
+            .modal-close {
+                top: 15px !important;
+                right: 15px !important;
+            }
         }
 
         @keyframes modalPop {
@@ -646,11 +965,9 @@ try {
         .attr-input-premium {
             text-align: center;
             font-weight: 900;
-            font-size: 1.1rem;
+            font-size: 1.2rem;
             color: var(--premium-accent);
             padding: 8px !important;
-        }
-            font-size: 0.95rem;
             transition: 0.3s;
         }
 
@@ -661,19 +978,12 @@ try {
             box-shadow: 0 0 15px rgba(157, 122, 255, 0.1);
         }
 
-        .attr-input-premium {
-            text-align: center;
-            font-weight: 900;
-            font-size: 1.2rem;
-            color: var(--premium-accent);
-        }
-
         .btn-card-ficha {
             background: linear-gradient(135deg, var(--premium-purple), var(--premium-accent));
-            font-size: 0.85rem;
-            padding: 8px 24px !important;
+            font-size: 0.75rem;
+            padding: 6px 16px !important;
             color: #fff;
-            border-radius: 8px !important;
+            border-radius: 6px !important;
             border: none;
             text-transform: uppercase;
             box-shadow: 0 4px 15px rgba(157, 122, 255, 0.4);
@@ -694,17 +1004,18 @@ try {
             background-size: 200% 200%;
             animation: gradientMove 3s ease infinite;
             color: #fff;
-            padding: 12px 28px;
-            border-radius: 12px;
+            padding: 8px 18px;
+            border-radius: 8px;
             border: 1px solid rgba(157, 122, 255, 0.3);
             font-weight: 900;
+            font-size: 0.78rem;
             text-transform: uppercase;
-            letter-spacing: 2px;
+            letter-spacing: 1.5px;
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 12px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4), 0 0 0 0 rgba(157, 122, 255, 0);
+            gap: 8px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4), 0 0 0 0 rgba(157, 122, 255, 0);
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             position: relative;
             overflow: hidden;
@@ -747,45 +1058,202 @@ try {
         }
 
         .btn-premium-dragon i {
-            font-size: 1.1rem;
+            font-size: 0.9rem;
             filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.3));
         }
 
         .card-ameaca-actions {
             margin-left: auto;
             display: flex;
-            gap: 12px;
+            gap: 8px;
             align-items: center;
+        }
+
+        /* TEMAS DINÂMICOS - PREMIUM EXPERIENCE */
+        /* Tema: Ordem Paranormal */
+        /* Forçar Cinzel em TUDO no tema Ordem Paranormal, EXCETO ícones */
+        body.tema-ordem-paranormal,
+        body.tema-ordem-paranormal *:not(i):not([class^="fa-"]):not([class*=" fa-"]) {
+            font-family: 'Cinzel', serif !important;
+            font-optical-sizing: auto !important;
+        }
+
+        body.tema-ordem-paranormal {
+            --premium-accent: #ff3232 !important;
+            --cor-destaque-claro: #ff4d4d !important;
+            --fundo-cartao-escuro: rgba(10, 5, 5, 0.98) !important;
+            --cor-primaria: #ff3232 !important;
+            
+            background: #050202 !important;
+            color: #fff !important;
+            letter-spacing: 1px;
+        }
+
+        /* Glow e Estilo para Títulos/Botões */
+        body.tema-ordem-paranormal h1, 
+        body.tema-ordem-paranormal h2, 
+        body.tema-ordem-paranormal h3, 
+        body.tema-ordem-paranormal h4,
+        body.tema-ordem-paranormal .btn-tab-sistema,
+        body.tema-ordem-paranormal .btn-premium-dragon,
+        body.tema-ordem-paranormal .btn-pilula {
+            font-weight: 700 !important;
+            color: white !important;
+            text-shadow: 0 0 10px rgba(255,255,255,0.8) !important;
+            letter-spacing: 2px !important;
+        }
+
+        /* Background Dinâmico - Mostrar mais */
+        body.tema-ordem-paranormal::before {
+            content: '';
+            position: fixed;
+            top: 80px; left: 0; width: 100%; height: calc(100vh - 80px);
+            background: radial-gradient(circle at center, transparent 0%, #000 90%),
+                        url('<?= !empty($sistema['ds_background']) ? $sistema['ds_background'] : '../img/ordem-paranormal-icon.png' ?>') center/cover no-repeat;
+            opacity: 0.55;
+            z-index: -1;
+            pointer-events: none;
+            filter: grayscale(0.2) contrast(1.1);
+        }
+
+        /* Borda da foto de capa e sistema */
+        body.tema-ordem-paranormal .img-sistema-grande,
+        body.tema-ordem-paranormal .card-ameaca-img {
+            border: 3px solid #ff3232 !important;
+            box-shadow: 0 0 25px rgba(255, 50, 50, 0.5) !important;
+        }
+
+        /* Scrollbars Temáticas - Sangue e Escuridão */
+        body.tema-ordem-paranormal::-webkit-scrollbar,
+        body.tema-ordem-paranormal *::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        body.tema-ordem-paranormal::-webkit-scrollbar-track,
+        body.tema-ordem-paranormal *::-webkit-scrollbar-track {
+            background: #0a0606;
+        }
+        body.tema-ordem-paranormal::-webkit-scrollbar-thumb,
+        body.tema-ordem-paranormal *::-webkit-scrollbar-thumb {
+            background: #8b0000;
+            border-radius: 10px;
+            border: 2px solid #0a0606;
+            transition: background 0.3s;
+        }
+        body.tema-ordem-paranormal::-webkit-scrollbar-thumb:hover,
+        body.tema-ordem-paranormal *::-webkit-scrollbar-thumb:hover {
+            background: #ff3232;
+        }
+
+        /* Overrides de UI Elements */
+        body.tema-ordem-paranormal .header-sistema-premium {
+            background: linear-gradient(to right, rgba(20, 5, 5, 0.95), rgba(255, 50, 50, 0.1)) !important;
+            border-color: rgba(255, 50, 50, 0.2) !important;
+        }
+
+        body.tema-ordem-paranormal .secao-descricao-completa,
+        body.tema-ordem-paranormal .card-ameaca-premium,
+        body.tema-ordem-paranormal .modal-box {
+            background: rgba(15, 5, 5, 0.7) !important;
+            border: 1px solid rgba(255, 50, 50, 0.15) !important;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6) !important;
+        }
+
+        body.tema-ordem-paranormal .btn-tab-sistema.ativa,
+        body.tema-ordem-paranormal .btn-pilula {
+            background: #ff3232 !important;
+            border-color: #ff3232 !important;
+            box-shadow: 0 0 20px rgba(255, 50, 50, 0.5) !important;
+            color: #fff !important;
+        }
+
+        body.tema-ordem-paranormal .btn-pilula:hover {
+            background: #ff4d4d !important;
+            transform: translateY(-2px);
+            box-shadow: 0 0 30px rgba(255, 50, 50, 0.7) !important;
+        }
+
+        body.tema-ordem-paranormal .btn-premium-dragon {
+            background: linear-gradient(135deg, #660000 0%, #ff3232 100%) !important;
+            border-color: rgba(255, 50, 50, 0.3) !important;
+            box-shadow: 0 10px 25px rgba(255, 50, 50, 0.3) !important;
+        }
+
+        body.tema-ordem-paranormal .attr-abbr {
+            background: #ff3232 !important;
+            color: #fff !important;
+        }
+
+        body.tema-ordem-paranormal .attr-circle {
+            border-color: #ff3232 !important;
+            background: rgba(255, 50, 50, 0.05) !important;
+        }
+
+        body.tema-ordem-paranormal .info-sistema-item label,
+        body.tema-ordem-paranormal .board-title-modern,
+        body.tema-ordem-paranormal .form-section-title {
+            color: #ff3232 !important;
+        }
+
+        body.tema-ordem-paranormal .input-premium-field:focus {
+            border-color: #ff3232 !important;
+            background: rgba(255, 50, 50, 0.05) !important;
+            box-shadow: 0 0 15px rgba(255, 50, 50, 0.1) !important;
         }
     </style>
 </head>
 
-<body class="ficha-body">
+<body class="ficha-body <?= $classeBackground ?>">
 
     <header>
         <div class="logotipo">
             <a href="index.php"><img src="../img/logo_horizontal.png" alt="Logo TABLE"></a>
         </div>
-        <nav>
+
+        <!-- BOTÃO MENU MOBILE (HAMBURGER) -->
+        <div class="menu-toggle" id="mobile-menu-btn">
+            <i class="fas fa-bars"></i>
+        </div>
+
+        <nav id="nav-menu">
             <ul>
                 <li><a href="index.php">Início</a></li>
-                <li><a href="cm-jogar.php" class="ativo">Como Jogar</a></li>
+                <li><a href="cm-jogar.php">Como Jogar</a></li>
                 <li><a href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a>
                 </li>
                 <li><a href="criar-mapa.php">Mundos</a></li>
-                <li><a href="rolador-de-dados.php">Dados</a></li>
+                <li><a href="rolagem-de-dados.php">Dados</a></li>
                 <li><a href="sobre-nos.php">Sobre Nós</a></li>
             </ul>
+
+            <!-- BOTÕES MOBILE -->
+            <div class="nav-mobile-footer">
+                <?php if (isset($_SESSION['usuario'])): ?>
+                    <div class="usuario-logado-nav" onclick="window.location.href='perfil.php'">
+                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
+                            alt="Avatar Navbar" class="avatar-nav">
+                        <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
+                    </div>
+                <?php else: ?>
+                    <a href="login.php" class="botao-entrar">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </a>
+                    <a href="cadastro.php" class="botao-cadastrar">
+                        <i class="fas fa-user-plus"></i> Cadastre-se
+                    </a>
+                <?php endif; ?>
+            </div>
         </nav>
+
         <?php if (isset($_SESSION['usuario'])): ?>
-            <div class="usuario-logado-nav" id="nav-logado" onclick="window.location.href='perfil.php'"
+            <div class="usuario-logado-nav desktop-only" id="nav-logado" onclick="window.location.href='perfil.php'"
                 title="Ir para o Perfil">
                 <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
                     alt="Avatar Navbar" class="avatar-nav">
                 <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
             </div>
         <?php else: ?>
-            <div class="botoes-navegacao" id="nav-deslogado">
+            <div class="botoes-navegacao desktop-only" id="nav-deslogado">
                 <a href="login.php" class="botao-entrar">
                     <i class="fas fa-sign-in-alt"></i> Login
                 </a>
@@ -803,19 +1271,25 @@ try {
                     style="color: #aaa; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;">
                     <i class="fas fa-arrow-left"></i> Voltar ao Perfil
                 </a>
-                <?php if ($sistema['id_usuario_criador'] == $_SESSION['usuario']['id'] || (isset($_SESSION['usuario']['cargo']) && strtolower($_SESSION['usuario']['cargo']) === 'admin')): ?>
-                    <div style="display: flex; gap: 15px; align-items: center;">
-                        <a href="editar-sistema.php?id=<?= $id_sistema ?>" style="text-decoration: none;">
-                            <button class="btn-pilula"
-                                style="background: var(--premium-purple); color: #fff; padding: 10px 25px; font-size: 0.85rem; border: none; border-radius: 30px; font-weight: 800; cursor: pointer; transition: 0.3s; box-shadow: 0 0 15px rgba(157, 122, 255, 0.4);"><i
-                                    class="fas fa-edit"></i> EDITAR SISTEMA</button>
-                        </a>
-                        <button class="btn-card-delete" onclick="removerSistema(<?= $id_sistema ?>)" 
-                                title="Excluir Sistema" style="width: 42px; height: 42px; font-size: 1.1rem;">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </div>
-                <?php endif; ?>
+                        <?php if ($isDono || (isset($_SESSION['usuario']['cargo']) && strtolower($_SESSION['usuario']['cargo']) === 'admin')): ?>
+                            <div style="display: flex; gap: 15px; align-items: center;">
+                                <?php if ($id_sistema != 1): ?>
+                                    <button class="btn-pilula" onclick="gerarLinkCompartilhamento()"
+                                            style="background: #27ae60; color: #fff; padding: 10px 25px; font-size: 0.85rem; border: none; border-radius: 30px; font-weight: 800; cursor: pointer; transition: 0.3s;">
+                                        <i class="fas fa-share-alt"></i> COMPARTILHAR
+                                    </button>
+                                <?php endif; ?>
+                                <a href="editar-sistema.php?id=<?= $id_sistema ?>" style="text-decoration: none;">
+                                    <button class="btn-pilula"
+                                        style="background: #b39ddb; color: #fff; padding: 10px 25px; font-size: 0.85rem; border: none; border-radius: 30px; font-weight: 800; cursor: pointer; transition: 0.3s;"><i
+                                            class="fas fa-edit"></i> EDITAR SISTEMA</button>
+                                </a>
+                                <button class="btn-lixeira-item" onclick="abrirModalExclusaoSistema()" 
+                                        title="Excluir Sistema" style="width: 42px; height: 42px; font-size: 1.1rem; background: rgba(230, 57, 70, 0.1); color: #e63946; border: 1px solid rgba(230, 57, 70, 0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        <?php endif; ?>
             </div>
             <!-- HEADER DO SISTEMA -->
             <section class="header-sistema-premium">
@@ -830,6 +1304,8 @@ try {
                         <label>Criado por</label>
                         <span class="criador-nome"><?= htmlspecialchars($criadorDisplay) ?></span>
                     </div>
+
+
                     <div class="info-sistema-item">
                         <label>Classificação Indicativa</label>
                         <div style="display: flex; align-items: center; gap: 10px; margin-top: 5px;">
@@ -843,6 +1319,12 @@ try {
                         <span><?= date('d/m/Y', strtotime($sistema['dt_cadastro'])) ?></span>
                     </div>
                 </div>
+
+                <?php if (isset($sistema['fl_importado']) && $sistema['fl_importado']): ?>
+                    <div style="position: absolute; bottom: 15px; right: 20px; font-size: 0.6rem; color: rgba(255,255,255,0.25); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; pointer-events: none; padding: 4px 10px; border-radius: 6px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);">
+                        <i class="fas fa-file-import" style="margin-right: 5px;"></i> Sistema Importado
+                    </div>
+                <?php endif; ?>
             </section>
 
             <!-- DESCRIÇÃO COMPLETA -->
@@ -872,32 +1354,42 @@ try {
                         <?php endforeach; ?>
                     </div>
 
-                    <!-- ORIGENS NO PADRÃO PREMIUM -->
-                    <div class="pericias-premium-container" style="height: auto; min-height: 350px; margin-top: 40px;">
-                        <div class="pericias-premium-header">
-                            <span class="h-main"><i class="fas fa-history"></i> ORIGENS</span>
-                        </div>
-                        <div class="pericias-premium-list" style="overflow: visible !important;">
-                            <?php if (empty($origens)): ?>
-                                <p style="text-align:center; opacity:0.5; margin-top:20px;">Nenhuma origem cadastrada.</p>
-                            <?php else: ?>
-                                <?php foreach ($origens as $or): ?>
-                                    <div class="p-row">
-                                        <div class="p-desc">
-                                            <span class="p-name"><?= htmlspecialchars($or['nm_origem']) ?></span>
+                    <!-- STATUS E DEFESAS (NOVIDADE) -->
+                    <?php if(!empty($barras_sistema) || !empty($defesas_sistema)): ?>
+                        <h2 class="board-title-modern" style="margin-top: 40px;"><i class="fas fa-heartbeat"></i> Status Iniciais</h2>
+                        
+                        <?php if(!empty($barras_sistema)): ?>
+                            <div class="premium-status-list" style="margin-bottom: 20px;">
+                                <?php foreach($barras_sistema as $barra): ?>
+                                    <div class="p-barra-status" style="margin-bottom: 18px;">
+                                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; color: <?= htmlspecialchars($barra['ds_cor']) ?>; margin-bottom: 8px;">
+                                            <span><?= htmlspecialchars($barra['nm_status']) ?></span>
+                                            <span style="opacity: 0.8;">100 / 100</span>
                                         </div>
-                                        <div class="p-values">
-                                            <i class="fas fa-info-circle info-icon"
-                                                style="color: var(--premium-accent); cursor: help;"></i>
-                                            <div class="tooltip">
-                                                <?= htmlspecialchars($or['ds_origem'] ?? 'Sem descrição da origem.') ?>
-                                            </div>
+                                        <div style="width: 100%; height: 14px; background: rgba(0,0,0,0.5); border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08);">
+                                            <div style="width: 100%; height: 100%; background: <?= htmlspecialchars($barra['ds_cor']) ?>; border-radius: 8px; box-shadow: 0 0 15px <?= htmlspecialchars($barra['ds_cor']) ?>;"></div>
                                         </div>
                                     </div>
                                 <?php endforeach; ?>
-                            <?php endif; ?>
-                        </div>
-                    </div>
+                            </div>
+                        <?php endif; ?>
+
+                        <?php if(!empty($defesas_sistema)): ?>
+                            <div class="premium-defesas-grid" style="display: flex; gap: 15px; margin-top: 10px; flex-wrap: wrap;">
+                                <?php foreach($defesas_sistema as $defesa): ?>
+                                    <div class="p-defesa-item" style="flex: 1; min-width: 120px; display: flex; align-items: center; gap: 12px; background: rgba(0,0,0,0.3); padding: 12px 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: inset 0 0 20px rgba(0,0,0,0.2);">
+                                        <i class="fas fa-shield-alt" style="color: <?= htmlspecialchars($defesa['ds_cor']) ?>; font-size: 1.8rem; filter: drop-shadow(0 0 8px <?= htmlspecialchars($defesa['ds_cor']) ?>);"></i>
+                                        <div style="display: flex; flex-direction: column;">
+                                            <span style="font-size: 0.65rem; color: #aaa; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;"><?= htmlspecialchars($defesa['nm_status']) ?></span>
+                                            <span style="color: #fff; font-weight: 900; font-size: 1.2rem;">0</span>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                    <?php endif; ?>
+
+                    <!-- ATRIBUTOS FIM -->
                 </div>
 
                 <!-- COLUNA DIREITA: CLASSES, PERÍCIAS E BESTIÁRIO -->
@@ -908,12 +1400,13 @@ try {
                         <button class="btn-tab-sistema ativa"
                             onclick="switchSistemaTab('classes', this)">Classes</button>
                         <button class="btn-tab-sistema" onclick="switchSistemaTab('pericias', this)">Perícias</button>
+                        <button class="btn-tab-sistema" onclick="switchSistemaTab('origens', this)">Origens</button>
                         <button class="btn-tab-sistema" onclick="switchSistemaTab('criaturas', this)">Criaturas</button>
                     </div>
 
                     <!-- CLASSES -->
                     <div id="tab-classes" class="pericias-premium-container tab-content-sistema"
-                        style="height: auto; min-height: 200px; margin-bottom: 40px;">
+                        style="height: auto; min-height: 300px; margin-bottom: 40px;">
                         <div class="pericias-premium-header">
                             <span class="h-main"><i class="fas fa-users-cog"></i> CLASSES DO SISTEMA</span>
                         </div>
@@ -922,16 +1415,12 @@ try {
                                 <p style="text-align:center; opacity:0.5; margin-top:20px;">Nenhuma classe cadastrada.</p>
                             <?php else: ?>
                                 <?php foreach ($classes as $cl): ?>
-                                    <div class="p-row">
-                                        <div class="p-desc">
-                                            <span class="p-name"><?= htmlspecialchars($cl['nm_classe']) ?></span>
-                                        </div>
-                                        <div class="p-values" style="display: flex; align-items: center; gap: 10px;">
-                                            <div class="info-icon-wrapper">
-                                                <i class="fas fa-info"></i>
-                                                <div class="tooltip">
-                                                    <?= htmlspecialchars($cl['ds_descricao'] ?? 'Sem descrição da classe.') ?>
-                                                </div>
+                                    <div class="sistema-row-premium">
+                                        <span class="p-name"><?= htmlspecialchars($cl['nm_classe']) ?></span>
+                                        <div class="info-icon-wrapper">
+                                            <i class="fas fa-info"></i>
+                                            <div class="tooltip">
+                                                <?= htmlspecialchars($cl['ds_descricao'] ?? 'Sem descrição da classe.') ?>
                                             </div>
                                         </div>
                                     </div>
@@ -942,24 +1431,53 @@ try {
 
                     <!-- PERÍCIAS -->
                     <div id="tab-pericias" class="pericias-premium-container tab-content-sistema escondido"
-                        style="height: auto; min-height: 200px;">
+                        style="height: auto; min-height: 300px; margin-bottom: 40px;">
                         <div class="pericias-premium-header">
                             <span class="h-main"><i class="fas fa-scroll"></i> PERÍCIAS ATIVAS</span>
                         </div>
-                        <div class="pericias-premium-list" style="max-height: 400px; overflow-y: auto;">
+                        <div class="pericias-premium-list" style="overflow: visible !important;">
                             <?php if (empty($pericias)): ?>
                                 <p style="text-align:center; opacity:0.5; margin-top:20px;">Nenhuma perícia cadastrada.</p>
                             <?php else: ?>
                                 <?php foreach ($pericias as $pe): ?>
-                                    <div class="p-row">
-                                        <div class="p-desc">
+                                    <div class="sistema-row-premium">
+                                        <div style="display:flex; align-items:center; gap:10px;">
                                             <span class="p-name"><?= htmlspecialchars($pe['nm_pericia']) ?></span>
-                                        </div>
-                                        <div class="p-values" style="justify-content: flex-end; width: 100px;">
-                                            <span class="p-attr"
-                                                style="font-weight: 800; color: #aaa; text-transform: uppercase;">
-                                                <?= htmlspecialchars(substr((string) ($pe['ds_atributo_base'] ?? ''), 0, 3) ?: '???') ?>
+                                            <span class="p-attr" style="font-weight: 800; color: #666; text-transform: uppercase;">
+                                                (<?= htmlspecialchars(substr((string) ($pe['ds_atributo_base'] ?? ''), 0, 3) ?: '???') ?>)
                                             </span>
+                                        </div>
+                                        <div class="info-icon-wrapper">
+                                            <i class="fas fa-info"></i>
+                                            <div class="tooltip" style="z-index: 9999;">
+                                                <b>Descrição:</b> <?= htmlspecialchars($pe['ds_descricao'] ?? 'Nenhuma.') ?><br>
+                                                <b>Habilidade:</b> <?= htmlspecialchars($pe['ds_habilidade'] ?? 'Nenhuma.') ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <!-- ORIGENS -->
+                    <div id="tab-origens" class="pericias-premium-container tab-content-sistema escondido"
+                        style="height: auto; min-height: 300px; margin-bottom: 40px;">
+                        <div class="pericias-premium-header">
+                            <span class="h-main"><i class="fas fa-history"></i> ORIGENS DISPONÍVEIS</span>
+                        </div>
+                        <div class="pericias-premium-list" style="overflow: visible !important;">
+                            <?php if (empty($origens)): ?>
+                                <p style="text-align:center; opacity:0.5; margin-top:20px;">Nenhuma origem cadastrada.</p>
+                            <?php else: ?>
+                                <?php foreach ($origens as $or): ?>
+                                    <div class="sistema-row-premium">
+                                        <span class="p-name"><?= htmlspecialchars($or['nm_origem']) ?></span>
+                                        <div class="info-icon-wrapper">
+                                            <i class="fas fa-info"></i>
+                                            <div class="tooltip" style="z-index: 9999;">
+                                                <?= htmlspecialchars($or['ds_origem'] ?? 'Sem descrição da origem.') ?>
+                                            </div>
                                         </div>
                                     </div>
                                 <?php endforeach; ?>
@@ -968,12 +1486,12 @@ try {
                     </div>
 
                     <!-- CRIATURAS -->
-                    <div id="tab-criaturas" class="tab-content-sistema escondido">
-                        <div class="pericias-premium-header" style="margin-bottom: 20px;">
-                            <span class="h-main"><i class="fas fa-dragon"></i> AMEAÇAS</span>
+                    <div id="tab-criaturas" class="tab-content-sistema escondido" style="min-height: 300px; margin-bottom: 40px;">
+                        <div class="pericias-premium-header" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                            <span class="h-main"><i class="fas fa-dragon"></i> CRIATURAS</span>
                             <?php if ($sistema['id_usuario_criador'] == $_SESSION['usuario']['id']): ?>
                                 <button class="btn-premium-dragon" onclick="resetarModalMonstro(); abrirModal('modal-criar-monstro')">
-                                    <i class="fas fa-dragon"></i> + CRIAR Ameaça
+                                    <i class="fas fa-dragon"></i> + CRIAR Criatura
                                 </button>
                             <?php endif; ?>
                         </div>
@@ -987,36 +1505,36 @@ try {
                             <?php if (empty($monstros)): ?>
                                 <p
                                     style="text-align:center; opacity:0.5; margin-top:40px; padding: 20px; border: 1px dashed rgba(255,255,255,0.1); border-radius: 10px;">
-                                    Nenhuma ameaça catalogada no sistema.</p>
+                                    Nenhuma criatura catalogada no sistema.</p>
                             <?php else: ?>
                                 <?php foreach ($monstros as $m): ?>
                                     <div class="card-ameaca-premium">
-                                        <img src="<?= !empty($m['ds_imagem']) ? htmlspecialchars($m['ds_imagem']) : '../img/logo_icone.png' ?>"
+                                        <img src="<?= (!empty($m['ds_imagem']) && $m['ds_imagem'] !== '../img/logo_icone.png') ? htmlspecialchars($m['ds_imagem']) : '../img/uploads/perfil/avatar1.png' ?>"
                                             alt="Monstro" class="card-ameaca-img">
                                         <div class="card-ameaca-body">
-                                            <h4 style="color: #fff; font-weight: 800; font-size: 1.1rem; margin-bottom: 5px;">
+                                            <h4 style="color: #fff; font-weight: 800; font-size: 0.95rem; margin-bottom: 3px;">
                                                 <?= htmlspecialchars($m['nm_monstro']) ?>
                                             </h4>
                                             <div class="card-ameaca-details"
-                                                style="display: flex; gap: 15px; font-size: 0.85rem; color: #aaa;">
+                                                style="display: flex; gap: 10px; font-size: 0.75rem; color: #aaa;">
                                                 <span
-                                                    style="background: rgba(255, 50, 50, 0.15); color: #ff4d4d; padding: 2px 8px; border-radius: 4px; font-weight: 700;">VD:
+                                                    style="background: rgba(255, 50, 50, 0.15); color: #ff4d4d; padding: 1px 6px; border-radius: 4px; font-weight: 700;">VD:
                                                     <b><?= $m['qt_vd'] ?? '???' ?></b></span>
-                                                <span style="display: flex; align-items: center; gap: 5px;"><i
+                                                <span style="display: flex; align-items: center; gap: 4px;"><i
                                                         class="fas fa-tag"></i>
                                                     <?= htmlspecialchars($m['tp_monstro'] ?? 'Criatura') ?></span>
                                             </div>
                                         </div>
                                         <div class="card-ameaca-actions">
                                             <button class="btn-card-ficha"
-                                                onclick="verFichaMonstro(<?= $m['id_monstro'] ?>)">Ficha</button>
-                                            <?php if ($sistema['id_usuario_criador'] == $_SESSION['usuario']['id']): ?>
+                                                onclick="exibirFichaMonstro(<?= $m['id_monstro'] ?>)">FICHA</button>
+                                            <?php if ($sistema['id_usuario_criador'] == $_SESSION['usuario']['id'] || (isset($_SESSION['usuario']['cargo']) && strtolower($_SESSION['usuario']['cargo']) === 'admin')): ?>
                                                 <button class="btn-card-edit" onclick="editarMonstro(<?= $m['id_monstro'] ?>)"
-                                                    title="Editar Ameaça" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #00d1b2; padding: 8px; border-radius: 8px; cursor: pointer;">
-                                                    <i class="fas fa-edit"></i>
+                                                    title="Editar Criatura">
+                                                    <i class="fas fa-edit"></i> EDITAR
                                                 </button>
                                                 <button class="btn-card-delete" onclick="removerMonstro(<?= $m['id_monstro'] ?>)"
-                                                    title="Excluir Ameaça">
+                                                    title="Excluir Criatura">
                                                     <i class="fas fa-trash-alt"></i>
                                                 </button>
                                             <?php endif; ?>
@@ -1038,7 +1556,7 @@ try {
 
             <div style="text-align: center; margin-bottom: 30px;">
                 <h2 style="color: #fff; font-size: 1.8rem; font-weight: 900; letter-spacing: -1px; margin-bottom: 5px;">
-                    NOVA Ameaça</h2>
+                    NOVA Criatura</h2>
                 <p style="color: #666; font-size: 0.9rem;">Catalogando perigos do Outro Lado</p>
             </div>
             <div id="form-criar-ameaca">
@@ -1046,16 +1564,16 @@ try {
                 <input type="hidden" id="m-imagem-atual" value="">
                 <div class="form-section-title"><i class="fas fa-fingerprint"></i> IDENTIDADE</div>
 
-                <div style="display: flex; gap: 25px; align-items: stretch; margin-bottom: 25px;">
+                <div class="monstro-identidade-container">
                     <div id="preview-monstro-container" onclick="document.getElementById('m-foto').click()" style="width: 120px; height: 120px; border: 2px dashed rgba(157, 122, 255, 0.3); border-radius: 20px; 
                                  display: flex; align-items: center; justify-content: center; cursor: pointer; 
-                                 background: rgba(0,0,0,0.4); overflow: hidden; transition: 0.3s; position: relative;">
+                                 background: rgba(0,0,0,0.4); overflow: hidden; transition: 0.3s; position: relative; flex-shrink: 0;">
                         <i class="fas fa-cloud-upload-alt" style="font-size: 2rem; color: var(--premium-accent); opacity: 0.5;"></i>
                         <span style="position: absolute; bottom: 10px; font-size: 0.6rem; color: #aaa; font-weight: 800; text-transform: uppercase;">Imagem</span>
                     </div>
-                    <div style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div class="monstro-identidade-inputs">
                         <div class="input-premium-group" style="margin-bottom: 10px;">
-                            <label class="input-premium-label">NOME DA AMEAÇA</label>
+                            <label class="input-premium-label">NOME DA CRIATURA</label>
                             <input type="text" id="m-nome" class="input-premium-field" placeholder="Ex: Degolador, Aniquilação...">
                         </div>
                         <input type="file" id="m-foto" accept="image/*" style="display: none;" onchange="previewImagemMonstro(this)">
@@ -1103,11 +1621,11 @@ try {
                 <div class="form-section-title"><i class="fas fa-align-left"></i> DETALHES</div>
                 <div class="input-premium-group">
                     <label class="input-premium-label">DESCRIÇÃO E HABILIDADES</label>
-                    <textarea id="m-desc" class="input-premium-field" style="height: 120px; resize: none;" placeholder="Descreva as peculiaridades e poderes desta ameaça..."></textarea>
+                    <textarea id="m-desc" class="input-premium-field" style="height: 120px; resize: none;" placeholder="Descreva as peculiaridades e poderes desta criatura..."></textarea>
                 </div>
 
                 <button type="button" class="btn-premium-dragon" id="btn-save-monstro" style="width: 100%; padding: 20px; justify-content: center;" onclick="salvarMonstro()">
-                    <i class="fas fa-skull"></i> CONVOCAR Ameaça
+                    <i class="fas fa-skull"></i> CONVOCAR Criatura
                 </button>
             </div>
         </div>
@@ -1118,6 +1636,25 @@ try {
         <div class="modal-box" id="ficha-monstro-render"
             style="max-width: 700px; max-height: 90vh; padding: 0; overflow-y: auto; overflow-x: hidden;">
             <!-- Renderizado via AJAX -->
+        </div>
+    </div>
+
+    <!-- MODAL COMPARTILHAR SISTEMA -->
+    <div class="modal-overlay" id="modal-compartilhar-sistema">
+        <div class="modal-box" style="max-width: 500px; padding: 40px; text-align: center;">
+            <i class="fas fa-times modal-close" onclick="fecharModal('modal-compartilhar-sistema')"></i>
+            <i class="fas fa-share-nodes" style="font-size: 3rem; color: #27ae60; margin-bottom: 20px;"></i>
+            <h2 style="color: #fff; margin-bottom: 10px;">Compartilhar Sistema</h2>
+            <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 25px;">Envie este link para um amigo importar seu sistema completo para a conta dele.</p>
+            
+            <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); display: flex; gap: 10px; align-items: center; margin-bottom: 20px;">
+                <input type="text" id="input-link-compartilhar" readonly 
+                       style="flex: 1; background: transparent; border: none; color: #fff; font-family: 'Montserrat', sans-serif; font-size: 0.8rem; outline: none;">
+                <button onclick="copiarLinkSistema()" style="background: #27ae60; color: #fff; border: none; padding: 8px 15px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.3s;">
+                    COPIAR
+                </button>
+            </div>
+            <p id="msg-copiado" style="color: #27ae60; font-size: 0.8rem; font-weight: 700; opacity: 0; transition: 0.3s;">Link copiado com sucesso!</p>
         </div>
     </div>
 
@@ -1139,7 +1676,7 @@ try {
                             href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a>
                     </li>
                     <li><a href="criar-mapa.php">Mundos</a></li>
-                    <li><a href="rolador-de-dados.php">Dados</a></li>
+                    <li><a href="rolagem-de-dados.php">Dados</a></li>
                     <li><a href="sobre-nos.php">Sobre Nós</a></li>
                 </ul>
             </div>
@@ -1166,20 +1703,30 @@ try {
 
     <script src="../js/nav-global.js?v=1.4" defer></script>
     <script>
-        function switchSistemaTab(tab, btn) {
-            document.querySelectorAll('.tab-content-sistema').forEach(t => t.classList.add('escondido'));
-            document.querySelectorAll('.btn-tab-sistema').forEach(b => b.classList.remove('ativa'));
+        // --- NAVEGAÇÃO DE ABAS ---
+        function switchSistemaTab(tabId, btn) {
+            document.querySelectorAll('.tab-content-sistema').forEach(t => {
+                t.classList.add('escondido');
+            });
+            document.querySelectorAll('.btn-tab-sistema').forEach(b => {
+                b.classList.remove('ativa');
+            });
 
-            document.getElementById('tab-' + tab).classList.remove('escondido');
-            btn.classList.add('ativa');
+            const target = document.getElementById('tab-' + tabId);
+            if (target) {
+                target.classList.remove('escondido');
+            }
+            if (btn) btn.classList.add('ativa');
         }
 
+        // --- GESTÃO DE MODAIS ---
         function abrirModal(id) {
             const el = document.getElementById(id);
             if (el) {
                 el.style.display = 'flex';
                 el.offsetHeight; // Force reflow
                 el.classList.add('ativa');
+                document.body.style.overflow = 'hidden';
             }
         }
 
@@ -1187,19 +1734,226 @@ try {
             const el = document.getElementById(id);
             if (el) {
                 el.classList.remove('ativa');
-                setTimeout(() => { el.style.display = 'none'; }, 400);
+                setTimeout(() => { 
+                    if (!el.classList.contains('ativa')) {
+                        el.style.display = 'none'; 
+                    }
+                }, 400);
+                document.body.style.overflow = '';
             }
         }
 
-        function previewImagemMonstro(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    const container = document.getElementById('preview-monstro-container');
-                    container.innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal-overlay')) {
+                fecharModal(event.target.id);
+            }
+        }
+
+        // --- COMPARTILHAMENTO ---
+        async function gerarLinkCompartilhamento() {
+            const btn = event.currentTarget;
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GERANDO...';
+
+            try {
+                const formData = new FormData();
+                formData.append('id_sistema', <?= $id_sistema ?>);
+
+                const res = await fetch('../app/ajax/gerar-convite-sistema.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+
+                if (data.sucesso) {
+                    document.getElementById('input-link-compartilhar').value = data.link;
+                    abrirModal('modal-compartilhar-sistema');
+                } else {
+                    await TableModal.alert('Erro: ' + data.mensagem, 'Erro ao Compartilhar', 'error');
                 }
+            } catch (e) {
+                console.error(e);
+                await TableModal.alert('Erro ao gerar o link de compartilhamento.', 'Erro', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        }
+
+        function copiarLinkSistema() {
+            const input = document.getElementById('input-link-compartilhar');
+            input.select();
+            input.setSelectionRange(0, 99999);
+            
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(input.value);
+            } else {
+                document.execCommand('copy');
+            }
+
+            const msg = document.getElementById('msg-copiado');
+            msg.style.opacity = '1';
+            setTimeout(() => { msg.style.opacity = '0'; }, 2000);
+        }
+
+        // --- EXCLUSÃO DE SISTEMA ---
+        function abrirModalExclusaoSistema() {
+            const input1 = document.getElementById('input-confirm-1');
+            const input2 = document.getElementById('input-confirm-2');
+            if(input1) input1.value = '';
+            if(input2) input2.value = '';
+            const btnExcluir = document.getElementById('btn-confirmar-exclusao-sistema');
+            if(btnExcluir && input1 && input2) {
+                btnExcluir.disabled = true;
+            }
+            abrirModal('modal-excluir-sistema');
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Gatilho para criar nova criatura vindo de link externo
+            const urlParams = new URLSearchParams(window.location.search);
+            const action = urlParams.get('action');
+            if (action === 'criar_criatura' || action === 'criar_ameaca') {
+                const btnCriaturas = document.querySelector('.btn-tab-sistema[onclick*="criaturas"]');
+                if (btnCriaturas) {
+                    switchSistemaTab('criaturas', btnCriaturas);
+                }
+                resetarModalMonstro();
+                abrirModal('modal-criar-monstro');
+            }
+
+            const input1 = document.getElementById('input-confirm-1');
+            const input2 = document.getElementById('input-confirm-2');
+            const btnExcluir = document.getElementById('btn-confirmar-exclusao-sistema');
+            const nomeSistemaOriginal = "<?= addslashes($sistema['nm_sistema'] ?? '') ?>".trim().toUpperCase();
+
+            function validarExclusao() {
+                if (input1 && input2 && btnExcluir) {
+                    if (input1.value.trim().toUpperCase() === nomeSistemaOriginal && input2.value.trim().toUpperCase() === nomeSistemaOriginal) {
+                        btnExcluir.disabled = false;
+                    } else {
+                        btnExcluir.disabled = true;
+                    }
+                }
+            }
+
+            if (input1) input1.addEventListener('input', validarExclusao);
+            if (input2) input2.addEventListener('input', validarExclusao);
+
+            if (btnExcluir) {
+                btnExcluir.addEventListener('click', async function() {
+                    btnExcluir.disabled = true;
+                    btnExcluir.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                    try {
+                        const res = await fetch('../app/ajax/deletar-item.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ tipo: 'sistema', id: <?= $id_sistema ?> })
+                        });
+                        const data = await res.json();
+
+                        if (data.success) {
+                            window.location.href = 'perfil.php';
+                        } else {
+                            alert('Erro ao excluir: ' + data.error);
+                            btnExcluir.disabled = false;
+                            btnExcluir.innerHTML = 'EXCLUIR';
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        alert('Erro de conexão.');
+                        btnExcluir.disabled = false;
+                        btnExcluir.innerHTML = 'EXCLUIR';
+                    }
+                });
+            }
+        });
+
+        async function removerSistema(idS) {
+            if (!await TableModal.confirm("Deseja realmente apagar este sistema? Esta ação é irreversível.", "Apagar Sistema", "warning")) return;
+            try {
+                const res = await fetch('../app/ajax/remover-sistema.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `id=${idS}`
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.location.href = 'perfil.php';
+                } else {
+                    await TableModal.alert("Erro ao remover: " + data.error, "Erro ao Remover", "error");
+                }
+            } catch (e) { 
+                console.error(e); 
+                await TableModal.alert("Erro de comunicação com o servidor.", "Erro de Conexão", "error");
+            }
+        }
+
+        // --- AMEAÇAS (MONSTROS) ---
+        function resetarModalMonstro() {
+            const fields = ['m-id', 'm-imagem-atual', 'm-nome', 'm-vd', 'm-vida', 'm-defesa', 'm-xp', 'm-desc'];
+            fields.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = (id === 'm-nome' || id === 'm-desc' || id === 'm-imagem-atual' || id === 'm-id') ? '' : 0;
+            });
+            const tipo = document.getElementById('m-tipo');
+            if (tipo) tipo.value = 'Criatura';
+            
+            const preview = document.getElementById('preview-monstro-container');
+            if (preview) {
+                preview.innerHTML = `
+                    <i class="fas fa-cloud-upload-alt" style="font-size: 2rem; color: var(--premium-accent); opacity: 0.5;"></i>
+                    <span style="position: absolute; bottom: 10px; font-size: 0.6rem; color: #aaa; font-weight: 800; text-transform: uppercase;">Imagem</span>
+                `;
+            }
+            
+            const btnSave = document.getElementById('btn-save-monstro');
+            if (btnSave) btnSave.innerHTML = '<i class="fas fa-skull"></i> CONVOCAR Criatura';
+            
+            document.querySelectorAll('.attr-input-premium').forEach(input => input.value = 0);
+        }
+
+        function previewImagemMonstro(input) {
+            const preview = document.getElementById('preview-monstro-container');
+            if (input.files && input.files[0] && preview) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
+                };
                 reader.readAsDataURL(input.files[0]);
             }
+        }
+
+        async function editarMonstro(idM) {
+            try {
+                const res = await fetch(`../app/ajax/get-monstro-detalhes.php?id=${idM}`);
+                const data = await res.json();
+                if (data.success) {
+                    const m = data.monstro;
+                    document.getElementById('m-id').value = m.id_monstro;
+                    document.getElementById('m-nome').value = m.nm_monstro;
+                    document.getElementById('m-tipo').value = m.tp_monstro || 'Criatura';
+                    document.getElementById('m-vd').value = m.qt_vd || 0;
+                    document.getElementById('m-vida').value = m.qt_vida || 0;
+                    document.getElementById('m-defesa').value = m.qt_defesa || 0;
+                    document.getElementById('m-xp').value = m.qt_xp_recompensa || 0;
+                    document.getElementById('m-desc').value = m.ds_monstro || '';
+                    document.getElementById('m-imagem-atual').value = m.ds_imagem || '';
+                    
+                    const preview = document.getElementById('preview-monstro-container');
+                    if (m.ds_imagem && preview) {
+                        preview.innerHTML = `<img src="${m.ds_imagem}" style="width:100%; height:100%; object-fit:cover;">`;
+                    }
+                    data.atributos.forEach(at => {
+                        const input = document.querySelector(`.attr-input-premium[data-id="${at.id_atributo}"]`);
+                        if (input) input.value = at.qt_valor;
+                    });
+                    document.getElementById('btn-save-monstro').innerHTML = '<i class="fas fa-skull"></i> ATUALIZAR Criatura';
+                    abrirModal('modal-criar-monstro');
+                }
+            } catch (e) { console.error(e); }
         }
 
         async function salvarMonstro() {
@@ -1215,7 +1969,7 @@ try {
             const foto = document.getElementById('m-foto').files[0];
             const imgAtual = document.getElementById('m-imagem-atual').value;
 
-            if (!nome) return alert('Dê um nome à criatura!');
+            if (!nome) return await TableModal.alert('Dê um nome à criatura!', 'Nome Requerido', 'warning');
 
             const atributos = [];
             document.querySelectorAll('.attr-input-premium').forEach(input => {
@@ -1224,7 +1978,7 @@ try {
 
             const btn = document.getElementById('btn-save-monstro');
             btn.disabled = true;
-            btn.textContent = idM ? 'ATUALIZANDO...' : 'CRIANDO...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SALVANDO...';
 
             const formData = new FormData();
             formData.append('id_sistema', idS);
@@ -1249,65 +2003,20 @@ try {
                 if (data.success) {
                     location.reload();
                 } else {
-                    alert('Erro: ' + data.error);
+                    await TableModal.alert('Erro: ' + data.error, 'Erro ao Convocação', 'error');
                 }
-            } catch (e) { console.error(e); }
-            finally { btn.disabled = false; btn.textContent = 'CONVOCAR Ameaça'; }
-        }
-
-        function resetarModalMonstro() {
-            console.log('Resetando modal de ameaça...');
-            const fields = ['m-id', 'm-imagem-atual', 'm-nome', 'm-vd', 'm-vida', 'm-defesa', 'm-xp', 'm-desc'];
-            fields.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.value = (id === 'm-nome' || id === 'm-desc' || id === 'm-imagem-atual' || id === 'm-id') ? '' : 0;
-            });
-            
-            const tipo = document.getElementById('m-tipo');
-            if (tipo) tipo.value = 'Criatura';
-            document.getElementById('preview-monstro-container').innerHTML = '<i class="fas fa-image" style="font-size: 2rem; color: rgba(255,255,255,0.1);"></i>';
-            document.querySelector('#modal-criar-monstro h2').textContent = 'Nova Ameaça';
-            document.getElementById('btn-save-monstro').innerHTML = '<i class="fas fa-skull"></i> CONVOCAR Ameaça';
-            document.querySelectorAll('.attr-input-premium').forEach(input => input.value = 0);
-        }
-
-        async function editarMonstro(idM) {
-            try {
-                const res = await fetch(`../app/ajax/get-monstro-detalhes.php?id=${idM}`);
-                const data = await res.json();
-                if (data.success) {
-                    const m = data.monstro;
-                    document.getElementById('m-id').value = m.id_monstro;
-                    document.getElementById('m-nome').value = m.nm_monstro;
-                    document.getElementById('m-tipo').value = m.tp_monstro || 'Criatura';
-                    document.getElementById('m-vd').value = m.qt_vd || 0;
-                    document.getElementById('m-vida').value = m.qt_vida || 0;
-                    document.getElementById('m-defesa').value = m.qt_defesa || 0;
-                    document.getElementById('m-xp').value = m.qt_xp_recompensa || 0;
-                    document.getElementById('m-desc').value = m.ds_monstro || '';
-                    document.getElementById('m-imagem-atual').value = m.ds_imagem || '';
-                    
-                    if (m.ds_imagem) {
-                        document.getElementById('preview-monstro-container').innerHTML = `<img src="${m.ds_imagem}" style="width:100%; height:100%; object-fit:cover;">`;
-                    } else {
-                        document.getElementById('preview-monstro-container').innerHTML = '<i class="fas fa-image" style="font-size: 2rem; color: rgba(255,255,255,0.1);"></i>';
-                    }
-
-                    // Preencher Atributos
-                    data.atributos.forEach(at => {
-                        const input = document.querySelector(`.attr-input-premium[data-id="${at.id_atributo}"]`);
-                        if (input) input.value = at.qt_valor;
-                    });
-
-                    document.getElementById('btn-save-monstro').innerHTML = '<i class="fas fa-skull"></i> ATUALIZAR Ameaça';
-                    document.querySelector('#modal-criar-monstro h2').textContent = 'Editar Ameaça';
-                    abrirModal('modal-criar-monstro');
-                }
-            } catch (e) { console.error(e); }
+            } catch (e) { 
+                console.error(e); 
+                await TableModal.alert("Erro de comunicação com o servidor.", "Erro de Conexão", "error");
+            }
+            finally { 
+                btn.disabled = false; 
+                btn.innerHTML = '<i class="fas fa-skull"></i> CONVOCAR Criatura'; 
+            }
         }
 
         async function removerMonstro(idM) {
-            if (!confirm("Tem certeza que deseja banir esta ameaça para o Outro Lado?")) return;
+            if (!await TableModal.confirm("Tem certeza que deseja banir esta criatura para o Outro Lado?", "Banir Criatura", "warning")) return;
 
             try {
                 const res = await fetch('../app/ajax/remover-monstro.php', {
@@ -1319,44 +2028,26 @@ try {
                 if (data.success) {
                     location.reload();
                 } else {
-                    alert("Erro ao remover: " + data.error);
+                    await TableModal.alert("Erro ao remover: " + data.error, "Erro ao Remover", "error");
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) { 
+                console.error(e); 
+                await TableModal.alert("Erro de comunicação com o servidor.", "Erro de Conexão", "error");
+            }
         }
 
-        async function removerSistema(idS) {
-            if (!confirm("Deseja realmente apagar este sistema? Esta ação é irreversível e removerá todas as classes, atributos e ameaças vinculadas.")) return;
-
-            try {
-                const res = await fetch('../app/ajax/remover-sistema.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: `id=${idS}`
-                });
-                const data = await res.json();
-                if (data.success) {
-                    window.location.href = 'perfil.php';
-                } else {
-                    alert("Erro ao remover: " + data.error);
-                }
-            } catch (e) { console.error(e); }
-        }
-
-        async function verFichaMonstro(idM) {
+        async function exibirFichaMonstro(idM) {
             const container = document.getElementById('ficha-monstro-render');
-            container.innerHTML = '<div style="padding: 40px; text-align: center; color: #888;"><i class="fas fa-spinner fa-spin"></i> Lendo Grimório...</div>';
+            if (container) container.innerHTML = '<div style="padding: 40px; text-align: center; color: #888;"><i class="fas fa-spinner fa-spin"></i> Lendo Grimório...</div>';
             abrirModal('modal-ficha-monstro');
 
             try {
                 const res = await fetch(`../app/ajax/get-monstro-detalhes.php?id=${idM}`);
                 const data = await res.json();
-
                 if (data.success) {
                     const m = data.monstro;
                     const attrs = data.atributos;
-                    const imgPlaceholder = '../img/logo_icone.png';
-                    const imgCriatura = m.ds_imagem ? m.ds_imagem : imgPlaceholder;
-
+                    const imgCriatura = (m.ds_imagem && m.ds_imagem !== '../img/logo_icone.png') ? m.ds_imagem : '../img/uploads/perfil/avatar1.png';
                     container.innerHTML = `
                         <div class="ficha-header-comp" style="position: relative; background: linear-gradient(135deg, rgba(30, 11, 58, 0.95), rgba(49, 28, 97, 0.9)), url('${imgCriatura}') center/cover; padding: 30px; border-bottom: 2px solid var(--premium-accent); display: flex; align-items: center; gap: 20px;">
                             <img src="${imgCriatura}" style="width: 100px; height: 100px; border-radius: 15px; border: 3px solid var(--premium-accent); object-fit: cover; box-shadow: 0 10px 30px rgba(0,0,0,0.8);" />
@@ -1386,9 +2077,10 @@ try {
                             <label style="color: var(--premium-accent); font-size: 0.8rem; font-weight: 900; text-transform: uppercase; margin-bottom: 10px; display: block; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">ATRIBUTOS PRINCIPAIS</label>
                             <div class="premium-atributos-grid" style="grid-template-columns: repeat(5, 1fr); margin-bottom: 25px; gap: 8px;">
                                 ${attrs.map(a => `
-                                    <div class="premium-attr-box" title="${a.nm_atributo}" style="height: 50px;">
+                                    <div class="premium-attr-box" style="height: 50px;">
                                         <span class="attr-abbr" style="font-size: 0.85rem; width: 60px;">${a.ds_abreviacao || a.nm_atributo.substring(0, 3).toUpperCase()}</span>
                                         <div class="attr-circle" style="border-color: ${a.qt_valor > 0 ? 'var(--premium-accent)' : '#444'}; font-size: 1.2rem;">${a.qt_valor}</div>
+                                        <div class="tooltip">${a.nm_atributo}</div>
                                     </div>
                                 `).join('')}
                             </div>
@@ -1403,6 +2095,61 @@ try {
             } catch (e) { console.error(e); }
         }
     </script>
-</body>
 
+    <!-- ESTILO DO MODAL DE EXCLUSÃO (IGUAL PERFIL) -->
+    <style>
+        .modal-perfil-content {
+            background: #ffffff; color: #333; width: 90%; max-width: 450px;
+            padding: 40px; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            text-align: center; animation: slideUp 0.3s ease; position: relative; margin: auto;
+        }
+        .modal-perfil-header i { font-size: 3rem; color: #f1c40f; margin-bottom: 15px; }
+        .modal-perfil-header h2 { color: #e63946; font-size: 1.8rem; font-weight: 800; margin-bottom: 10px; }
+        .modal-perfil-body p { font-size: 1rem; color: #555; margin-bottom: 25px; }
+        .input-perfil-modal {
+            width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 10px;
+            font-size: 1rem; text-align: center; margin-bottom: 30px; outline: none; transition: border-color 0.3s;
+            color: #333; background: #fff;
+        }
+        .input-perfil-modal:focus { border-color: #e63946; }
+        .modal-perfil-footer { display: flex; gap: 15px; justify-content: center; }
+        .btn-perfil-cancelar {
+            background: #718096; color: white; border: none; padding: 12px 25px;
+            border-radius: 10px; font-weight: 700; cursor: pointer; transition: opacity 0.2s; font-size: 1rem;
+        }
+        .btn-perfil-cancelar:hover { opacity: 0.8; }
+        .btn-perfil-deletar {
+            background: #e63946; color: white; border: none; padding: 12px 35px;
+            border-radius: 10px; font-weight: 700; cursor: pointer; transition: all 0.3s; font-size: 1rem;
+        }
+        .btn-perfil-deletar:disabled { background: #ccc; cursor: not-allowed; opacity: 0.6; }
+        .btn-perfil-deletar:not(:disabled):hover { background: #c92a3a; transform: translateY(-2px); }
+    </style>
+
+    <div id="modal-excluir-sistema" class="modal-overlay">
+        <div class="modal-perfil-content">
+            <div class="modal-perfil-header">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h2>Excluir Sistema</h2>
+            </div>
+            <div class="modal-perfil-body">
+                <?php if ($sistema['fl_importado']): ?>
+                    <p>Tem certeza que deseja remover este sistema importado da sua conta?</p>
+                <?php else: ?>
+                    <p>Esta ação é <strong>permanente</strong> e excluirá o sistema para <strong>TODOS</strong> os usuários que o importaram.</p>
+                    <p style="margin-top: 15px; font-size: 0.9rem; color: #555;">Para confirmar, digite o nome do sistema duas vezes abaixo:</p>
+                    <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;">
+                        <input type="text" id="input-confirm-1" placeholder="Nome do sistema..." class="input-perfil-modal" style="margin-bottom: 0;">
+                        <input type="text" id="input-confirm-2" placeholder="Repita o nome..." class="input-perfil-modal" style="margin-bottom: 20px;">
+                    </div>
+                <?php endif; ?>
+            </div>
+            <div class="modal-perfil-footer">
+                <button class="btn-perfil-cancelar" onclick="fecharModal('modal-excluir-sistema')">Cancelar</button>
+                <button id="btn-confirmar-exclusao-sistema" class="btn-perfil-deletar" <?= (!$sistema['fl_importado']) ? 'disabled' : '' ?>>Deletar</button>
+            </div>
+        </div>
+    </div>
+</body>
 </html>
+

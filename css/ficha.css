@@ -20,6 +20,8 @@ body.ficha-body {
     color: var(--text-white);
     font-family: 'Montserrat', sans-serif;
     padding-top: 80px; /* Espaço para navbar fixa */
+    overflow-x: hidden;
+    width: 100%;
 }
 
 /* CONTAINER MESTRE */
@@ -27,6 +29,8 @@ body.ficha-body {
     max-width: 1200px;
     margin: 40px auto;
     padding: 0 20px;
+    width: 100%;
+    overflow-x: hidden;
 }
 
 .ficha-layout-premium {
@@ -40,6 +44,12 @@ body.ficha-body {
     display: flex;
     gap: 30px;
     align-items: center;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
 }
 
 .premium-avatar {
@@ -92,7 +102,16 @@ body.ficha-body {
 .nivel-deslocamento-row {
     display: flex;
     justify-content: flex-end;
+    align-items: center;
     gap: 30px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 12px 30px;
+    border-radius: 16px;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
+    width: fit-content;
+    margin-left: auto;
 }
 
 .extra-stat-box { font-weight: 800; font-size: 1.2rem; }
@@ -111,6 +130,13 @@ body.ficha-body {
     grid-template-columns: 480px 1fr;
     gap: 40px;
     align-items: start;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 35px;
+    border-radius: 24px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+    box-sizing: border-box;
 }
 
 /* ATRIBUTOS (Estilo Criar Personagem) */
@@ -125,7 +151,7 @@ body.ficha-body {
     display: flex;
     align-items: stretch;
     border-radius: 10px;
-    overflow: hidden;
+    overflow: visible;
     height: 55px;
     filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
 }
@@ -139,6 +165,7 @@ body.ficha-body {
     justify-content: center;
     font-weight: 900;
     font-size: 1.3rem;
+    border-radius: 10px 0 0 10px;
 }
 
 .attr-circle {
@@ -172,8 +199,8 @@ body.ficha-body {
     font-weight: 900;
     font-size: 0.85rem;
     letter-spacing: 2px;
-    color: var(--premium-accent);
-    text-shadow: 0 0 10px rgba(193, 147, 253, 0.3);
+    color: #ffffff;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
 }
 
 .bar-bg {
@@ -342,18 +369,28 @@ body.ficha-body {
 }
 
 .pericias-premium-header {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr 75px 75px 75px;
+    align-items: center;
     padding-bottom: 10px;
     border-bottom: 1px solid rgba(255,255,255,0.2);
     font-weight: 900;
     font-size: 0.8rem;
     color: #fff;
     text-transform: uppercase;
+    padding-right: 11px; /* Para compensar a scrollbar de 6px + 5px padding da lista */
 }
 
-.h-stats { display: flex; gap: 10px; }
-.h-stats span { width: 55px; text-align: center; }
+.h-stats {
+    display: none;
+}
+
+.h-stat {
+    text-align: center;
+    font-weight: 900;
+    font-size: 0.8rem;
+    color: #fff;
+}
 
 .pericias-premium-list {
     flex: 1;
@@ -363,21 +400,48 @@ body.ficha-body {
 }
 
 .p-row {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr 75px 75px 75px;
     align-items: center;
     padding: 8px 0;
     border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 
-.p-desc { display: flex; gap: 8px; align-items: baseline; }
+.p-desc { display: flex; gap: 8px; align-items: baseline; min-width: 0; }
 .p-name { font-weight: 600; font-size: 1rem; }
 .p-attr { font-size: 0.7rem; color: #aaa; font-weight: 800; text-transform: uppercase; }
 
-.p-values { display: flex; gap: 10px; }
-.p-values span { width: 55px; text-align: center; font-weight: 800; font-size: 1rem; }
+.p-values {
+    display: contents; /* Faz com que os filhos (.p-bonus, .p-treino, .p-outros) entrem diretamente nas colunas do grid principal .p-row */
+}
+
+.p-bonus, .p-treino, .p-outros {
+    text-align: center;
+    font-weight: 800;
+    font-size: 1rem;
+    display: block;
+    width: 100%;
+    border-bottom: 1px dashed rgba(255,255,255,0.2);
+    outline: none;
+    transition: border-bottom-color 0.2s;
+}
+
+.p-bonus, .p-outros {
+    cursor: text;
+}
+
+.p-bonus:focus, .p-outros:focus {
+    border-bottom-color: var(--premium-accent);
+}
+
+.p-treino {
+    cursor: pointer;
+    color: var(--premium-accent) !important;
+    font-weight: 900 !important;
+}
+
 .p-bonus { color: #fff; }
-.p-treino, .p-outros { color: #fff; font-weight: 400; }
+.p-outros { color: #fff; font-weight: 400; }
 
 /* LINHAS DE PROTEÇÃO */
 .premium-footer-lines { display: flex; flex-direction: column; gap: 15px; }
@@ -546,11 +610,257 @@ body.ficha-body {
 .pericias-premium-list::-webkit-scrollbar-track { background: transparent; }
 .pericias-premium-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 10px; }
 
-/* RESPONSIVIDADE BÁSICA */
-@media (max-width: 1000px) {
-    .premium-main { grid-template-columns: 1fr; }
-    .premium-header { flex-direction: column; text-align: center; }
-    .premium-info-grid { grid-template-columns: 1fr; }
-    .premium-info-item { flex-direction: column; align-items: center; }
+/* RESPONSIVIDADE AVANÇADA */
+@media (max-width: 1024px) {
+    .premium-main {
+        grid-template-columns: 1fr;
+        gap: 30px;
+    }
+
+    .pericias-premium-container {
+        height: auto;
+        max-height: 500px;
+    }
+}
+
+@media (max-width: 768px) {
+    body.ficha-body {
+        padding-top: 70px;
+    }
+
+    .ficha-container-master {
+        margin: 20px auto;
+        padding: 0 15px;
+    }
+
+    .premium-header {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+        background: rgba(0,0,0,0.3);
+        padding: 20px;
+        border-radius: 20px;
+    }
+
+    .premium-avatar {
+        width: 120px;
+        height: 120px;
+    }
+
+    .premium-info-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        width: 100%;
+    }
+
+    .premium-info-item {
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .premium-info-item label {
+        font-size: 0.9rem;
+        white-space: normal;
+        text-align: center;
+    }
+
+    .premium-info-item input {
+        text-align: center;
+        font-size: 1.1rem;
+    }
+
+    .nivel-deslocamento-row {
+        justify-content: center;
+        gap: 15px;
+        background: rgba(255,255,255,0.05);
+        padding: 15px;
+        border-radius: 15px;
+    }
+
+    .extra-stat-box {
+        font-size: 1rem;
+    }
+
+    .extra-stat-box span {
+        padding: 4px 10px;
+    }
+
+    .premium-atributos-grid {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 10px;
+    }
+
+    .premium-attr-box {
+        height: 50px;
+    }
+
+    .attr-abbr {
+        width: 50px;
+        font-size: 1.1rem;
+    }
+
+    .attr-circle {
+        font-size: 1.4rem;
+    }
+
+    .premium-combat-section {
+        flex-direction: column;
+        gap: 20px;
+        padding: 20px;
+        background: rgba(0,0,0,0.2);
+        border-radius: 20px;
+    }
+
+    .defesa-shield-box {
+        width: 80px;
+        height: 80px;
+    }
+
+    .shield-bg-icon {
+        font-size: 4.5rem;
+    }
+
+    .shield-text {
+        font-size: 1.8rem;
+    }
+
+    .defesa-details {
+        width: 100%;
+    }
+
+    .defesa-stats-row {
+        gap: 15px;
+    }
+
+    .premium-buttons-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .btn-p {
+        padding: 15px;
+        font-size: 1.1rem;
+    }
+
+    /* Modais Mobile */
+    .modal-content {
+        width: 100%;
+        height: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+        padding: 20px;
+    }
+
+    .modal-header h2 {
+        font-size: 1.5rem;
+    }
+
+    /* Otimizações das Perícias para evitar Textos Juntos no celular */
+    .pericias-premium-container {
+        padding: 10px !important;
+    }
+
+    .pericias-premium-header {
+        font-size: 0.72rem !important;
+    }
+
+    .p-desc {
+        gap: 4px !important;
+    }
+
+    .p-name {
+        font-size: 0.85rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        word-break: keep-all !important;
+    }
+
+    .p-attr {
+        font-size: 0.65rem !important;
+        flex-shrink: 0 !important;
+    }
+
+    .pericias-premium-header, .p-row {
+        grid-template-columns: 1fr 50px 50px 50px !important;
+    }
+
+    .h-stat {
+        font-size: 0 !important;
+        position: relative;
+    }
+
+    .h-stat:nth-child(2)::after {
+        content: 'BÔN.';
+        font-size: 0.7rem !important;
+        font-weight: 900 !important;
+        letter-spacing: 0px !important;
+    }
+
+    .h-stat:nth-child(3)::after {
+        content: 'TRE.';
+        font-size: 0.7rem !important;
+        font-weight: 900 !important;
+        letter-spacing: 0px !important;
+    }
+
+    .h-stat:nth-child(4)::after {
+        content: 'OUT.';
+        font-size: 0.7rem !important;
+        font-weight: 900 !important;
+        letter-spacing: 0px !important;
+    }
+
+    .p-bonus, .p-treino, .p-outros {
+        font-size: 0.85rem !important;
+    }
+
+    /* Ajuste para o botão Adicionar e busca nos modais não saírem para fora */
+    .modal-search-area {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+        padding: 12px !important;
+    }
+
+    .modal-search-area input {
+        width: 100% !important;
+        font-size: 0.9rem !important;
+    }
+
+    .btn-add-modal {
+        width: 100% !important;
+        padding: 10px !important;
+        text-align: center !important;
+        font-size: 0.85rem !important;
+    }
+
+    .premium-main {
+        padding: 20px 15px !important;
+        border-radius: 16px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .premium-atributos-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .bar-num {
+        font-size: 1rem;
+    }
+
+    .step-btn {
+        font-size: 1.4rem;
+    }
+
+    .nivel-deslocamento-row {
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .extra-stat-box {
+        font-size: 0.9rem;
+    }
 }
 

@@ -61,28 +61,32 @@ document.addEventListener('DOMContentLoaded', () => {
             slideAlvo.classList.add('slide-atual');
         }
 
-        btnProximo.addEventListener('click', () => {
-            const slideAtual = trilho.querySelector('.slide-atual');
-            let proximoSlide = slideAtual.nextElementSibling;
-            let proximoIndex = slides.findIndex(slide => slide === proximoSlide);
+        if (btnProximo) {
+            btnProximo.addEventListener('click', () => {
+                const slideAtual = trilho.querySelector('.slide-atual');
+                let proximoSlide = slideAtual.nextElementSibling;
+                let proximoIndex = slides.findIndex(slide => slide === proximoSlide);
 
-            if (!proximoSlide) {
-                proximoSlide = slides[0];
-                proximoIndex = 0;
-            }
-            moverSlide(slideAtual, proximoSlide, proximoIndex);
-        });
+                if (!proximoSlide) {
+                    proximoSlide = slides[0];
+                    proximoIndex = 0;
+                }
+                moverSlide(slideAtual, proximoSlide, proximoIndex);
+            });
+        }
 
-        btnAnterior.addEventListener('click', () => {
-            const slideAtual = trilho.querySelector('.slide-atual');
-            let slideAnterior = slideAtual.previousElementSibling;
-            let indexAnterior = slides.findIndex(slide => slide === slideAnterior);
+        if (btnAnterior) {
+            btnAnterior.addEventListener('click', () => {
+                const slideAtual = trilho.querySelector('.slide-atual');
+                let slideAnterior = slideAtual.previousElementSibling;
+                let indexAnterior = slides.findIndex(slide => slide === slideAnterior);
 
-            if (!slideAnterior) {
-                slideAnterior = slides[slides.length - 1];
-                indexAnterior = slides.length - 1;
-            }
-            moverSlide(slideAtual, slideAnterior, indexAnterior);
-        });
+                if (!slideAnterior) {
+                    slideAnterior = slides[slides.length - 1];
+                    indexAnterior = slides.length - 1;
+                }
+                moverSlide(slideAtual, slideAnterior, indexAnterior);
+            });
+        }
     }
 });

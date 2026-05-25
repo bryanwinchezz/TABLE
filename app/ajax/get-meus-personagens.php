@@ -13,7 +13,17 @@ $id_campanha = $_GET['id_campanha'] ?? null;
 try {
     $pdo = Database::getConexao();
 
-    // Buscar personagens do usuário que ainda não estão nessa campanha
+    $id_sistema_campanha = null;
+    if ($id_campanha) {
+        $stmtCamp = $pdo->prepare("SELECT id_sistema FROM tb_campanha WHERE id_campanha = ? LIMIT 1");
+        $stmtCamp->execute([$id_campanha]);
+        $camp = $stmtCamp->fetch();
+        if ($camp) {
+            $id_sistema_campanha = $camp['id_sistema'];
+        }
+    }
+
+    // Buscar personagens do usuário que ainda não estão nessa campanha e correspondem ao sistema da campanha
     $sql = "
         SELECT p.id_personagem, p.nm_personagem, p.ds_foto, s.nm_sistema, c.nm_classe
         FROM tb_personagem p
@@ -23,14 +33,19 @@ try {
         WHERE p.id_usuario = ? AND p.fl_ativo = 1
     ";
 
+    $params = [$id_usuario];
+
     if ($id_campanha) {
         $sql .= " AND p.id_personagem NOT IN (SELECT id_personagem FROM tb_campanha_personagem WHERE id_campanha = ?)";
+        $params[] = $id_campanha;
+    }
+
+    if ($id_sistema_campanha) {
+        $sql .= " AND p.id_sistema = ?";
+        $params[] = $id_sistema_campanha;
     }
 
     $stmt = $pdo->prepare($sql);
-    $params = [$id_usuario];
-    if ($id_campanha) $params[] = $id_campanha;
-    
     $stmt->execute($params);
     $personagens = $stmt->fetchAll();
 

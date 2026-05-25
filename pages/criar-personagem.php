@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  *  Após a página de login definir a sessão com os dados do usuario a página index lê a sessão e inicia a mesma
  *  Na navbar temos um if e else para cado o usuario esteja conectado ou não, mudando sendo que: 
@@ -14,8 +14,19 @@ if (!isset($_SESSION['usuario'])) {
 require_once __DIR__ . '/../app/config/database.php';
 $pdo = Database::getConexao();
 
-// Buscar todos os sistemas disponíveis
-$stmt = $pdo->query("SELECT id_sistema, nm_sistema, ds_imagem, ds_descricao FROM tb_sistema ORDER BY nm_sistema ASC");
+// Buscar todos os sistemas disponíveis (Oficiais, Criados pelo usuário e Vinculados)
+$stmt = $pdo->prepare("
+    SELECT DISTINCT s.id_sistema, s.nm_sistema, s.ds_imagem, s.ds_descricao 
+    FROM tb_sistema s
+    LEFT JOIN tb_usuario u ON s.id_usuario_criador = u.id_usuario
+    LEFT JOIN tb_usuario_sistema us ON s.id_sistema = us.id_sistema
+    WHERE s.id_usuario_criador IS NULL 
+       OR s.id_usuario_criador = ? 
+       OR u.tp_cargo = 'admin'
+       OR us.id_usuario = ?
+    ORDER BY s.nm_sistema ASC
+");
+$stmt->execute([$_SESSION['usuario']['id'], $_SESSION['usuario']['id']]);
 $sistemas = $stmt->fetchAll();
 ?>
 
@@ -26,24 +37,46 @@ $sistemas = $stmt->fetchAll();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TABLE | Criar Personagem</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
     <link rel="shortcut icon" href="../img/logo_icone.png" type="image/x-icon">
 
     <link rel="stylesheet" href="../css/nav-footer.css">
-    <link rel="stylesheet" href="../css/criar-personagem.css?v=2.1">
+    <link rel="stylesheet" href="../css/criar-personagem.css?v=2.4">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        /* Estilos Base */
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background-color: #311c61;
+            color: #fff;
+            font-family: 'Montserrat', sans-serif;
+            margin: 0;
+        }
+
+
+    </style>
 </head>
 
-<body
-    style="display: flex; flex-direction: column; min-height: 100vh; background-color: #311c61; color: #fff; font-family: 'Montserrat', sans-serif;">
+<body id="body-criar-personagem">
 
     <header>
         <div class="logotipo">
             <a href="index.php"><img src="../img/logo_horizontal.png" alt="Logo TABLE"></a>
         </div>
-        <nav>
+
+        <!-- BOTÃO MENU MOBILE (HAMBURGER) -->
+        <div class="menu-toggle" id="mobile-menu-btn">
+            <i class="fas fa-bars"></i>
+        </div>
+
+        <nav id="nav-menu">
             <ul>
                 <li><a href="index.php">Início</a></li>
                 <li><a href="cm-jogar.php">Como Jogar</a></li>
@@ -51,19 +84,38 @@ $sistemas = $stmt->fetchAll();
                         class="ativo">Personagens</a>
                 </li>
                 <li><a href="criar-mapa.php">Mundos</a></li>
-                <li><a href="rolador-de-dados.php">Dados</a></li>
+                <li><a href="rolagem-de-dados.php">Dados</a></li>
                 <li><a href="sobre-nos.php">Sobre Nós</a></li>
             </ul>
+
+            <!-- BOTÕES MOBILE -->
+            <div class="nav-mobile-footer">
+                <?php if (isset($_SESSION['usuario'])): ?>
+                    <div class="usuario-logado-nav" onclick="window.location.href='perfil.php'">
+                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
+                            alt="Avatar Navbar" class="avatar-nav">
+                        <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
+                    </div>
+                <?php else: ?>
+                    <a href="login.php" class="botao-entrar">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </a>
+                    <a href="cadastro.php" class="botao-cadastrar">
+                        <i class="fas fa-user-plus"></i> Cadastre-se
+                    </a>
+                <?php endif; ?>
+            </div>
         </nav>
+
         <?php if (isset($_SESSION['usuario'])): ?>
-            <div class="usuario-logado-nav" id="nav-logado" onclick="window.location.href='perfil.php'"
+            <div class="usuario-logado-nav desktop-only" id="nav-logado" onclick="window.location.href='perfil.php'"
                 title="Ir para o Perfil">
                 <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
                     alt="Avatar Navbar" class="avatar-nav">
                 <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
             </div>
         <?php else: ?>
-            <div class="botoes-navegacao" id="nav-deslogado">
+            <div class="botoes-navegacao desktop-only" id="nav-deslogado">
                 <a href="login.php" class="botao-entrar">
                     <i class="fas fa-sign-in-alt"></i> Login
                 </a>
@@ -89,6 +141,7 @@ $sistemas = $stmt->fetchAll();
             <input type="hidden" name="id_sistema" id="input-sistema" value="">
             <input type="hidden" name="origemEscolhida" id="input-origem" value="">
             <input type="hidden" name="classeEscolhida" id="input-classe" value="">
+            <input type="hidden" name="invite_token" id="input-invite-token" value="<?= htmlspecialchars($_GET['invite_token'] ?? '') ?>">
 
             <!-- ABA 0: SELEÇÃO DE SISTEMA -->
             <div id="aba-sistema" class="conteudo-aba ativa">
@@ -110,6 +163,11 @@ $sistemas = $stmt->fetchAll();
                             <button type="button" class="btn-selecionar-sistema">Selecionar</button>
                         </div>
                     <?php endforeach; ?>
+                </div>
+
+                <!-- NAVEGAÇÃO MOBILE -->
+                <div class="nav-abas-mobile">
+                    <button type="button" class="btn-nav-aba prox" onclick="mudarAba(1)">Próximo: Descrição <i class="fas fa-arrow-right"></i></button>
                 </div>
 
                 <div class="botoes-nav-form apenas-proximo">
@@ -161,6 +219,12 @@ $sistemas = $stmt->fetchAll();
                     </div>
                 </div>
 
+                <!-- NAVEGAÇÃO MOBILE -->
+                <div class="nav-abas-mobile">
+                    <button type="button" class="btn-nav-aba ant" onclick="mudarAba(0)"><i class="fas fa-arrow-left"></i> Anterior</button>
+                    <button type="button" class="btn-nav-aba prox" onclick="mudarAba(2)">Próximo: Origem <i class="fas fa-arrow-right"></i></button>
+                </div>
+
                 <div class="botoes-nav-form apenas-proximo">
                     <button type="button" class="btn-form-nav btn-proximo-aba">Próximo <i
                             class="fas fa-arrow-right"></i></button>
@@ -176,6 +240,12 @@ $sistemas = $stmt->fetchAll();
 
                 <div class="origens-container" id="container-origens-dinamico">
                     <p style="text-align: center; opacity: 0.5; padding: 40px;">Selecione um sistema primeiro.</p>
+                </div>
+
+                <!-- NAVEGAÇÃO MOBILE -->
+                <div class="nav-abas-mobile">
+                    <button type="button" class="btn-nav-aba ant" onclick="mudarAba(1)"><i class="fas fa-arrow-left"></i> Anterior</button>
+                    <button type="button" class="btn-nav-aba prox" onclick="mudarAba(3)">Próximo: Atributos <i class="fas fa-arrow-right"></i></button>
                 </div>
 
                 <div class="botoes-nav-form">
@@ -202,6 +272,12 @@ $sistemas = $stmt->fetchAll();
                     <p style="text-align: center; opacity: 0.5; padding: 40px;">Selecione um sistema primeiro.</p>
                 </div>
 
+                <!-- NAVEGAÇÃO MOBILE -->
+                <div class="nav-abas-mobile">
+                    <button type="button" class="btn-nav-aba ant" onclick="mudarAba(2)"><i class="fas fa-arrow-left"></i> Anterior</button>
+                    <button type="button" class="btn-nav-aba prox" onclick="mudarAba(4)">Próximo: Classe <i class="fas fa-arrow-right"></i></button>
+                </div>
+
                 <div class="botoes-nav-form">
                     <button type="button" class="btn-form-nav btn-voltar-aba"><i class="fas fa-arrow-left"></i>
                         Voltar</button>
@@ -219,6 +295,11 @@ $sistemas = $stmt->fetchAll();
 
                 <div class="tri-class" id="container-classes-dinamico">
                     <p style="text-align: center; opacity: 0.5; padding: 40px;">Selecione um sistema primeiro.</p>
+                </div>
+
+                <!-- NAVEGAÇÃO MOBILE -->
+                <div class="nav-abas-mobile">
+                    <button type="button" class="btn-nav-aba ant" onclick="mudarAba(3)"><i class="fas fa-arrow-left"></i> Anterior</button>
                 </div>
 
                 <div class="botoes-nav-form">
@@ -249,7 +330,7 @@ $sistemas = $stmt->fetchAll();
                             href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a>
                     </li>
                     <li><a href="criar-mapa.php">Mundos</a></li>
-                    <li><a href="rolador-de-dados.php">Dados</a></li>
+                    <li><a href="rolagem-de-dados.php">Dados</a></li>
                     <li><a href="sobre-nos.php">Sobre Nós</a></li>
                 </ul>
             </div>
@@ -264,6 +345,8 @@ $sistemas = $stmt->fetchAll();
                     </li>
                 </ul>
             </div>
+
+            </div>
         </div>
         <div class="rodape-inferior">
             <p>© 2026 TABLE. Todos os direitos reservados.</p>
@@ -275,7 +358,9 @@ $sistemas = $stmt->fetchAll();
     </footer>
 
     <script src="../js/nav-global.js" defer></script>
-    <script src="../js/criar-personagem.js?v=2.0" defer></script>
+    <script src="../js/criar-personagem.js?v=2.5" defer></script>
+
 </body>
 
 </html>
+

@@ -287,3 +287,105 @@ main {
     box-shadow: 0 12px 25px rgba(139, 92, 246, 0.6);
     background: linear-gradient(135deg, #8b5cf6, #C193FD);
 }
+
+/* =========================================
+   MEDIA QUERIES - RESPONSIVIDADE
+========================================= */
+
+@media (max-width: 900px) {
+    main {
+        padding-top: 100px !important;
+    }
+
+    .comojogar,
+    .comojogar2 {
+        flex-direction: column;
+        padding: 30px 20px;
+        text-align: center;
+        gap: 25px;
+        width: 95%;
+    }
+
+    .desc-comojogar {
+        text-align: center;
+    }
+
+    .img-comojogar {
+        width: 100%;
+        max-width: 400px;
+        height: auto;
+    }
+
+    .expli-rpg,
+    .expli-jogador {
+        flex-direction: column;
+        padding: 40px 20px;
+        gap: 30px;
+    }
+
+    .txt-expli,
+    .txt-jogador {
+        text-align: center;
+    }
+
+    .img-expli-rpg,
+    .img-expli-rpg-mestre {
+        width: 100%;
+        max-width: 450px;
+        height: auto;
+    }
+
+    .item-comp {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+        padding: 20px;
+    }
+
+    .item-comp h3 {
+        min-width: 0;
+    }
+
+    .como-funciona,
+    .tipos-rpg {
+        min-width: unset !important;
+        width: 100% !important;
+        padding: 30px 20px !important;
+        box-sizing: border-box !important;
+    }
+
+    .rpg-componentes {
+        padding: 40px 15px;
+        gap: 30px;
+    }
+
+    .btns-como,
+    .btn-navegacao {
+        flex-direction: column;
+        gap: 15px;
+        padding: 20px 15px;
+    }
+
+    .btns-como button,
+    .btn-navegacao button {
+        width: 100%;
+        padding: 15px 20px;
+    }
+}
+
+@media (max-width: 600px) {
+    .desc-comojogar h1,
+    .componentes h1 {
+        font-size: 26px;
+    }
+
+    .txt-expli h1,
+    .txt-jogador h1 {
+        font-size: 24px;
+    }
+
+    .como-funciona h2,
+    .tipos-rpg h2 {
+        font-size: 22px;
+    }
+}

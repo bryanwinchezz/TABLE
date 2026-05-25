@@ -7,7 +7,7 @@ $id_sistema = $_GET['id_sistema'] ?? null;
 try {
     $pdo = Database::getConexao();
 
-    $sql = "SELECT id_monstro, nm_monstro, ds_monstro, tp_monstro, qt_vida, qt_defesa, ds_imagem, qt_vd FROM tb_monstro";
+    $sql = "SELECT id_monstro, nm_monstro, ds_monstro, tp_monstro, qt_vida, qt_defesa, ds_imagem, qt_vd, id_sistema FROM tb_monstro";
     if ($id_sistema) {
         $sql .= " WHERE id_sistema = ?";
     }

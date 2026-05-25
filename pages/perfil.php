@@ -1,4 +1,4 @@
-<?php
+﻿<?php
     /**
      *  Após a página de login definir a sessão com os dados do usuario a página index lê a sessão e inicia a mesma
      *  Na navbar temos um if e else para cado o usuario esteja conectado ou não, mudando sendo que: 
@@ -54,10 +54,11 @@
     try {
         $pdo = Database::getConexao();
         $stmt = $pdo->prepare("
-            SELECT p.*, c.nm_classe 
+            SELECT p.*, c.nm_classe, s.nm_sistema
             FROM tb_personagem p
             LEFT JOIN tb_personagem_classe pc ON p.id_personagem = pc.id_personagem
             LEFT JOIN tb_classe c ON pc.id_classe = c.id_classe
+            LEFT JOIN tb_sistema s ON p.id_sistema = s.id_sistema
             WHERE p.id_usuario = ? AND p.fl_ativo = 1
             ORDER BY p.dt_criacao DESC
         ");
@@ -66,7 +67,7 @@
 
         // Buscar Campanhas onde o usuário participa
         $stmt = $pdo->prepare("
-            SELECT c.*, s.nm_sistema 
+            SELECT c.id_campanha, c.nm_campanha, c.ds_imagem, c.dt_criacao, c.id_usuario_mestre, s.nm_sistema 
             FROM tb_campanha c
             INNER JOIN tb_campanha_usuario cu ON c.id_campanha = cu.id_campanha
             LEFT JOIN tb_sistema s ON c.id_sistema = s.id_sistema
@@ -76,13 +77,17 @@
         $stmt->execute([$usuarioAtivo['id']]);
         $campanhas = $stmt->fetchAll();
 
-        // Buscar Sistemas Disponíveis (Com nome do criador)
-        $stmt = $pdo->query("
+        // Buscar Sistemas Disponíveis (Com nome do criador e filtro de visibilidade)
+        // Filtramos para não mostrar duplicatas do sistema oficial (Ordem Paranormal) que foram importadas
+        $stmt = $pdo->prepare("
             SELECT s.*, u.nm_usuario as criador_nome, u.tp_cargo as criador_cargo
             FROM tb_sistema s
             LEFT JOIN tb_usuario u ON s.id_usuario_criador = u.id_usuario
+            WHERE (s.id_usuario_criador = ? OR s.id_usuario_criador IS NULL OR u.tp_cargo = 'admin' OR s.id_sistema IN (SELECT id_sistema FROM tb_usuario_sistema WHERE id_usuario = ?))
+            AND NOT (s.nm_sistema = 'Ordem Paranormal' AND s.fl_importado = 1)
             ORDER BY s.nm_sistema ASC
         ");
+        $stmt->execute([$usuarioAtivo['id'], $usuarioAtivo['id']]);
         $sistemas = $stmt->fetchAll();
 
     } catch (Exception $e) {
@@ -104,23 +109,23 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="../css/nav-footer.css">
-    <link rel="stylesheet" href="../css/perfil.css">
+    <link rel="stylesheet" href="../css/perfil.css?v=2.8">
     <style>
         .badget-classificacao {
             position: absolute;
-            bottom: -8px;
-            right: -8px;
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
+            bottom: 4px;
+            right: 4px;
+            width: 22px;
+            height: 22px;
+            border-radius: 4px;
             color: #fff;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.85rem;
+            font-size: 0.7rem;
             font-weight: 900;
-            border: 2px solid #111;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            border: 1px solid rgba(0,0,0,0.5);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
             z-index: 5;
         }
         .sistema-bloqueado {
@@ -145,26 +150,51 @@
     <div class="logotipo">
         <a href="index.php"><img src="../img/logo_horizontal.png" alt="Logo TABLE"></a>
     </div>
-    <nav>
+
+    <!-- BOTÃO MENU MOBILE (HAMBURGER) -->
+    <div class="menu-toggle" id="mobile-menu-btn">
+        <i class="fas fa-bars"></i>
+    </div>
+
+    <nav id="nav-menu">
         <ul>
             <li><a href="index.php">Início</a></li>
             <li><a href="cm-jogar.php">Como Jogar</a></li>
             <li><a href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a>
             </li>
             <li><a href="criar-mapa.php">Mundos</a></li>
-            <li><a href="rolador-de-dados.php">Dados</a></li>
+            <li><a href="rolagem-de-dados.php">Dados</a></li>
             <li><a href="sobre-nos.php">Sobre Nós</a></li>
         </ul>
+
+        <!-- BOTÕES MOBILE -->
+        <div class="nav-mobile-footer">
+            <?php if (isset($_SESSION['usuario'])): ?>
+                <div class="usuario-logado-nav" onclick="window.location.href='perfil.php'">
+                    <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
+                        alt="Avatar Navbar" class="avatar-nav">
+                    <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
+                </div>
+            <?php else: ?>
+                <a href="login.php" class="botao-entrar">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </a>
+                <a href="cadastro.php" class="botao-cadastrar">
+                    <i class="fas fa-user-plus"></i> Cadastre-se
+                </a>
+            <?php endif; ?>
+        </div>
     </nav>
+
     <?php if (isset($_SESSION['usuario'])): ?>
-        <div class="usuario-logado-nav" id="nav-logado" onclick="window.location.href='perfil.php'"
+        <div class="usuario-logado-nav desktop-only" id="nav-logado" onclick="window.location.href='perfil.php'"
             title="Ir para o Perfil">
             <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
                 alt="Avatar Navbar" class="avatar-nav">
             <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
         </div>
     <?php else: ?>
-        <div class="botoes-navegacao" id="nav-deslogado">
+        <div class="botoes-navegacao desktop-only" id="nav-deslogado">
             <a href="login.php" class="botao-entrar">
                 <i class="fas fa-sign-in-alt"></i> Login
             </a>
@@ -201,15 +231,18 @@
                         <p style="text-align: center; color: rgba(255,255,255,0.5); padding: 20px;">Você ainda não tem personagens.</p>
                     <?php else: ?>
                         <?php foreach ($personagens as $p): ?>
-                            <div class="lista-item" onclick="window.location.href='exibir-ficha.php?id=<?= $p['id_personagem'] ?>'" style="cursor: pointer;">
-                                <div class="item-avatar">
+                            <div class="lista-item" onclick="window.location.href='exibir-ficha.php?id=<?= $p['id_personagem'] ?>'" style="cursor: pointer; position: relative;">
+                                <div class="item-avatar-quadrado">
                                     <img src="<?= !empty($p['ds_foto']) ? $p['ds_foto'] : '../img/uploads/perfil/avatar1.png' ?>" alt="Avatar">
                                 </div>
                                 <div class="item-dados">
                                     <h3><?= htmlspecialchars($p['nm_personagem']) ?></h3>
-                                    <p><?= htmlspecialchars($p['nm_classe'] ?? 'Sem Classe') ?></p>
+                                    <p><?= htmlspecialchars($p['nm_sistema'] ?? 'Sistema Desconhecido') ?></p>
                                     <span>Criado em: <?= date('d/m/Y', strtotime($p['dt_criacao'])) ?></span>
                                 </div>
+                                <button class="btn-lixeira-item" onclick="abrirModalExclusao(event, 'personagem', <?= $p['id_personagem'] ?>)" title="Excluir Personagem">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
                             </div>
                         <?php endforeach; ?>
                     <?php endif; ?>
@@ -226,13 +259,18 @@
                         <p style="text-align: center; color: rgba(255,255,255,0.5); padding: 20px;">Você não participa de nenhuma campanha.</p>
                     <?php else: ?>
                         <?php foreach ($campanhas as $c): ?>
-                            <div class="lista-item" onclick="window.location.href='criar-campanha.php?id=<?= $c['id_campanha'] ?>'" style="cursor: pointer;">
+                            <div class="lista-item" onclick="window.location.href='criar-campanha.php?id=<?= $c['id_campanha'] ?>'" style="cursor: pointer; position: relative;">
                                 <div class="item-avatar"><img src="<?= !empty($c['ds_imagem']) ? $c['ds_imagem'] : '../img/foto-campanha.jpg' ?>" alt="Capa"></div>
                                 <div class="item-dados">
                                     <h3><?= htmlspecialchars($c['nm_campanha']) ?></h3>
                                     <p><?= htmlspecialchars($c['nm_sistema'] ?? 'Sistema Desconhecido') ?></p>
                                     <span>Criado em: <?= date('d/m/Y', strtotime($c['dt_criacao'])) ?></span>
                                 </div>
+                                <?php if ((int)$c['id_usuario_mestre'] === (int)$usuarioAtivo['id']): ?>
+                                    <button class="btn-lixeira-item" onclick="abrirModalExclusao(event, 'campanha', <?= $c['id_campanha'] ?>)" title="Excluir Campanha">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                <?php endif; ?>
                             </div>
                         <?php endforeach; ?>
                     <?php endif; ?>
@@ -262,7 +300,7 @@
                                 </div>
                                 <div class="item-dados">
                                     <h3><?= htmlspecialchars($s['nm_sistema']) ?></h3>
-                                    <p><?= (empty($s['id_usuario_criador']) || (isset($s['criador_cargo']) && strtolower($s['criador_cargo']) === 'admin')) ? "Sistema Oficial" : "Sistema criado por: " . htmlspecialchars($s['criador_nome'] ?? 'TABLE') ?></p>
+                                    <p><?= (empty($s['id_usuario_criador']) || (isset($s['criador_cargo']) && strtolower($s['criador_cargo']) === 'admin') || (isset($s['criador_nome']) && $s['criador_nome'] === 'Kauan Bryan')) ? "Sistema Oficial" : "Sistema criado por: " . htmlspecialchars($s['criador_nome'] ?? 'TABLE') ?></p>
                                     <span>Registrado em: <?= date('d/m/Y', strtotime($s['dt_cadastro'])) ?></span>
                                 </div>
 
@@ -270,6 +308,15 @@
                                     <div class="bloqueio-overlay" title="Conteúdo restrito para sua idade: <?= $idadeUsuario ?> anos.">
                                         <i class="fas fa-lock"></i>
                                     </div>
+                                <?php endif; ?>
+
+                                <?php
+                                    $isOfficial = (empty($s['id_usuario_criador']) || (isset($s['criador_cargo']) && strtolower($s['criador_cargo']) === 'admin') || (isset($s['criador_nome']) && $s['criador_nome'] === 'Kauan Bryan'));
+                                    if (!$isOfficial && $s['id_usuario_criador'] != $usuarioAtivo['id']):
+                                ?>
+                                        <button class="btn-lixeira-item" onclick="abrirModalExclusao(event, 'sistema_vinculo', <?= $s['id_sistema'] ?>)" title="Remover da Minha Conta">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
                                 <?php endif; ?>
                             </div>
                         <?php endforeach; ?>
@@ -297,7 +344,7 @@
                 <li><a href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a>
                 </li>
                 <li><a href="criar-mapa.php">Mundos</a></li>
-                <li><a href="rolador-de-dados.php">Dados</a></li>
+                <li><a href="rolagem-de-dados.php">Dados</a></li>
                 <li><a href="sobre-nos.php">Sobre Nós</a></li>
             </ul>
         </div>
@@ -321,7 +368,134 @@
     </div>
 </footer>
 
+    <!-- MODAL DE EXCLUSÃO PREMIUM -->
+    <div id="modal-exclusao" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h2>Tem certeza?</h2>
+            </div>
+            <div class="modal-body">
+                <p id="texto-modal-exclusao">Esta ação não pode ser desfeita. Para confirmar, escreva <strong style="color: #e63946;">DELETAR</strong> abaixo:</p>
+                <input type="text" id="input-confirmar-exclusao" placeholder="Escreva DELETAR aqui..." class="input-modal">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal-cancelar" onclick="fecharModalExclusao()">Cancelar</button>
+                <button id="btn-confirmar-delete" class="btn-modal-deletar" disabled>Deletar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let tipoExclusao = '';
+        let idExclusao = null;
+        
+        function abrirModalExclusao(event, tipo, id) {
+            // Impedir que o clique no botão dispare o clique no card (div pai)
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
+            tipoExclusao = tipo;
+            idExclusao = id;
+            
+            const modal = document.getElementById('modal-exclusao');
+            const textoModal = document.getElementById('texto-modal-exclusao');
+            const tituloModal = document.querySelector('.modal-header h2');
+            
+            if (tipo === 'sistema_vinculo') {
+                tituloModal.innerText = 'Aviso: Remoção Crítica';
+                textoModal.innerHTML = 'Você está prestes a remover o vínculo deste sistema da sua conta.<br><br><strong style="color: #e63946; font-size: 0.95rem;">ATENÇÃO: Ao fazer isso, você automaticamente SAIRÁ de todas as campanhas que usam este sistema e todos os seus PERSONAGENS vinculados a ele serão EXCLUÍDOS permanentemente!</strong><br><br>Para confirmar, escreva <strong style="color: #e63946;">DELETAR</strong> abaixo:';
+            } else if (tipo === 'sistema') {
+                tituloModal.innerText = 'Tem certeza?';
+                textoModal.innerHTML = 'Você está apagando este sistema permanentemente para TODOS os usuários.<br><br>Para confirmar, escreva <strong style="color: #e63946;">DELETAR</strong> abaixo:';
+            } else {
+                tituloModal.innerText = 'Tem certeza?';
+                textoModal.innerHTML = 'Esta ação não pode ser desfeita. Para confirmar, escreva <strong style="color: #e63946;">DELETAR</strong> abaixo:';
+            }
+
+            if (modal) {
+                modal.style.display = 'flex';
+                modal.offsetHeight; // Force reflow
+                modal.classList.add('ativa');
+                document.body.style.overflow = 'hidden';
+                
+                const input = document.getElementById('input-confirmar-exclusao');
+                if (input) {
+                    input.value = '';
+                    input.focus();
+                }
+                
+                const btn = document.getElementById('btn-confirmar-delete');
+                if (btn) btn.disabled = true;
+            }
+        }
+
+        function fecharModalExclusao() {
+            const modal = document.getElementById('modal-exclusao');
+            if (modal) {
+                modal.classList.remove('ativa');
+                setTimeout(() => {
+                    if (!modal.classList.contains('ativa')) {
+                        modal.style.display = 'none';
+                    }
+                }, 400);
+                document.body.style.overflow = '';
+            }
+        }
+
+        // Fechar ao clicar no overlay
+        window.onclick = function(event) {
+            const modal = document.getElementById('modal-exclusao');
+            if (event.target === modal) {
+                fecharModalExclusao();
+            }
+        }
+
+        document.getElementById('input-confirmar-exclusao').addEventListener('input', function() {
+            const btn = document.getElementById('btn-confirmar-delete');
+            if (this.value.trim().toUpperCase() === 'DELETAR') {
+                btn.disabled = false;
+            } else {
+                btn.disabled = true;
+            }
+        });
+
+        document.getElementById('btn-confirmar-delete').addEventListener('click', async function() {
+            const btn = this;
+            const originalTxt = btn.innerHTML;
+            
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btn.style.pointerEvents = 'none';
+
+            try {
+                const response = await fetch('../app/ajax/deletar-item.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tipo: tipoExclusao, id: idExclusao })
+                });
+                
+                const data = await response.json();
+
+                if (data.success) {
+                    fecharModalExclusao();
+                    window.location.reload();
+                } else {
+                    alert('Erro ao excluir: ' + data.error);
+                    btn.innerHTML = originalTxt;
+                    btn.style.pointerEvents = 'auto';
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Erro de conexão com o servidor.');
+                btn.innerHTML = originalTxt;
+                btn.style.pointerEvents = 'auto';
+            }
+        });
+    </script>
     <script src="../js/nav-global.js" defer></script>
 </body>
 
 </html>
+

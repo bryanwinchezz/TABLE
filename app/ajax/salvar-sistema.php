@@ -19,6 +19,40 @@ if (!$data || empty($data['nome'])) {
 
 try {
     $pdo = Database::getConexao();
+
+    // ============================================================
+    // MIGRATION AUTOMÁTICA SILENCIOSA (Evita colunas desconhecidas)
+    // ============================================================
+    try {
+        // Verifica tb_classe - ds_habilidade
+        $chkCla = $pdo->query("SHOW COLUMNS FROM tb_classe LIKE 'ds_habilidade'");
+        if ($chkCla->rowCount() === 0) {
+            $pdo->exec("ALTER TABLE tb_classe ADD COLUMN ds_habilidade TEXT NULL");
+        }
+        // Verifica tb_classe - ds_descricao
+        $chkClaDesc = $pdo->query("SHOW COLUMNS FROM tb_classe LIKE 'ds_descricao'");
+        if ($chkClaDesc->rowCount() === 0) {
+            $pdo->exec("ALTER TABLE tb_classe ADD COLUMN ds_descricao TEXT NULL");
+        }
+        // Verifica tb_pericia - ds_habilidade
+        $chkPer = $pdo->query("SHOW COLUMNS FROM tb_pericia LIKE 'ds_habilidade'");
+        if ($chkPer->rowCount() === 0) {
+            $pdo->exec("ALTER TABLE tb_pericia ADD COLUMN ds_habilidade TEXT NULL");
+        }
+        // Verifica tb_pericia - ds_descricao
+        $chkPerDesc = $pdo->query("SHOW COLUMNS FROM tb_pericia LIKE 'ds_descricao'");
+        if ($chkPerDesc->rowCount() === 0) {
+            $pdo->exec("ALTER TABLE tb_pericia ADD COLUMN ds_descricao TEXT NULL");
+        }
+        // Verifica tb_origem - ds_habilidade
+        $chkOri = $pdo->query("SHOW COLUMNS FROM tb_origem LIKE 'ds_habilidade'");
+        if ($chkOri->rowCount() === 0) {
+            $pdo->exec("ALTER TABLE tb_origem ADD COLUMN ds_habilidade TEXT NULL");
+        }
+    } catch (Exception $e) {
+        // Silencioso
+    }
+
     $pdo->beginTransaction();
 
     $id_usuario = $_SESSION['usuario']['id'];
@@ -34,7 +68,7 @@ try {
             $data_img = substr($base64, strpos($base64, ',') + 1);
             $type = strtolower($type[1]); // jpg, png, gif
 
-            if (in_array($type, ['jpg', 'jpeg', 'gif', 'png'])) {
+            if (in_array($type, ['jpg', 'jpeg', 'gif', 'png', 'webp'])) {
                 $data_img = base64_decode($data_img);
                 if ($data_img !== false) {
                     $nome_arquivo = 'sistema_' . time() . '_' . uniqid() . '.' . $type;
@@ -69,25 +103,41 @@ try {
 
     // Inserir Classes
     if (!empty($data['classes'])) {
-        $stmtCla = $pdo->prepare("INSERT INTO tb_classe (nm_classe, ds_descricao, id_sistema) VALUES (?, ?, ?)");
+        $stmtCla = $pdo->prepare("INSERT INTO tb_classe (nm_classe, ds_descricao, ds_habilidade, id_sistema) VALUES (?, ?, ?, ?)");
         foreach ($data['classes'] as $cla) {
-            $stmtCla->execute([$cla['nome'], $cla['val1'], $id_sistema]);
+            $stmtCla->execute([$cla['nome'], $cla['val1'] ?? null, $cla['val2'] ?? null, $id_sistema]);
         }
     }
 
     // Inserir Perícias
     if (!empty($data['pericias'])) {
-        $stmtPer = $pdo->prepare("INSERT INTO tb_pericia (nm_pericia, ds_atributo_base, id_sistema) VALUES (?, ?, ?)");
+        $stmtPer = $pdo->prepare("INSERT INTO tb_pericia (nm_pericia, ds_descricao, ds_habilidade, ds_atributo_base, id_sistema) VALUES (?, ?, ?, ?, ?)");
         foreach ($data['pericias'] as $per) {
-            $stmtPer->execute([$per['nome'], $per['val1'], $id_sistema]);
+            $stmtPer->execute([$per['nome'], $per['val1'] ?? null, $per['val2'] ?? null, $per['val3'] ?? null, $id_sistema]);
         }
     }
 
     // Inserir Origens
     if (!empty($data['origens'])) {
-        $stmtOri = $pdo->prepare("INSERT INTO tb_origem (nm_origem, ds_origem, id_sistema) VALUES (?, ?, ?)");
+        $stmtOri = $pdo->prepare("INSERT INTO tb_origem (nm_origem, ds_origem, ds_habilidade, id_sistema) VALUES (?, ?, ?, ?)");
         foreach ($data['origens'] as $ori) {
-            $stmtOri->execute([$ori['nome'], $ori['val1'], $id_sistema]);
+            $stmtOri->execute([$ori['nome'], $ori['val1'] ?? null, $ori['val2'] ?? null, $id_sistema]);
+        }
+    }
+
+    // Inserir Equipamentos (Itens)
+    if (!empty($data['equipamentos'])) {
+        $stmtItem = $pdo->prepare("INSERT INTO tb_item (nm_item, ds_item, tp_item, id_sistema) VALUES (?, ?, ?, ?)");
+        foreach ($data['equipamentos'] as $item) {
+            $stmtItem->execute([$item['nome'], $item['val1'], $item['val2'] ?? 'outro', $id_sistema]);
+        }
+    }
+
+    // Inserir Poderes (Habilidades)
+    if (!empty($data['poderes'])) {
+        $stmtHab = $pdo->prepare("INSERT INTO tb_habilidade (nm_habilidade, ds_habilidade, tp_habilidade, id_sistema) VALUES (?, ?, ?, ?)");
+        foreach ($data['poderes'] as $hab) {
+            $stmtHab->execute([$hab['nome'], $hab['val1'], $hab['val2'] ?? 'ativa', $id_sistema]);
         }
     }
 

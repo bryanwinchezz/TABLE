@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once __DIR__ . '/../app/config/database.php';
 
@@ -24,6 +24,13 @@ try {
     if (!$sistema)
         throw new Exception("Sistema não encontrado.");
 
+    $isOficial = (isset($_SESSION['usuario']['cargo']) && strtolower($_SESSION['usuario']['cargo']) === 'admin');
+    $isDono = ($sistema['id_usuario_criador'] == $_SESSION['usuario']['id']);
+
+    if (!$isOficial && !$isDono) {
+        header('Location: perfil.php');
+        exit;
+    }
     // Atributos
     $stmtAttr = $pdo->prepare("SELECT * FROM tb_atributo WHERE id_sistema = ?");
     $stmtAttr->execute([$id_sistema]);
@@ -48,6 +55,16 @@ try {
     $stmtMonstros = $pdo->prepare("SELECT * FROM tb_monstro WHERE id_sistema = ?");
     $stmtMonstros->execute([$id_sistema]);
     $monstros = $stmtMonstros->fetchAll(PDO::FETCH_ASSOC);
+
+    // Itens (Equipamentos)
+    $stmtItens = $pdo->prepare("SELECT * FROM tb_item WHERE id_sistema = ?");
+    $stmtItens->execute([$id_sistema]);
+    $itens = $stmtItens->fetchAll(PDO::FETCH_ASSOC);
+
+    // Habilidades (Poderes)
+    $stmtHab = $pdo->prepare("SELECT * FROM tb_habilidade WHERE id_sistema = ?");
+    $stmtHab->execute([$id_sistema]);
+    $habilidades = $stmtHab->fetchAll(PDO::FETCH_ASSOC);
 
     foreach ($monstros as &$m) {
         $stmtMAttr = $pdo->prepare("
@@ -82,7 +99,7 @@ try {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="shortcut icon" href="../img/logo_icone.png" type="image/x-icon">
     <link rel="stylesheet" href="../css/nav-footer.css">
-    <link rel="stylesheet" href="../css/criar-sistema.css?v=1.2">
+    <link rel="stylesheet" href="../css/criar-sistema.css?v=1.3">
 </head>
 
 <body class="pagina-criacao-sistema">
@@ -98,7 +115,7 @@ try {
                 <li><a href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a>
                 </li>
                 <li><a href="criar-mapa.php">Mundos</a></li>
-                <li><a href="rolador-de-dados.php">Dados</a></li>
+                <li><a href="rolagem-de-dados.php">Dados</a></li>
                 <li><a href="sobre-nos.php">Sobre Nós</a></li>
             </ul>
         </nav>
@@ -140,7 +157,7 @@ try {
                             <div class="silhueta-cabeca" id="silhueta-1"></div>
                             <div class="silhueta-corpo" id="silhueta-2"></div>
                         </div>
-                        <p class="dica-imagem">Tamanho ideal: 320x180px</p>
+                        <p class="dica-imagem">Recomendado: 1920x1080px (Wallpaper)</p>
                         <input type="file" id="input-foto-sistema" accept="image/*" hidden>
                         <button type="button" class="btn-contorno" id="btn-trocar-foto">Trocar foto</button>
                     </div>
@@ -220,18 +237,8 @@ try {
                             <input type="text" id="input-abrev-atributo" class="input-painel"
                                 placeholder="Digite a abreviação (Máx. 3)..." maxlength="3">
                         </div>
-                        <div class="grupo-form-painel">
-                            <label>Valor Inicial</label>
-                            <input type="hidden" id="input-valor-atributo" value="0">
-                            <div class="grupo-botoes-sel botoes-valor-atributo">
-                                <button type="button" class="btn-sel ativo" data-valor="0">0</button>
-                                <button type="button" class="btn-sel" data-valor="1">1</button>
-                                <button type="button" class="btn-sel" data-valor="2">2</button>
-                                <button type="button" class="btn-sel" data-valor="3">3</button>
-                                <button type="button" class="btn-sel" data-valor="4">4</button>
-                                <button type="button" class="btn-sel" data-valor="5">5</button>
-                            </div>
-                        </div>
+                        <input type="hidden" id="input-valor-atributo" value="0">
+
                         <div class="acoes-form-painel">
                             <button type="button" id="btn-salvar-atributo" class="btn-salvar-escuro">Salvar</button>
                             <button type="button" id="btn-cancelar-atributo"
@@ -375,7 +382,13 @@ try {
             <div class="grupo-form-painel">
                 <label id="lbl-val2">Habilidades / Extras</label>
                 <textarea id="modal-input-val2" class="input-painel" placeholder="Ataque especial, Bônus..."
-                    style="min-height: 100px; max-height: 100px; resize: none; overflow-y: auto;"></textarea>
+                    style="min-height: 100px; max-height: 100px; resize: none; overflow-y: auto; margin-bottom: 25px;"></textarea>
+            </div>
+
+            <div class="grupo-form-painel" id="grupo-val3" style="display: none;">
+                <label id="lbl-val3">Atributo Base</label>
+                <select id="modal-select-val3" class="input-painel" style="margin-bottom: 25px; height: 50px; cursor: pointer;">
+                </select>
             </div>
 
             <div class="acoes-form-painel" style="justify-content: space-between;">
@@ -531,7 +544,7 @@ try {
                             href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a>
                     </li>
                     <li><a href="criar-mapa.php">Mundos</a></li>
-                    <li><a href="rolador-de-dados.php">Dados</a></li>
+                    <li><a href="rolagem-de-dados.php">Dados</a></li>
                     <li><a href="sobre-nos.php">Sobre Nós</a></li>
                 </ul>
             </div>
@@ -565,10 +578,13 @@ try {
         const PERICIAS_DB = <?= json_encode($pericias) ?>;
         const ORIGENS_DB = <?= json_encode($origens) ?>;
         const MONSTROS_DB = <?= json_encode($monstros) ?>;
+        const ITENS_DB = <?= json_encode($itens) ?>;
+        const PODERES_DB = <?= json_encode($habilidades) ?>;
     </script>
 
     <script src="../js/nav-global.js?v=1.2" defer></script>
-    <script src="../js/editar-sistema.js?v=1.5" defer></script>
+    <script src="../js/editar-sistema.js?v=1.7" defer></script>
 </body>
 
 </html>
+

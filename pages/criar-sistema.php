@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  *  Após a página de login definir a sessão com os dados do usuario a página index lê a sessão e inicia a mesma
  *  Na navbar temos um if e else para cado o usuario esteja conectado ou não, mudando sendo que: 
@@ -25,7 +25,9 @@ if (!isset($_SESSION['usuario'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="shortcut icon" href="../img/logo_icone.png" type="image/x-icon">
     <link rel="stylesheet" href="../css/nav-footer.css">
-    <link rel="stylesheet" href="../css/criar-sistema.css?v=1.4">
+    <link rel="stylesheet" href="../css/table-modal.css">
+    <link rel="stylesheet" href="../css/criar-sistema.css?v=1.3">
+    <script src="../js/table-modal.js"></script>
 </head>
 
 <body class="pagina-criacao-sistema">
@@ -34,26 +36,51 @@ if (!isset($_SESSION['usuario'])) {
         <div class="logotipo">
             <a href="index.php"><img src="../img/logo_horizontal.png" alt="Logo TABLE"></a>
         </div>
-        <nav>
+
+        <!-- BOTÃO MENU MOBILE (HAMBURGER) -->
+        <div class="menu-toggle" id="mobile-menu-btn">
+            <i class="fas fa-bars"></i>
+        </div>
+
+        <nav id="nav-menu">
             <ul>
                 <li><a href="index.php">Início</a></li>
                 <li><a href="cm-jogar.php">Como Jogar</a></li>
                 <li><a href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a>
                 </li>
                 <li><a href="criar-mapa.php">Mundos</a></li>
-                <li><a href="rolador-de-dados.php">Dados</a></li>
+                <li><a href="rolagem-de-dados.php">Dados</a></li>
                 <li><a href="sobre-nos.php">Sobre Nós</a></li>
             </ul>
+
+            <!-- BOTÕES MOBILE -->
+            <div class="nav-mobile-footer">
+                <?php if (isset($_SESSION['usuario'])): ?>
+                    <div class="usuario-logado-nav" onclick="window.location.href='perfil.php'">
+                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
+                            alt="Avatar Navbar" class="avatar-nav">
+                        <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
+                    </div>
+                <?php else: ?>
+                    <a href="login.php" class="botao-entrar">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </a>
+                    <a href="cadastro.php" class="botao-cadastrar">
+                        <i class="fas fa-user-plus"></i> Cadastre-se
+                    </a>
+                <?php endif; ?>
+            </div>
         </nav>
+
         <?php if (isset($_SESSION['usuario'])): ?>
-            <div class="usuario-logado-nav" id="nav-logado" onclick="window.location.href='perfil.php'"
+            <div class="usuario-logado-nav desktop-only" id="nav-logado" onclick="window.location.href='perfil.php'"
                 title="Ir para o Perfil">
                 <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
                     alt="Avatar Navbar" class="avatar-nav">
                 <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
             </div>
         <?php else: ?>
-            <div class="botoes-navegacao" id="nav-deslogado">
+            <div class="botoes-navegacao desktop-only" id="nav-deslogado">
                 <a href="login.php" class="botao-entrar">
                     <i class="fas fa-sign-in-alt"></i> Login
                 </a>
@@ -83,7 +110,7 @@ if (!isset($_SESSION['usuario'])) {
                             <div class="silhueta-cabeca" id="silhueta-1"></div>
                             <div class="silhueta-corpo" id="silhueta-2"></div>
                         </div>
-                        <p class="dica-imagem">Tamanho ideal: 320x180px</p>
+                        <p class="dica-imagem">Recomendado: 1920x1080px (Wallpaper)</p>
                         <input type="file" id="input-foto-sistema" accept="image/*" hidden>
                         <button type="button" class="btn-contorno" id="btn-trocar-foto">Trocar foto</button>
                     </div>
@@ -130,6 +157,11 @@ if (!isset($_SESSION['usuario'])) {
                     </div>
                 </section>
 
+                <!-- NAVEGAÇÃO MOBILE -->
+                <div class="nav-abas-mobile">
+                    <button type="button" class="btn-nav-aba prox" onclick="mudarAba(1)">Próximo: Atributos <i class="fas fa-arrow-right"></i></button>
+                </div>
+
                 <div class="botoes-nav-form apenas-proximo">
                     <button type="button" class="btn-form-nav btn-proximo-aba">Próximo <i
                             class="fas fa-arrow-right"></i></button>
@@ -163,27 +195,19 @@ if (!isset($_SESSION['usuario'])) {
                             <input type="text" id="input-abrev-atributo" class="input-painel"
                                 placeholder="Digite a abreviação (Máx. 3)..." maxlength="3">
                         </div>
-                        <div class="grupo-form-painel">
-                            <label>Valor Inicial</label>
-                            <input type="hidden" id="input-valor-atributo" value="0">
-                            <div class="grupo-botoes-sel botoes-valor-atributo" id="botoes-valor-atributo">
-                                <button type="button" class="btn-sel ativo" data-valor="0">0</button>
-                                <button type="button" class="btn-sel" data-valor="1">1</button>
-                                <button type="button" class="btn-sel" data-valor="2">2</button>
-                                <button type="button" class="btn-sel" data-valor="3">3</button>
-                                <button type="button" class="btn-sel" data-valor="4">4</button>
-                                <button type="button" class="btn-sel" data-valor="5">5</button>
-                            </div>
-                            <div class="scrollbar-custom-track" id="scroll-track-attr-valor">
-                                <div class="scrollbar-custom-thumb" id="scroll-thumb-attr-valor"></div>
-                            </div>
-                        </div>
+                        <input type="hidden" id="input-valor-atributo" value="0">
                         <div class="acoes-form-painel">
                             <button type="button" id="btn-salvar-atributo" class="btn-salvar-escuro">Salvar</button>
                             <button type="button" id="btn-cancelar-atributo"
                                 class="btn-cancelar-escuro">Cancelar</button>
                         </div>
                     </div>
+                </div>
+
+                <!-- NAVEGAÇÃO MOBILE -->
+                <div class="nav-abas-mobile">
+                    <button type="button" class="btn-nav-aba ant" onclick="mudarAba(0)"><i class="fas fa-arrow-left"></i> Anterior</button>
+                    <button type="button" class="btn-nav-aba prox" onclick="mudarAba(2)">Próximo: Status <i class="fas fa-arrow-right"></i></button>
                 </div>
 
                 <div class="botoes-nav-form">
@@ -255,6 +279,12 @@ if (!isset($_SESSION['usuario'])) {
                     </div>
                 </div>
 
+                <!-- NAVEGAÇÃO MOBILE -->
+                <div class="nav-abas-mobile">
+                    <button type="button" class="btn-nav-aba ant" onclick="mudarAba(1)"><i class="fas fa-arrow-left"></i> Anterior</button>
+                    <button type="button" class="btn-nav-aba prox" onclick="mudarAba(3)">Próximo: Componentes <i class="fas fa-arrow-right"></i></button>
+                </div>
+
                 <div class="botoes-nav-form" style="margin-bottom: 100px;">
                     <button type="button" class="btn-form-nav btn-voltar-aba"><i class="fas fa-arrow-left"></i>
                         Voltar</button>
@@ -292,6 +322,11 @@ if (!isset($_SESSION['usuario'])) {
                     </div>
                 </div>
 
+                <!-- NAVEGAÇÃO MOBILE -->
+                <div class="nav-abas-mobile">
+                    <button type="button" class="btn-nav-aba ant" onclick="mudarAba(2)"><i class="fas fa-arrow-left"></i> Anterior</button>
+                </div>
+
                 <div class="botoes-nav-form">
                     <button type="button" class="btn-form-nav btn-voltar-aba"><i class="fas fa-arrow-left"></i>
                         Voltar</button>
@@ -321,7 +356,13 @@ if (!isset($_SESSION['usuario'])) {
             <div class="grupo-form-painel">
                 <label id="lbl-val2">Habilidades / Extras</label>
                 <textarea id="modal-input-val2" class="input-painel" placeholder="Ataque especial, Bônus..."
-                    style="min-height: 100px; max-height: 100px; resize: none; overflow-y: auto;"></textarea>
+                    style="height: 100px; resize: none; margin-bottom: 25px;"></textarea>
+            </div>
+
+            <div class="grupo-form-painel" id="grupo-val3" style="display: none;">
+                <label id="lbl-val3">Atributo Base</label>
+                <select id="modal-select-val3" class="input-painel" style="margin-bottom: 25px; height: 50px; cursor: pointer;">
+                </select>
             </div>
 
             <div class="acoes-form-painel" style="justify-content: space-between;">
@@ -472,7 +513,7 @@ if (!isset($_SESSION['usuario'])) {
                             href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a>
                     </li>
                     <li><a href="criar-mapa.php">Mundos</a></li>
-                    <li><a href="rolador-de-dados.php">Dados</a></li>
+                    <li><a href="rolagem-de-dados.php">Dados</a></li>
                     <li><a href="sobre-nos.php">Sobre Nós</a></li>
                 </ul>
             </div>
@@ -498,7 +539,8 @@ if (!isset($_SESSION['usuario'])) {
     </footer>
 
     <script src="../js/nav-global.js" defer></script>
-    <script src="../js/criar-sistema.js?v=1.3" defer></script>
+    <script src="../js/criar-sistema.js?v=1.9" defer></script>
 </body>
 
 </html>
+

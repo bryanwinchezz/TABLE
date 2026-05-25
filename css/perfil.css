@@ -170,6 +170,45 @@ body.pagina-perfil {
     opacity: 0.8;
 }
 
+.acoes-painel {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.btn-lixeira {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-lixeira:hover {
+    color: #ff4d4d;
+    transform: scale(1.1);
+}
+
+.btn-lixeira-item {
+    position: absolute;
+    bottom: 12px;
+    right: 15px;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.2);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.btn-lixeira-item:hover {
+    color: #ff4d4d;
+    transform: scale(1.2);
+    text-shadow: 0 0 10px rgba(255, 77, 77, 0.5);
+}
+
 
 /* Scroller Interno Redesenhado */
 
@@ -200,24 +239,51 @@ body.pagina-perfil {
 /* Itens da Lista */
 
 .lista-item {
-    background: #151515;
-    padding: 12px 20px;
-    border-radius: 15px;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 15px;
+    border-radius: 12px;
     display: flex;
-    gap: 15px;
+    gap: 20px;
     align-items: center;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.lista-item:hover {
+    background: rgba(255, 255, 255, 0.07);
+    transform: translateX(5px);
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
 .item-avatar {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    background: #e0e0e0;
+    width: 100px;
+    height: 56px; /* Mantém a proporção ~16:9 */
+    border-radius: 8px;
+    background: #333;
     overflow: hidden;
     flex-shrink: 0;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .item-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.item-avatar-quadrado {
+    width: 60px;
+    height: 60px;
+    border-radius: 10px;
+    background: #333;
+    overflow: hidden;
+    flex-shrink: 0;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.item-avatar-quadrado img {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -231,9 +297,11 @@ body.pagina-perfil {
 }
 
 .item-dados h3 {
-    font-size: 1rem;
-    font-weight: 700;
+    font-size: 1.1rem;
+    font-weight: 800;
     margin: 0;
+    color: #fff;
+    letter-spacing: 0.5px;
 }
 
 .item-dados p {
@@ -247,11 +315,132 @@ body.pagina-perfil {
     color: #a8a8a8;
 }
 
+/* MODAL EXCLUSÃO PREMIUM */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+    background: #ffffff;
+    color: #333;
+    width: 90%;
+    max-width: 450px;
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    text-align: center;
+    animation: slideUp 0.3s ease;
+}
+
+.modal-header i {
+    font-size: 3rem;
+    color: #f1c40f;
+    margin-bottom: 15px;
+}
+
+.modal-header h2 {
+    color: #e63946;
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+.modal-body p {
+    font-size: 1rem;
+    color: #555;
+    margin-bottom: 25px;
+}
+
+.input-modal {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #eee;
+    border-radius: 10px;
+    font-size: 1rem;
+    text-align: center;
+    margin-bottom: 30px;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+.input-modal:focus {
+    border-color: #e63946;
+}
+
+.modal-footer {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.btn-modal-cancelar {
+    background: #718096;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.btn-modal-deletar {
+    background: #e63946;
+    color: white;
+    border: none;
+    padding: 12px 35px;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-modal-deletar:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.btn-modal-deletar:not(:disabled):hover {
+    background: #c92a3a;
+    transform: translateY(-2px);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
 /* Responsividade para Zooms e Telas Menores */
 @media (max-width: 900px) {
+    body.pagina-perfil {
+        padding-top: 100px;
+    }
+
+    .perfil-container {
+        padding: 15px;
+    }
+
     .grid-jogador, .grid-mestre {
         grid-template-columns: 1fr;
         grid-template-areas: none !important;
+        gap: 20px;
     }
     
     #painel-personagens, #painel-campanhas, #painel-sistemas {
@@ -261,10 +450,35 @@ body.pagina-perfil {
     .perfil-header {
         flex-direction: column;
         text-align: center;
+        gap: 20px;
+    }
+
+    .perfil-avatar-wrapper {
+        width: 150px;
+        height: 150px;
     }
 
     .perfil-nome-box {
         min-width: unset;
         width: 100%;
+    }
+
+    .painel-dark {
+        min-height: 350px;
+    }
+}
+
+@media (max-width: 480px) {
+    .perfil-avatar-wrapper {
+        width: 120px;
+        height: 120px;
+    }
+
+    .perfil-info h1 {
+        font-size: 1.6rem;
+    }
+
+    .painel-header h2 {
+        font-size: 1.3rem;
     }
 }

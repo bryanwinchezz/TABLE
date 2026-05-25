@@ -23,6 +23,10 @@ body.pagina-criacao-sistema {
     width: 100%;
 }
 
+.nav-abas-mobile {
+    display: none;
+}
+
 /* ==========================================
    MENU DE ABAS
 ========================================== */
@@ -582,7 +586,7 @@ body.pagina-criacao-sistema {
 }
 
 .btn-sel.ativo {
-    background-color: #333;
+    background-color: #311c61;
     color: #fff;
     border-color: #333;
 }
@@ -599,7 +603,7 @@ body.pagina-criacao-sistema {
 }
 
 .btn-salvar-escuro {
-    background-color: #333;
+    background-color: #311c61;
     color: #fff;
     border: none;
     padding: 12px 25px;
@@ -753,7 +757,30 @@ body.pagina-criacao-sistema {
     display: flex;
     flex-direction: column;
     gap: 15px;
-    padding: 0 5px;
+    padding: 0 15px 20px 5px; /* Adicionado padding inferior */
+    max-height: 480px; /* Altura fixa para permitir scroll interno */
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Scrollbar Premium para Painéis de Componentes */
+.painel-categoria::-webkit-scrollbar {
+    width: 6px;
+}
+
+.painel-categoria::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+}
+
+.painel-categoria::-webkit-scrollbar-thumb {
+    background: rgba(157, 122, 255, 0.3);
+    border-radius: 10px;
+    transition: 0.3s;
+}
+
+.painel-categoria::-webkit-scrollbar-thumb:hover {
+    background: rgba(157, 122, 255, 0.5);
 }
 
 .item-comp {
@@ -775,6 +802,145 @@ body.pagina-criacao-sistema {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+/* ==========================================
+   RESPONSIVIDADE MOBILE
+   ========================================== */
+@media (max-width: 900px) {
+    .componente-card {
+        padding: 15px;
+    }
+
+    /* Navegação de Abas Mobile */
+    .nav-abas-mobile {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 30px;
+        padding: 0 10px;
+    }
+
+    .btn-nav-aba {
+        flex: 1;
+        padding: 15px;
+        border-radius: 12px;
+        border: none;
+        font-weight: 800;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-nav-aba.prox {
+        background: linear-gradient(135deg, #6539C7, #8b5cf6);
+        color: white;
+        box-shadow: 0 5px 15px rgba(101, 57, 199, 0.3);
+    }
+
+    .btn-nav-aba.ant {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .container-sistema {
+        padding-top: 100px;
+    }
+
+    .menu-abas {
+        display: none;
+    }
+
+    .aba {
+        padding: 10px 15px;
+        font-size: 0.8rem;
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+
+    .indicador-aba {
+        display: none;
+    }
+
+    .aba.ativa {
+        background-color: #ffffff;
+        color: #311c61;
+    }
+
+    .secao-topo {
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .caixa-imagem {
+        width: 100%;
+        max-width: 320px;
+    }
+
+    .container-painel-duplo {
+        flex-direction: column;
+        min-height: unset;
+    }
+
+    .painel-esquedo {
+        border-radius: 20px 20px 0 0;
+        flex: unset;
+    }
+
+    .painel-direito {
+        border-radius: 0 0 20px 20px;
+        flex: unset;
+        max-width: 100%;
+    }
+
+    .item-comp {
+        flex-direction: column;
+        text-align: center;
+        gap: 10px;
+    }
+
+    .titulo-comp {
+        width: 100%;
+        white-space: normal;
+    }
+
+    .viewport-comp {
+        overflow-x: auto;
+    }
+
+    .track-comp {
+        width: 600%;
+        display: flex;
+    }
+}
+
+@media (max-width: 600px) {
+    .acoes-globais-desc {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .input-titulo-desc {
+        width: 100% !important;
+    }
+
+    .botoes-nav-form {
+        flex-direction: column;
+        gap: 15px;
+        margin-bottom: 50px;
+    }
+
+    .btn-form-nav, .btn-concluir {
+        width: 100%;
+        justify-content: center;
+    }
 }
 
 .item-comp-info {
@@ -980,3 +1146,6 @@ body.pagina-criacao-sistema {
     height: 1px; 
     background: linear-gradient(to right, rgba(157, 122, 255, 0.3), transparent); 
 }
+
+#modal-select-val3 { background-color: rgba(255, 255, 255, 0.07); color: #fff; }
+#modal-select-val3 option { background-color: #110e1a; color: #fff; }

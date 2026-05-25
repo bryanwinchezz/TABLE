@@ -9,15 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =======================================================
-    // FORÇAR MAIÚSCULAS NOS INPUTS
+    // REMOVIDO: FORÇAR MAIÚSCULAS NOS INPUTS (Agora permite minúsculas)
     // =======================================================
-    const forcarMaiuscula = (e) => {
-        e.target.value = e.target.value.toUpperCase();
-    };
-    document.getElementById('input-nome-atributo').addEventListener('input', forcarMaiuscula);
-    document.getElementById('input-abrev-atributo').addEventListener('input', forcarMaiuscula);
-    document.getElementById('input-nome-status').addEventListener('input', forcarMaiuscula);
-    document.getElementById('modal-input-nome').addEventListener('input', forcarMaiuscula);
 
 
     // =======================================================
@@ -122,31 +115,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (typeof STATUS_DB !== 'undefined' && STATUS_DB.length > 0) {
         statusObj = STATUS_DB.filter(s => s.tp_status === 'barra').map(s => ({
-            id: s.id_status,
+            id: s.id_status_sistema,
             nome: s.nm_status,
             cor: s.ds_cor,
             base: 'null'
         }));
         defesasObj = STATUS_DB.filter(s => s.tp_status === 'defesa').map(s => ({
-            id: s.id_status,
+            id: s.id_status_sistema,
             nome: s.nm_status,
             cor: s.ds_cor,
             base: 'null'
         }));
     } else {
-        statusObj = [{ id: gerarID(), nome: 'VIDA', cor: '#ed1c24', base: 'null' }];
-        defesasObj = [{ id: gerarID(), nome: 'DEFESA', cor: '#0f75bc', base: 'null' }];
+        statusObj = [];
+        defesasObj = [];
     }
 
     if (typeof ATRIBS_DB !== 'undefined' && ATRIBS_DB.length > 0) {
         window.atributosObj = ATRIBS_DB.map(a => ({ id: a.id_atributo, nome: a.nm_atributo, abrev: a.ds_abreviacao, valor: a.qt_valor_minimo || '0' }));
     } else {
-        window.atributosObj = [{ id: gerarID(), nome: 'FORÇA', abrev: 'FOR', valor: '0' }];
+        window.atributosObj = [];
     }
 
-    if (typeof CLASSES_DB !== 'undefined') window.componentesDb['CLASSES'].items = CLASSES_DB.map(c => ({ id: c.id_classe, nome: c.nm_classe, val1: c.ds_descricao, val2: '' }));
-    if (typeof PERICIAS_DB !== 'undefined') window.componentesDb['PERÍCIAS'].items = PERICIAS_DB.map(p => ({ id: p.id_pericia, nome: p.nm_pericia, val1: p.ds_atributo_base, val2: '' }));
-    if (typeof ORIGENS_DB !== 'undefined') window.componentesDb['ORIGENS'].items = ORIGENS_DB.map(o => ({ id: o.id_origem, nome: o.nm_origem, val1: o.ds_origem, val2: '' }));
+    if (typeof CLASSES_DB !== 'undefined') window.componentesDb['CLASSES'].items = CLASSES_DB.map(c => ({ id: c.id_classe, nome: c.nm_classe, val1: c.ds_descricao, val2: c.ds_habilidade }));
+    if (typeof PERICIAS_DB !== 'undefined') window.componentesDb['PERÍCIAS'].items = PERICIAS_DB.map(p => ({ id: p.id_pericia, nome: p.nm_pericia, val1: p.ds_descricao, val2: p.ds_habilidade, val3: p.ds_atributo_base }));
+    if (typeof ORIGENS_DB !== 'undefined') window.componentesDb['ORIGENS'].items = ORIGENS_DB.map(o => ({ id: o.id_origem, nome: o.nm_origem, val1: o.ds_origem, val2: o.ds_habilidade }));
     if (typeof MONSTROS_DB !== 'undefined') {
         window.componentesDb['AMEAÇAS'].items = MONSTROS_DB.map(m => ({
             id: m.id_monstro,
@@ -161,6 +154,8 @@ document.addEventListener('DOMContentLoaded', () => {
             foto_base64: m.ds_imagem
         }));
     }
+    if (typeof ITENS_DB !== 'undefined') window.componentesDb['EQUIPAMENTOS'].items = ITENS_DB.map(i => ({ id: i.id_item, nome: i.nm_item, val1: i.ds_item, val2: i.tp_item }));
+    if (typeof PODERES_DB !== 'undefined') window.componentesDb['PODERES'].items = PODERES_DB.map(h => ({ id: h.id_habilidade, nome: h.nm_habilidade, val1: h.ds_habilidade, val2: h.tp_habilidade }));
 
     // =======================================================
     // SUBMISSÃO
@@ -187,6 +182,8 @@ document.addEventListener('DOMContentLoaded', () => {
             classes: window.componentesDb['CLASSES'].items,
             pericias: window.componentesDb['PERÍCIAS'].items,
             origens: window.componentesDb['ORIGENS'].items,
+            equipamentos: window.componentesDb['EQUIPAMENTOS'].items,
+            poderes: window.componentesDb['PODERES'].items,
             monstros: window.componentesDb['AMEAÇAS'].items
         };
 
@@ -226,11 +223,21 @@ document.addEventListener('DOMContentLoaded', () => {
         inputFoto.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
+                // Validação de tamanho (ex: 5MB) para evitar estouro de POST
+                if (file.size > 5 * 1024 * 1024) {
+                    alert("A imagem é muito pesada! Escolha uma de até 5MB.");
+                    return;
+                }
+
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     previewImagem.style.backgroundImage = `url(${event.target.result})`;
+                    previewImagem.style.backgroundSize = 'cover';
+                    previewImagem.style.backgroundPosition = 'center';
+                    
                     silhuetas.forEach(s => s.style.display = 'none');
                     imagemBase64 = event.target.result; 
+                    console.log('TABLE | Nova imagem de capa carregada para envio.');
                 };
                 reader.readAsDataURL(file);
             }
@@ -465,23 +472,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('btn-add-status-vazio').addEventListener('click', () => {
         if (statusObj.length >= 3) return alert("Máximo atingido.");
-        statusObj.push({ id: gerarID(), nome: 'NOVO', cor: '#888888', base: 'null' });
-        renderStatusEDefesas();
+        resetarFormStatus();
+        document.getElementById('titulo-painel-status').textContent = 'Novo Status';
     });
 
     document.getElementById('btn-add-defesa-vazio').addEventListener('click', () => {
         if (defesasObj.length >= 3) return alert("Máximo atingido.");
-        defesasObj.push({ id: gerarID(), nome: 'NOVO', cor: '#888888', base: 'null' });
-        renderStatusEDefesas();
+        resetarFormStatus();
+        document.getElementById('titulo-painel-status').textContent = 'Nova Defesa';
     });
 
     document.getElementById('btn-salvar-status').addEventListener('click', () => {
-        if (!statusEditandoID) return alert("Selecione um status ou defesa para editar primeiro.");
-        let lista = editandoTipo === 'status' ? statusObj : defesasObj;
-        const stat = lista.find(s => s.id === statusEditandoID);
-        stat.nome = document.getElementById('input-nome-status').value.toUpperCase();
-        stat.cor = document.getElementById('input-cor-status').value;
-        stat.base = document.getElementById('input-base-status').value;
+        const nome = document.getElementById('input-nome-status').value.trim();
+        const cor = document.getElementById('input-cor-status').value;
+        const base = document.getElementById('input-base-status').value;
+
+        if (!nome) return alert("O nome é obrigatório!");
+
+        if (statusEditandoID) {
+            let lista = editandoTipo === 'status' ? statusObj : defesasObj;
+            const stat = lista.find(s => s.id == statusEditandoID);
+            stat.nome = nome;
+            stat.cor = cor;
+            stat.base = base;
+        } else {
+            const titulo = document.getElementById('titulo-painel-status').textContent;
+            const isDefesa = titulo.toLowerCase().includes('defesa');
+            if (isDefesa) {
+                if (defesasObj.length >= 3) return alert("Máximo atingido.");
+                defesasObj.push({ id: gerarID(), nome, cor, base });
+            } else {
+                if (statusObj.length >= 3) return alert("Máximo atingido.");
+                statusObj.push({ id: gerarID(), nome, cor, base });
+            }
+        }
         renderStatusEDefesas();
         resetarFormStatus();
     });
@@ -496,15 +520,15 @@ document.addEventListener('DOMContentLoaded', () => {
         let lista = isStatus ? statusObj : defesasObj;
 
         if (e.target.classList.contains('btn-deletar-status')) {
-            if (isStatus) statusObj = statusObj.filter(s => s.id !== id);
-            else defesasObj = defesasObj.filter(d => d.id !== id);
+            if (isStatus) statusObj = statusObj.filter(s => s.id != id);
+            else defesasObj = defesasObj.filter(d => d.id != id);
             renderStatusEDefesas();
-            if (statusEditandoID === id) resetarFormStatus();
+            if (statusEditandoID == id) resetarFormStatus();
         } else if (e.target.classList.contains('btn-editar-status')) {
             statusEditandoID = id;
             editandoTipo = tipo;
             document.getElementById('titulo-painel-status').textContent = isStatus ? 'Editar Status' : 'Editar Defesa';
-            const item = lista.find(x => x.id === id);
+            const item = lista.find(x => x.id == id);
             document.getElementById('input-nome-status').value = item.nome;
             document.getElementById('input-cor-status').value = item.cor;
             document.getElementById('input-base-status').value = item.base;
@@ -514,8 +538,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('btn-add-atributo-vazio').addEventListener('click', () => {
         if (window.atributosObj.length >= 8) return alert("Máximo atingido.");
-        window.atributosObj.push({ id: gerarID(), nome: 'NOVO', abrev: 'NOV', valor: '0' });
+        const novoID = gerarID();
+        window.atributosObj.push({ id: novoID, nome: 'Novo Atributo', abrev: '...', valor: '0' });
         renderAtributos();
+        
+        // Seleciona automaticamente para edição
+        window.atributoEditandoID = novoID;
+        document.getElementById('titulo-painel-attr').textContent = 'Editar Atributo';
+        document.getElementById('input-nome-atributo').value = 'Novo Atributo';
+        document.getElementById('input-abrev-atributo').value = '...';
+        document.getElementById('input-valor-atributo').value = '0';
+        document.getElementById('input-nome-atributo').focus();
     });
 
     document.getElementById('lista-atributos').addEventListener('click', (e) => {
@@ -535,13 +568,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('btn-salvar-atributo').addEventListener('click', () => {
-        if (!window.atributoEditandoID) return;
-        const attr = window.atributosObj.find(a => a.id == window.atributoEditandoID);
-        attr.nome = document.getElementById('input-nome-atributo').value.toUpperCase();
-        attr.abrev = document.getElementById('input-abrev-atributo').value.toUpperCase();
-        attr.valor = document.getElementById('input-valor-atributo').value;
+        const nome = document.getElementById('input-nome-atributo').value.trim();
+        const abrev = document.getElementById('input-abrev-atributo').value.trim();
+        const valor = document.getElementById('input-valor-atributo').value;
+
+        if (!nome || !abrev) return alert("Nome e Abreviação são obrigatórios!");
+
+        if (window.atributoEditandoID) {
+            const attr = window.atributosObj.find(a => a.id == window.atributoEditandoID);
+            attr.nome = nome;
+            attr.abrev = abrev;
+            attr.valor = valor;
+        } else {
+            if (window.atributosObj.length >= 8) return alert("Máximo atingido.");
+            window.atributosObj.push({ id: gerarID(), nome, abrev, valor });
+        }
         renderAtributos();
-        window.atributoEditandoID = null;
+        resetarFormAtributo();
     });
 
     renderAtributos();
@@ -588,6 +631,73 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
+    function configurarModalDinamico(comp = null) {
+        const inputNome = document.getElementById('modal-input-nome');
+        const inputVal1 = document.getElementById('modal-input-val1');
+        const inputVal2 = document.getElementById('modal-input-val2');
+        const selectVal2 = document.getElementById('modal-select-val2');
+        
+        let labelCat = '';
+        switch(catAtiva) {
+            case 'CLASSES': 
+                labelCat = 'Classe'; 
+                inputNome.placeholder = 'Ex: Guerreiro, Atirador...';
+                inputVal1.placeholder = 'Detalhes e mecânicas...';
+                inputVal2.placeholder = 'Habilidades extras...';
+                break;
+            case 'PERÍCIAS': 
+                labelCat = 'Perícia'; 
+                inputNome.placeholder = 'Ex: Atletismo, Furtividade...';
+                inputVal1.placeholder = 'O que permite fazer...';
+                break;
+            case 'ORIGENS': 
+                labelCat = 'Origem'; 
+                inputNome.placeholder = 'Ex: Soldado, Acadêmico...';
+                inputVal1.placeholder = 'A história do personagem...';
+                inputVal2.placeholder = 'Itens ou poderes bônus...';
+                break;
+            case 'EQUIPAMENTOS': 
+                labelCat = 'Equipamento'; 
+                inputNome.placeholder = 'Ex: Espada de Ferro, Capa...';
+                inputVal1.placeholder = 'Efeito e características...';
+                inputVal2.placeholder = 'Arma, Consumível...';
+                break;
+            case 'PODERES': 
+                labelCat = 'Poder'; 
+                inputNome.placeholder = 'Ex: Rajada Mística, Cura...';
+                inputVal1.placeholder = 'Dano ou cura descritos...';
+                inputVal2.placeholder = 'Ação necessária (Ativa/Passiva)...';
+                break;
+            default:
+                labelCat = 'Componente';
+                inputNome.placeholder = 'Ex: Nome do item...';
+                inputVal1.placeholder = 'Detalhes breves...';
+                inputVal2.placeholder = 'Habilidades extras...';
+        }
+
+        document.getElementById('modal-comp-titulo').textContent = comp ? `Editar ${labelCat}` : `Criar ${labelCat}`;
+
+        const grupoVal3 = document.getElementById('grupo-val3');
+        const selectVal3 = document.getElementById('modal-select-val3');
+        inputVal2.style.display = 'block';
+
+        if (catAtiva === 'PERÍCIAS') {
+            grupoVal3.style.display = 'block';
+            selectVal3.innerHTML = '';
+            if (!window.atributosObj || window.atributosObj.length === 0) {
+                selectVal3.innerHTML = '<option value="">Sem Atributos Criados</option>';
+            } else {
+                window.atributosObj.forEach(a => {
+                    const abrev = a.abrev || a.nome.substring(0,3).toUpperCase();
+                    selectVal3.insertAdjacentHTML('beforeend', `<option value="${abrev}">${a.nome} (${abrev})</option>`);
+                });
+            }
+            if (comp && comp.val3) selectVal3.value = comp.val3;
+        } else {
+            grupoVal3.style.display = 'none';
+        }
+    }
+
     document.getElementById('btn-criar-comp').addEventListener('click', () => {
         if (catAtiva === 'AMEAÇAS' || catAtiva === 'MONSTROS') {
             document.getElementById('m-id-local').value = '';
@@ -615,13 +725,11 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('modal-criar-monstro').classList.add('ativo');
         } else {
             window.compEditandoID = null;
-            document.getElementById('modal-comp-titulo').textContent = `Novo ${catAtiva}`;
-            document.getElementById('modal-input-nome').value = '';
-            document.getElementById('modal-input-val1').value = '';
-            document.getElementById('modal-input-val2').value = '';
-            document.getElementById('btn-excluir-modal').style.display = 'none';
             document.getElementById('lbl-val1').textContent = window.componentesDb[catAtiva].labels[0];
             document.getElementById('lbl-val2').textContent = window.componentesDb[catAtiva].labels[1];
+            document.getElementById('btn-excluir-modal').style.display = 'none';
+            
+            configurarModalDinamico();
             document.getElementById('modal-comp').classList.add('ativo');
         }
     });
@@ -629,20 +737,30 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-fechar-modal').addEventListener('click', () => document.getElementById('modal-comp').classList.remove('ativo'));
 
     document.getElementById('btn-salvar-modal').addEventListener('click', () => {
-        const nome = document.getElementById('modal-input-nome').value.toUpperCase();
+        const nome = document.getElementById('modal-input-nome').value.trim();
         if (!nome) return;
 
         const val1 = document.getElementById('modal-input-val1').value;
         const val2 = document.getElementById('modal-input-val2').value;
+        let val3 = '';
+
+        if (catAtiva === 'PERÍCIAS') {
+            val3 = document.getElementById('modal-select-val3').value;
+        }
 
         if (window.compEditandoID) {
             // Modo edição: atualiza o item existente
             const item = window.componentesDb[catAtiva].items.find(c => c.id == window.compEditandoID);
-            if (item) { item.nome = nome; item.val1 = val1; item.val2 = val2; }
+            if (item) { 
+                item.nome = nome; item.val1 = val1; item.val2 = val2; 
+                if (catAtiva === 'PERÍCIAS') item.val3 = val3;
+            }
             window.compEditandoID = null;
         } else {
             // Modo criação: adiciona novo item
-            window.componentesDb[catAtiva].items.push({ id: gerarIDComp(), nome, val1, val2 });
+            const novoItem = { id: gerarIDComp(), nome, val1, val2 };
+            if (catAtiva === 'PERÍCIAS') novoItem.val3 = val3;
+            window.componentesDb[catAtiva].items.push(novoItem);
         }
 
         document.getElementById('modal-comp').classList.remove('ativo');
@@ -664,13 +782,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             window.compEditandoID = id;
-            document.getElementById('modal-comp-titulo').textContent = `Editar ${catAtiva}`;
             document.getElementById('lbl-val1').textContent = catData.labels[0];
             document.getElementById('lbl-val2').textContent = catData.labels[1];
 
             document.getElementById('modal-input-nome').value = comp.nome;
             document.getElementById('modal-input-val1').value = comp.val1 || '';
             document.getElementById('modal-input-val2').value = comp.val2 || '';
+
+            configurarModalDinamico(comp);
 
             const btnExcluir = document.getElementById('btn-excluir-modal');
             btnExcluir.style.display = catData.items.length <= 1 ? 'none' : 'block';
@@ -733,7 +852,7 @@ function abrirModalEdicaoMonstro(comp) {
 }
 
 function salvarMonstro() {
-    const nome = document.getElementById('m-nome').value.toUpperCase();
+    const nome = document.getElementById('m-nome').value.trim();
     const idLocal = document.getElementById('m-id-local').value;
     if(!nome) return alert('Dê um nome!');
     

@@ -11,15 +11,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =======================================================
-    // FORÇAR MAIÚSCULAS NOS INPUTS
+    // REMOVIDO: FORÇAR MAIÚSCULAS NOS INPUTS (Agora permite minúsculas)
     // =======================================================
-    const forcarMaiuscula = (e) => {
-        e.target.value = e.target.value.toUpperCase();
-    };
-    document.getElementById('input-nome-atributo').addEventListener('input', forcarMaiuscula);
-    document.getElementById('input-abrev-atributo').addEventListener('input', forcarMaiuscula);
-    document.getElementById('input-nome-status').addEventListener('input', forcarMaiuscula);
-    document.getElementById('modal-input-nome').addEventListener('input', forcarMaiuscula);
 
 
     // =======================================================
@@ -78,6 +71,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Inicializa
     if (abas.length > 0) ativarAba(abas[0]);
+
+    // Função global para navegação mobile via botões Próximo/Anterior
+    window.mudarAba = function(index) {
+        const abaAlvo = document.querySelector(`.aba[data-index="${index}"]`);
+        if (abaAlvo) {
+            abaAlvo.click();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
 
     // Botões Próximo e Voltar
     document.querySelectorAll('.btn-proximo-aba').forEach(btn => {
@@ -148,6 +150,8 @@ document.addEventListener('DOMContentLoaded', () => {
             classes: componentesDb['CLASSES'] ? componentesDb['CLASSES'].items : [],
             pericias: componentesDb['PERÍCIAS'] ? componentesDb['PERÍCIAS'].items : [],
             origens: componentesDb['ORIGENS'] ? componentesDb['ORIGENS'].items : [],
+            equipamentos: componentesDb['EQUIPAMENTOS'] ? componentesDb['EQUIPAMENTOS'].items : [],
+            poderes: componentesDb['PODERES'] ? componentesDb['PODERES'].items : [],
             monstros: componentesDb['AMEAÇAS'] ? componentesDb['AMEAÇAS'].items : []
         };
 
@@ -159,13 +163,13 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const res = await req.json();
             if(res.success) {
-                alert("Mundo criado com sucesso! O Grimório o registra na história.");
+                await TableModal.alert("Mundo criado com sucesso! O Grimório o registra na história.", "Mundo Criado", "success");
                 window.location.href = 'perfil.php';
             } else {
-                alert("Falha arcana: " + res.error);
+                await TableModal.alert("Falha arcana: " + res.error, "Erro de Criação", "error");
             }
         } catch(e) {
-            alert("Erro de comunicação com o servidor.");
+            await TableModal.alert("Erro de comunicação com o servidor.", "Erro de Conexão", "error");
         }
     });
 
@@ -295,25 +299,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Variáveis de estado globais para serem acessadas por funções fora do DOMContentLoaded (como salvarMonstro)
     window.atributosObj = [
-        { id: gerarID(), nome: 'FORÇA', abrev: 'FOR', valor: '0' }
+        { id: gerarID(), nome: 'Força', abrev: 'FOR', valor: '0' },
+        { id: gerarID(), nome: 'Agilidade', abrev: 'AGI', valor: '0' }
     ];
     window.statusObj = [
-        { id: gerarID(), nome: 'VIDA', cor: '#ed1c24', base: 'null' }
+        { id: gerarID(), nome: 'Vida', cor: '#ed1c24', base: 'null' }
     ];
-    window.defesasObj = [
-        { id: gerarID(), nome: 'DEFESA', cor: '#0f75bc', base: 'null' }
-    ];
+    window.defesasObj = [];
     window.componentesDb = {
         'CLASSES': {
-            limit: 15, labels: ['DESCRIÇÃO', 'HABILIDADES'], items: [
-                { id: gerarIDComp(), nome: 'COMBATENTE', val1: 'Treinado desde cedo...', val2: 'Ataque uma vez por cena...' }
+            limit: 15, labels: ['Descrição', 'Habilidades'], items: [
+                { id: gerarIDComp(), nome: 'Guerreiro', val1: 'Focado em força física e resistência. Ideal para iniciantes aprenderem as regras de combate.', val2: 'Ataque Especial: 1 vez por cena, soma +5 de dano puro em um ataque físico.' }
             ]
         },
-        'PERÍCIAS': { limit: 30, labels: ['DESCRIÇÃO', 'HABILIDADES'], items: [] },
-        'ORIGENS': { limit: 75, labels: ['DESCRIÇÃO', 'HABILIDADES'], items: [] },
-        'EQUIPAMENTOS': { limit: 100, labels: ['DESCRIÇÃO', 'CATEGORIA'], items: [] },
-        'PODERES': { limit: 50, labels: ['DESCRIÇÃO', 'DURAÇÃO'], items: [] },
-        'AMEAÇAS': { limit: 50, labels: ['TIPO DA AMEAÇA', 'VD'], items: [] }
+        'PERÍCIAS': { limit: 30, labels: ['Descrição', 'Habilidades'], items: [
+                { id: gerarIDComp(), nome: 'Luta', val1: 'Habilidade de combate corpo a corpo e testes de força em conflito.', val2: 'Baseado em Força' }
+        ] },
+        'ORIGENS': { limit: 75, labels: ['Descrição', 'Habilidades'], items: [
+                { id: gerarIDComp(), nome: 'Desgarrado', val1: 'Alguém que viveu à margem da sociedade e aprendeu a se virar sozinho.', val2: 'Sobrevivente Nato: +2 em testes de Percepção.' }
+        ] },
+        'EQUIPAMENTOS': { limit: 100, labels: ['Descrição', 'Categoria'], items: [] },
+        'PODERES': { limit: 50, labels: ['Descrição', 'Duração'], items: [] },
+        'AMEAÇAS': { limit: 50, labels: ['Tipo da Ameaça', 'VD'], items: [] }
     };
 
     let atributoEditandoID = null;
@@ -556,8 +563,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('btn-add-atributo-vazio').addEventListener('click', () => {
         if (atributosObj.length >= 8) return alert("Máximo de 8 atributos atingido.");
-        atributosObj.push({ id: gerarID(), nome: 'NOVO', abrev: 'NOV', valor: '0' });
+        const novoID = gerarID();
+        atributosObj.push({ id: novoID, nome: 'Novo Atributo', abrev: '...', valor: '0' });
         renderAtributos();
+        
+        // Seleciona automaticamente para edição
+        atributoEditandoID = novoID;
+        document.getElementById('titulo-painel-attr').textContent = 'Editar Atributo';
+        document.getElementById('input-nome-atributo').value = 'Novo Atributo';
+        document.getElementById('input-abrev-atributo').value = '...';
+        document.getElementById('input-valor-atributo').value = '0';
+        document.getElementById('input-nome-atributo').focus();
     });
 
     document.getElementById('btn-add-status-vazio').addEventListener('click', () => {
@@ -598,24 +614,52 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('#aba-status .btn-cancelar-escuro').addEventListener('click', resetarFormStatus);
 
     document.getElementById('btn-salvar-atributo').addEventListener('click', () => {
-        if (!atributoEditandoID) return alert("Selecione um atributo para editar primeiro, ou clique em +.");
-        const attr = atributosObj.find(a => a.id === atributoEditandoID);
-        attr.nome = document.getElementById('input-nome-atributo').value.toUpperCase();
-        attr.abrev = document.getElementById('input-abrev-atributo').value.toUpperCase();
-        attr.valor = document.getElementById('input-valor-atributo').value;
+        const nome = document.getElementById('input-nome-atributo').value.trim();
+        const abrev = document.getElementById('input-abrev-atributo').value.trim();
+        const valor = document.getElementById('input-valor-atributo').value;
+
+        if (!nome || !abrev) return alert("Nome e Abreviação são obrigatórios!");
+
+        if (atributoEditandoID) {
+            const attr = atributosObj.find(a => a.id === atributoEditandoID);
+            attr.nome = nome;
+            attr.abrev = abrev;
+            attr.valor = valor;
+        } else {
+            if (atributosObj.length >= 8) return alert("Máximo de 8 atributos atingido.");
+            atributosObj.push({ id: gerarID(), nome, abrev, valor });
+        }
 
         renderAtributos();
         resetarFormAtributo();
     });
 
     document.getElementById('btn-salvar-status').addEventListener('click', () => {
-        if (!statusEditandoID) return alert("Selecione um status ou defesa para editar primeiro, ou clique em +.");
+        const nome = document.getElementById('input-nome-status').value.trim();
+        const cor = document.getElementById('input-cor-status').value;
+        const base = document.getElementById('input-base-status').value;
 
-        let lista = editandoTipo === 'status' ? statusObj : defesasObj;
-        const stat = lista.find(s => s.id === statusEditandoID);
-        stat.nome = document.getElementById('input-nome-status').value.toUpperCase();
-        stat.cor = document.getElementById('input-cor-status').value;
-        stat.base = document.getElementById('input-base-status').value;
+        if (!nome) return alert("O nome é obrigatório!");
+
+        if (statusEditandoID) {
+            let lista = editandoTipo === 'status' ? statusObj : defesasObj;
+            const stat = lista.find(s => s.id === statusEditandoID);
+            stat.nome = nome;
+            stat.cor = cor;
+            stat.base = base;
+        } else {
+            // Se não está editando, assume que quer criar um novo Status por padrão (ou o que estiver no título)
+            const titulo = document.getElementById('titulo-painel-status').textContent;
+            const isDefesa = titulo.toLowerCase().includes('defesa');
+            
+            if (isDefesa) {
+                if (defesasObj.length >= 3) return alert("Máximo de 3 defesas atingido.");
+                defesasObj.push({ id: gerarID(), nome, cor, base });
+            } else {
+                if (statusObj.length >= 3) return alert("Máximo de 3 status atingido.");
+                statusObj.push({ id: gerarID(), nome, cor, base });
+            }
+        }
 
         renderStatusEDefesas();
         resetarFormStatus();
@@ -741,6 +785,73 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('btn-fechar-modal').addEventListener('click', fecharModalComp);
 
+    function configurarModalDinamico(comp = null) {
+        const inputNome = document.getElementById('modal-input-nome');
+        const inputVal1 = document.getElementById('modal-input-val1');
+        const inputVal2 = document.getElementById('modal-input-val2');
+        const selectVal2 = document.getElementById('modal-select-val2');
+        
+        let labelCat = '';
+        switch(catAtiva) {
+            case 'CLASSES': 
+                labelCat = 'Classe'; 
+                inputNome.placeholder = 'Ex: Guerreiro, Atirador...';
+                inputVal1.placeholder = 'Detalhes e mecânicas...';
+                inputVal2.placeholder = 'Habilidades extras...';
+                break;
+            case 'PERÍCIAS': 
+                labelCat = 'Perícia'; 
+                inputNome.placeholder = 'Ex: Atletismo, Furtividade...';
+                inputVal1.placeholder = 'O que permite fazer...';
+                break;
+            case 'ORIGENS': 
+                labelCat = 'Origem'; 
+                inputNome.placeholder = 'Ex: Soldado, Acadêmico...';
+                inputVal1.placeholder = 'A história do personagem...';
+                inputVal2.placeholder = 'Itens ou poderes bônus...';
+                break;
+            case 'EQUIPAMENTOS': 
+                labelCat = 'Equipamento'; 
+                inputNome.placeholder = 'Ex: Espada de Ferro, Capa...';
+                inputVal1.placeholder = 'Efeito e características...';
+                inputVal2.placeholder = 'Arma, Consumível...';
+                break;
+            case 'PODERES': 
+                labelCat = 'Poder'; 
+                inputNome.placeholder = 'Ex: Rajada Mística, Cura...';
+                inputVal1.placeholder = 'Dano ou cura descritos...';
+                inputVal2.placeholder = 'Ação necessária (Ativa/Passiva)...';
+                break;
+            default:
+                labelCat = 'Componente';
+                inputNome.placeholder = 'Ex: Nome do item...';
+                inputVal1.placeholder = 'Detalhes breves...';
+                inputVal2.placeholder = 'Habilidades extras...';
+        }
+
+        document.getElementById('modal-comp-titulo').textContent = comp ? `Editar ${labelCat}` : `Criar ${labelCat}`;
+
+        const grupoVal3 = document.getElementById('grupo-val3');
+        const selectVal3 = document.getElementById('modal-select-val3');
+        inputVal2.style.display = 'block';
+
+        if (catAtiva === 'PERÍCIAS') {
+            grupoVal3.style.display = 'block';
+            selectVal3.innerHTML = '';
+            if (!window.atributosObj || window.atributosObj.length === 0) {
+                selectVal3.innerHTML = '<option value="">Sem Atributos Criados</option>';
+            } else {
+                window.atributosObj.forEach(a => {
+                    const abrev = a.abrev || a.nome.substring(0,3).toUpperCase();
+                    selectVal3.insertAdjacentHTML('beforeend', `<option value="${abrev}">${a.nome} (${abrev})</option>`);
+                });
+            }
+            if (comp && comp.val3) selectVal3.value = comp.val3;
+        } else {
+            grupoVal3.style.display = 'none';
+        }
+    }
+
     document.getElementById('btn-criar-comp').addEventListener('click', () => {
         const catData = componentesDb[catAtiva];
         if (catData.items.length >= catData.limit) return alert(`Limite atingido!`);
@@ -762,25 +873,34 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         compEditandoID = null;
-        document.getElementById('modal-comp-titulo').textContent = `Criar Nova`;
         document.getElementById('lbl-val1').textContent = catData.labels[0];
         document.getElementById('lbl-val2').textContent = catData.labels[1];
         btnExcluirModal.style.display = 'none';
+        
+        configurarModalDinamico();
         abrirModalComp();
     });
 
     document.getElementById('btn-salvar-modal').addEventListener('click', () => {
-        const nome = document.getElementById('modal-input-nome').value.toUpperCase();
+        const nome = document.getElementById('modal-input-nome').value.trim();
         const val1 = document.getElementById('modal-input-val1').value;
         const val2 = document.getElementById('modal-input-val2').value;
+        let val3 = '';
+
+        if (catAtiva === 'PERÍCIAS') {
+            val3 = document.getElementById('modal-select-val3').value;
+        }
 
         if (!nome) return alert("O Nome é obrigatório!");
 
         if (compEditandoID) {
             const item = componentesDb[catAtiva].items.find(c => c.id === compEditandoID);
             item.nome = nome; item.val1 = val1; item.val2 = val2;
+            if (catAtiva === 'PERÍCIAS') item.val3 = val3;
         } else {
-            componentesDb[catAtiva].items.push({ id: gerarIDComp(), nome, val1, val2 });
+            const novoItem = { id: gerarIDComp(), nome, val1, val2 };
+            if (catAtiva === 'PERÍCIAS') novoItem.val3 = val3;
+            componentesDb[catAtiva].items.push(novoItem);
         }
 
         fecharModalComp();
@@ -796,7 +916,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!comp) return;
 
             compEditandoID = id;
-            document.getElementById('modal-comp-titulo').textContent = `Editar ${catAtiva}`;
             document.getElementById('lbl-val1').textContent = catData.labels[0];
             document.getElementById('lbl-val2').textContent = catData.labels[1];
 
@@ -804,6 +923,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('modal-input-val1').value = comp.val1;
             document.getElementById('modal-input-val2').value = comp.val2;
 
+            configurarModalDinamico(comp);
             // Sempre mostra o botão EXCLUIR ao editar
             btnExcluirModal.style.display = 'block';
 

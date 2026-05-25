@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  *  Após a página de login definir a sessão com os dados do usuario a página index lê a sessão e inicia a mesma
  *  Na navbar temos um if e else para cado o usuario esteja conectado ou não, mudando sendo que: 
@@ -1408,19 +1408,84 @@ session_start();
             }
         }
 
-        @media (max-width: 680px) {
-            .sidebar {
-                display: none;
+        @media (max-width: 768px) {
+            :root {
+                --sidebar-w: 260px !important;
+                --sidebar-pad: 0px !important;
             }
 
+            .sidebar {
+                display: flex !important;
+                position: fixed !important;
+                top: var(--header-h) !important;
+                bottom: 0 !important;
+                height: calc(100vh - var(--header-h)) !important;
+                border-radius: 0 !important;
+                z-index: 10000 !important;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8) !important;
+                transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            }
+
+            .sidebar.left {
+                left: 0 !important;
+            }
+
+            .sidebar.right {
+                right: 0 !important;
+            }
+
+            /* No celular, sidebars recolhidas somem da tela para dar espaço total ao desenho do mapa */
+            .sidebar.left.collapsed {
+                transform: translateX(-100%) !important;
+            }
+
+            .sidebar.right.collapsed {
+                transform: translateX(100%) !important;
+            }
+
+            /* Estilização das abas de clique no celular para ficarem fáceis de tocar */
+            .sidebar.left .sidebar-collapse-btn {
+                right: -30px !important;
+                border-radius: 0 8px 8px 0 !important;
+                background: var(--accent) !important;
+                width: 30px !important;
+                height: 60px !important;
+            }
+
+            .sidebar.right .sidebar-collapse-btn {
+                left: -30px !important;
+                border-radius: 8px 0 0 8px !important;
+                background: var(--accent) !important;
+                width: 30px !important;
+                height: 60px !important;
+            }
+
+            .sidebar.left.collapsed .sidebar-collapse-btn {
+                right: -30px !important;
+            }
+
+            .sidebar.right.collapsed .sidebar-collapse-btn {
+                left: -30px !important;
+            }
+
+            /* Barra de ferramentas superior com scroll horizontal no celular */
             .action-toolbar {
-                gap: 3px;
-                padding: 0 8px;
+                gap: 6px !important;
+                padding: 0 10px !important;
+                overflow-x: auto !important;
+                flex-wrap: nowrap !important;
+                display: flex !important;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .toolbar-section {
+                flex-shrink: 0 !important;
             }
 
             .action-btn {
-                padding: 6px 9px;
-                font-size: 0.74rem;
+                padding: 6px 12px !important;
+                font-size: 0.76rem !important;
+                flex-shrink: 0 !important;
             }
         }
 
@@ -1926,26 +1991,51 @@ session_start();
         <div class="logotipo">
             <a href="index.php"><img src="../img/logo_horizontal.png" alt="Logo TABLE"></a>
         </div>
-        <nav>
+
+        <!-- BOTÃO MENU MOBILE (HAMBURGER) -->
+        <div class="menu-toggle" id="mobile-menu-btn">
+            <i class="fas fa-bars"></i>
+        </div>
+
+        <nav id="nav-menu">
             <ul>
                 <li><a href="index.php">Início</a></li>
                 <li><a href="cm-jogar.php">Como Jogar</a></li>
                 <li><a href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a>
                 </li>
                 <li><a href="criar-mapa.php" class="ativo">Mundos</a></li>
-                <li><a href="rolador-de-dados.php">Dados</a></li>
+                <li><a href="rolagem-de-dados.php">Dados</a></li>
                 <li><a href="sobre-nos.php">Sobre Nós</a></li>
             </ul>
+
+            <!-- BOTÕES MOBILE -->
+            <div class="nav-mobile-footer">
+                <?php if (isset($_SESSION['usuario'])): ?>
+                    <div class="usuario-logado-nav" onclick="window.location.href='perfil.php'">
+                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
+                            alt="Avatar Navbar" class="avatar-nav">
+                        <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
+                    </div>
+                <?php else: ?>
+                    <a href="login.php" class="botao-entrar">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </a>
+                    <a href="cadastro.php" class="botao-cadastrar">
+                        <i class="fas fa-user-plus"></i> Cadastre-se
+                    </a>
+                <?php endif; ?>
+            </div>
         </nav>
+
         <?php if (isset($_SESSION['usuario'])): ?>
-            <div class="usuario-logado-nav" id="nav-logado" onclick="window.location.href='perfil.php'"
+            <div class="usuario-logado-nav desktop-only" id="nav-logado" onclick="window.location.href='perfil.php'"
                 title="Ir para o Perfil">
                 <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
                     alt="Avatar Navbar" class="avatar-nav">
                 <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
             </div>
         <?php else: ?>
-            <div class="botoes-navegacao" id="nav-deslogado">
+            <div class="botoes-navegacao desktop-only" id="nav-deslogado">
                 <a href="login.php" class="botao-entrar">
                     <i class="fas fa-sign-in-alt"></i> Login
                 </a>
@@ -4394,7 +4484,7 @@ session_start();
                             href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a>
                     </li>
                     <li><a href="criar-mapa.php">Mundos</a></li>
-                    <li><a href="rolador-de-dados.php">Dados</a></li>
+                    <li><a href="rolagem-de-dados.php">Dados</a></li>
                     <li><a href="sobre-nos.php">Sobre Nós</a></li>
                 </ul>
             </div>
@@ -4425,3 +4515,4 @@ session_start();
 </body>
 
 </html>
+

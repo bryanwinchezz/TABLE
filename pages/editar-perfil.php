@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 session_start();
 
@@ -7,7 +7,7 @@ if (!isset($_SESSION['usuario'])) {
     exit;
 }
 
-require_once '../app/config/Database.php';
+require_once '../app/config/database.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['excluir_conta'])) {
 
@@ -56,20 +56,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['salvar_dados'])) {
             $stmt = $conn->prepare("
                 UPDATE tb_usuario 
                 SET nm_usuario = :nome, 
+                    nm_exibicao = :nome_exibicao, 
                     ds_email = :email,
+                    ds_bio = :bio,
                     dt_atualizacao = CURRENT_TIMESTAMP
                 WHERE id_usuario = :id
             ");
 
             $stmt->execute([
                 ':nome' => $novo_nome,
+                ':nome_exibicao' => $novo_nome,
                 ':email' => $novo_email,
+                ':bio' => trim($_POST['bio'] ?? ''),
                 ':id' => $_SESSION['usuario']['id']
             ]);
 
             // Atualiza a sessão
             $_SESSION['usuario']['nome'] = $novo_nome;
             $_SESSION['usuario']['email'] = $novo_email;
+            $_SESSION['usuario']['bio'] = trim($_POST['bio'] ?? '');
 
             header("Location: editar-perfil.php?sucesso=1");
             exit;
@@ -136,13 +141,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['virar_mestre'])) {
 // ======================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['desistir_mestre'])) {
     try {
+        $conn->beginTransaction();
+
+        // 1. Excluir os sistemas criados por este usuário (exceto o oficial com ID 1)
+        $stmtDelSistemas = $conn->prepare("DELETE FROM tb_sistema WHERE id_usuario_criador = :id AND id_sistema != 1");
+        $stmtDelSistemas->execute([':id' => $_SESSION['usuario']['id']]);
+
+        // 2. Mudar o cargo do usuário para jogador
         $stmt = $conn->prepare("UPDATE tb_usuario SET tp_cargo = 'jogador' WHERE id_usuario = :id");
         $stmt->execute([':id' => $_SESSION['usuario']['id']]);
+
         $_SESSION['usuario']['cargo'] = 'jogador';
+
+        $conn->commit();
         header("Location: editar-perfil.php?sucesso_jogador=1");
         exit;
-    } catch (PDOException $e) {
-        $erro = "Erro ao voltar a ser jogador.";
+    } catch (Exception $e) {
+        if ($conn->inTransaction()) $conn->rollBack();
+        $erro = "Erro ao desistir de mestrar: " . $e->getMessage();
     }
 }
 
@@ -151,7 +167,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['desistir_mestre'])) {
 // ======================
 try {
     $stmt = $conn->prepare("
-        SELECT id_usuario, nm_usuario, ds_email, dt_nascimento, dt_cadastro, tp_cargo, ds_foto 
+        SELECT id_usuario, nm_usuario, ds_email, dt_nascimento, dt_cadastro, tp_cargo, ds_foto, ds_bio 
         FROM tb_usuario 
         WHERE id_usuario = :id 
         LIMIT 1
@@ -223,7 +239,7 @@ $permissao = obterClassificacao($idade);
                 <li><a href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a>
                 </li>
                 <li><a href="criar-mapa.php">Mundos</a></li>
-                <li><a href="rolador-de-dados.php">Dados</a></li>
+                <li><a href="rolagem-de-dados.php">Dados</a></li>
                 <li><a href="sobre-nos.php">Sobre Nós</a></li>
             </ul>
         </nav>
@@ -294,6 +310,11 @@ $permissao = obterClassificacao($idade);
                         <label for="input-email">E-mail:</label>
                         <input type="email" id="input-email" name="email"
                             value="<?= htmlspecialchars($usuario['ds_email']) ?>" required>
+                    </div>
+
+                    <div class="campo-edicao">
+                        <label for="input-bio">Biografia:</label>
+                        <textarea id="input-bio" name="bio" rows="4" placeholder="Conte um pouco sobre você..."><?= htmlspecialchars($usuario['ds_bio'] ?? '') ?></textarea>
                     </div>
 
                     <div class="campo-edicao">
@@ -380,7 +401,7 @@ $permissao = obterClassificacao($idade);
                             href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a>
                     </li>
                     <li><a href="criar-mapa.php">Mundos</a></li>
-                    <li><a href="rolador-de-dados.php">Dados</a></li>
+                    <li><a href="rolagem-de-dados.php">Dados</a></li>
                     <li><a href="sobre-nos.php">Sobre Nós</a></li>
                 </ul>
             </div>
@@ -502,10 +523,30 @@ $permissao = obterClassificacao($idade);
         document.getElementById('modal-ser-mestre').style.display = 'none';
     }
     function abrirModalDesistirMestre() {
+        document.getElementById('confirmacao-desistir-1').value = '';
+        document.getElementById('confirmacao-desistir-2').value = '';
+        validarConfirmacaoDesistir();
         document.getElementById('modal-desistir-mestre').style.display = 'flex';
     }
     function fecharModalDesistirMestre() {
         document.getElementById('modal-desistir-mestre').style.display = 'none';
+    }
+    function validarConfirmacaoDesistir() {
+        const val1 = document.getElementById('confirmacao-desistir-1').value.trim().toUpperCase();
+        const val2 = document.getElementById('confirmacao-desistir-2').value.trim().toUpperCase();
+        const btn = document.getElementById('btn-confirmar-desistencia');
+        
+        if (val1 === 'DESISTIR' && val2 === 'DESISTIR') {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+            btn.style.background = '#c0392b';
+        } else {
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.style.cursor = 'not-allowed';
+            btn.style.background = '#6c757d';
+        }
     }
 
     // Função que realmente desativa a conta
@@ -553,22 +594,39 @@ $permissao = obterClassificacao($idade);
 <div id="modal-desistir-mestre"
     style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center;">
     <div
-        style="background:#fff; padding:30px; border-radius:12px; width:90%; max-width:420px; color:#333; text-align:center;">
-        <h2 style="color:#6c757d;"><i class="fas fa-undo"></i> Você tem certeza?</h2>
-        <p style="margin:20px 0 25px; line-height: 1.5;">
-            Ao desistir de mestrar, você voltará a ser um jogador comum e poderá perder acesso a ferramentas exclusivas
-            de criação.
+        style="background:#fff; padding:30px; border-radius:12px; width:90%; max-width:440px; color:#333; text-align:center;">
+        <h2 style="color:#c0392b; display:flex; align-items:center; justify-content:center; gap:10px; font-weight:800;">
+            <i class="fas fa-exclamation-triangle"></i> ATENÇÃO CRÍTICA!
+        </h2>
+        <p style="margin:15px 0; line-height: 1.5; color:#555; font-size:0.95rem;">
+            Ao desistir de mestrar, você voltará a ser um jogador comum. 
+            <br><strong style="color:#c0392b;">ISSO IRÁ DELETAR PERMANENTEMENTE todos os sistemas personalizados criados por você (incluindo monstros, classes, perícias e fichas vinculadas)!</strong>
+        </p>
+        <p style="margin-bottom:20px; font-size:0.85rem; color:#888;">
+            Para confirmar essa ação destrutiva irreversível, digite a palavra <strong style="color:#c0392b;">DESISTIR</strong> em ambos os campos abaixo:
         </p>
         <form method="POST">
+            <div style="margin-bottom: 15px;">
+                <input type="text" id="confirmacao-desistir-1" oninput="validarConfirmacaoDesistir()" placeholder="Digite DESISTIR" required
+                    style="width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; text-align:center; font-weight:700; letter-spacing:1px; text-transform:uppercase;">
+            </div>
+            <div style="margin-bottom: 20px;">
+                <input type="text" id="confirmacao-desistir-2" oninput="validarConfirmacaoDesistir()" placeholder="Digite DESISTIR novamente" required
+                    style="width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; text-align:center; font-weight:700; letter-spacing:1px; text-transform:uppercase;">
+            </div>
             <div style="display:flex; gap:12px; justify-content:center;">
                 <button type="button" onclick="fecharModalDesistirMestre()"
-                    style="padding:10px 25px; background:#6c757d; color:white; border:none; border-radius:6px; cursor:pointer;">Cancelar</button>
-                <button type="submit" name="desistir_mestre"
-                    style="padding:10px 25px; background:#c0392b; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:700;">Sim,
-                    voltar a ser Jogador</button>
+                    style="padding:10px 25px; background:#6c757d; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600;">
+                    Cancelar
+                </button>
+                <button type="submit" name="desistir_mestre" id="btn-confirmar-desistencia" disabled
+                    style="padding:10px 25px; background:#6c757d; color:white; border:none; border-radius:6px; cursor:not-allowed; font-weight:700; opacity:0.5; transition: all 0.3s ease;">
+                    Confirmar Desistência
+                </button>
             </div>
         </form>
     </div>
 </div>
 
 </html>
+

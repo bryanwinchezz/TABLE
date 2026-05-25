@@ -18,6 +18,40 @@ if (!$data || empty($data['nome']) || empty($data['id_sistema'])) {
 
 try {
     $pdo = Database::getConexao();
+
+    // ============================================================
+    // MIGRATION AUTOMÁTICA SILENCIOSA (Evita colunas desconhecidas)
+    // ============================================================
+    try {
+        // Verifica tb_classe - ds_habilidade
+        $chkCla = $pdo->query("SHOW COLUMNS FROM tb_classe LIKE 'ds_habilidade'");
+        if ($chkCla->rowCount() === 0) {
+            $pdo->exec("ALTER TABLE tb_classe ADD COLUMN ds_habilidade TEXT NULL");
+        }
+        // Verifica tb_classe - ds_descricao
+        $chkClaDesc = $pdo->query("SHOW COLUMNS FROM tb_classe LIKE 'ds_descricao'");
+        if ($chkClaDesc->rowCount() === 0) {
+            $pdo->exec("ALTER TABLE tb_classe ADD COLUMN ds_descricao TEXT NULL");
+        }
+        // Verifica tb_pericia - ds_habilidade
+        $chkPer = $pdo->query("SHOW COLUMNS FROM tb_pericia LIKE 'ds_habilidade'");
+        if ($chkPer->rowCount() === 0) {
+            $pdo->exec("ALTER TABLE tb_pericia ADD COLUMN ds_habilidade TEXT NULL");
+        }
+        // Verifica tb_pericia - ds_descricao
+        $chkPerDesc = $pdo->query("SHOW COLUMNS FROM tb_pericia LIKE 'ds_descricao'");
+        if ($chkPerDesc->rowCount() === 0) {
+            $pdo->exec("ALTER TABLE tb_pericia ADD COLUMN ds_descricao TEXT NULL");
+        }
+        // Verifica tb_origem - ds_habilidade
+        $chkOri = $pdo->query("SHOW COLUMNS FROM tb_origem LIKE 'ds_habilidade'");
+        if ($chkOri->rowCount() === 0) {
+            $pdo->exec("ALTER TABLE tb_origem ADD COLUMN ds_habilidade TEXT NULL");
+        }
+    } catch (Exception $e) {
+        // Silencioso
+    }
+
     $pdo->beginTransaction();
 
     $id_usuario = $_SESSION['usuario']['id'];
@@ -33,7 +67,7 @@ try {
             $data_img = substr($base64, strpos($base64, ',') + 1);
             $type = strtolower($type[1]);
 
-            if (in_array($type, ['jpg', 'jpeg', 'gif', 'png'])) {
+            if (in_array($type, ['jpg', 'jpeg', 'gif', 'png', 'webp'])) {
                 $data_img = base64_decode($data_img);
                 if ($data_img !== false) {
                     $nome_arquivo = 'sistema_' . time() . '_' . uniqid() . '.' . $type;
@@ -84,9 +118,12 @@ try {
                 $sql = "UPDATE $tabela SET $colNome=?, $colExtra=?";
                 $params = [$item['nome'], $item['val1'] ?? $item['abrev']];
                 
-                if ($colValor && isset($item['valor'])) {
-                    $sql .= ", $colValor=?";
-                    $params[] = $item['valor'];
+                if ($colValor) {
+                    $valToUse = $item['valor'] ?? $item['val2'] ?? null;
+                    if ($valToUse !== null) {
+                        $sql .= ", $colValor=?";
+                        $params[] = $valToUse;
+                    }
                 }
                 
                 $sql .= " WHERE $colId=? AND id_sistema=?";
@@ -101,10 +138,13 @@ try {
                 $placeholders = "?, ?, ?";
                 $params = [$item['nome'], $item['val1'] ?? $item['abrev'], $idSistema];
                 
-                if ($colValor && isset($item['valor'])) {
-                    $sql .= ", $colValor";
-                    $placeholders .= ", ?";
-                    $params[] = $item['valor'];
+                if ($colValor) {
+                    $valToUse = $item['valor'] ?? $item['val2'] ?? null;
+                    if ($valToUse !== null) {
+                        $sql .= ", $colValor";
+                        $placeholders .= ", ?";
+                        $params[] = $valToUse;
+                    }
                 }
                 
                 $sql .= ") VALUES ($placeholders)";
@@ -145,37 +185,82 @@ try {
 
     // Sincronizar Classes
     if (isset($data['classes'])) {
-        syncComponent($pdo, 'tb_classe', 'id_classe', 'nm_classe', 'ds_descricao', $id_sistema, $data['classes']);
+        syncComponent($pdo, 'tb_classe', 'id_classe', 'nm_classe', 'ds_descricao', $id_sistema, $data['classes'], 'ds_habilidade');
     }
 
     // Sincronizar Perícias
     if (isset($data['pericias'])) {
-        syncComponent($pdo, 'tb_pericia', 'id_pericia', 'nm_pericia', 'ds_atributo_base', $id_sistema, $data['pericias']);
+        $stmtAtual = $pdo->prepare("SELECT id_pericia FROM tb_pericia WHERE id_sistema = ?");
+        $stmtAtual->execute([$id_sistema]);
+        $dbIds = $stmtAtual->fetchAll(PDO::FETCH_COLUMN);
+        $payloadIds = [];
+
+        foreach ($data['pericias'] as $item) {
+            $itemId = $item['id'];
+            if (is_numeric($itemId)) {
+                $payloadIds[] = $itemId;
+                $stmtUp = $pdo->prepare("UPDATE tb_pericia SET nm_pericia=?, ds_descricao=?, ds_habilidade=?, ds_atributo_base=? WHERE id_pericia=? AND id_sistema=?");
+                $stmtUp->execute([$item['nome'], $item['val1'] ?? null, $item['val2'] ?? null, $item['val3'] ?? null, $itemId, $id_sistema]);
+            } else {
+                $stmtIn = $pdo->prepare("INSERT INTO tb_pericia (nm_pericia, ds_descricao, ds_habilidade, ds_atributo_base, id_sistema) VALUES (?, ?, ?, ?, ?)");
+                $stmtIn->execute([$item['nome'], $item['val1'] ?? null, $item['val2'] ?? null, $item['val3'] ?? null, $id_sistema]);
+            }
+        }
+
+        $toDelete = array_diff($dbIds, $payloadIds);
+        foreach ($toDelete as $delId) {
+            try {
+                $pdo->prepare("DELETE FROM tb_pericia WHERE id_pericia=? AND id_sistema=?")->execute([$delId, $id_sistema]);
+            } catch (PDOException $e) { continue; }
+        }
     }
 
     // Sincronizar Origens
     if (isset($data['origens'])) {
-        syncComponent($pdo, 'tb_origem', 'id_origem', 'nm_origem', 'ds_origem', $id_sistema, $data['origens']);
+        syncComponent($pdo, 'tb_origem', 'id_origem', 'nm_origem', 'ds_origem', $id_sistema, $data['origens'], 'ds_habilidade');
+    }
+    
+    // Sincronizar Equipamentos (Itens)
+    if (isset($data['equipamentos'])) {
+        syncComponent($pdo, 'tb_item', 'id_item', 'nm_item', 'ds_item', $id_sistema, $data['equipamentos'], 'tp_item');
     }
 
-    // Sincronizar Status e Defesas
-    // Como a tabela tb_sistema_status tem tp_status, faremos manual ou adaptado
-    if (isset($data['status']) || isset($data['defesas'])) {
-        // Deletar os antigos para simplificar o MVP de edição de status
-        $stmtDelStatus = $pdo->prepare("DELETE FROM tb_sistema_status WHERE id_sistema = ?");
-        $stmtDelStatus->execute([$id_sistema]);
+    // Sincronizar Poderes (Habilidades)
+    if (isset($data['poderes'])) {
+        syncComponent($pdo, 'tb_habilidade', 'id_habilidade', 'nm_habilidade', 'ds_habilidade', $id_sistema, $data['poderes'], 'tp_habilidade');
+    }
 
-        if (!empty($data['status'])) {
-            $stmtStat = $pdo->prepare("INSERT INTO tb_sistema_status (nm_status, ds_cor, tp_status, id_sistema) VALUES (?, ?, 'barra', ?)");
-            foreach ($data['status'] as $stat) {
-                $stmtStat->execute([$stat['nome'], $stat['cor'], $id_sistema]);
+    // Sincronizar Status e Defesas (Inteligente)
+    if (isset($data['status']) || isset($data['defesas'])) {
+        $todosStatusPayload = array_merge(
+            array_map(function($s) { $s['tp'] = 'barra'; return $s; }, $data['status'] ?? []),
+            array_map(function($d) { $d['tp'] = 'defesa'; return $d; }, $data['defesas'] ?? [])
+        );
+
+        $stmtAtual = $pdo->prepare("SELECT id_status_sistema FROM tb_sistema_status WHERE id_sistema = ?");
+        $stmtAtual->execute([$id_sistema]);
+        $dbIds = $stmtAtual->fetchAll(PDO::FETCH_COLUMN);
+        $payloadIds = [];
+
+        foreach ($todosStatusPayload as $item) {
+            $itemId = $item['id'];
+            if (is_numeric($itemId)) {
+                $payloadIds[] = $itemId;
+                $stmtUp = $pdo->prepare("UPDATE tb_sistema_status SET nm_status=?, ds_cor=?, tp_status=? WHERE id_status_sistema=? AND id_sistema=?");
+                $stmtUp->execute([$item['nome'], $item['cor'], $item['tp'], $itemId, $id_sistema]);
+            } else {
+                $stmtIn = $pdo->prepare("INSERT INTO tb_sistema_status (nm_status, ds_cor, tp_status, id_sistema) VALUES (?, ?, ?, ?)");
+                $stmtIn->execute([$item['nome'], $item['cor'], $item['tp'], $id_sistema]);
             }
         }
 
-        if (!empty($data['defesas'])) {
-            $stmtDef = $pdo->prepare("INSERT INTO tb_sistema_status (nm_status, ds_cor, tp_status, id_sistema) VALUES (?, ?, 'defesa', ?)");
-            foreach ($data['defesas'] as $def) {
-                $stmtDef->execute([$def['nome'], $def['cor'], $id_sistema]);
+        // Deletar órfãos com segurança
+        $toDelete = array_diff($dbIds, $payloadIds);
+        foreach ($toDelete as $delId) {
+            try {
+                $pdo->prepare("DELETE FROM tb_sistema_status WHERE id_status_sistema=? AND id_sistema=?")->execute([$delId, $id_sistema]);
+            } catch (PDOException $e) {
+                continue; // Ignora se estiver em uso
             }
         }
     }
