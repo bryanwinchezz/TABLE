@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  *  Após a página de login definir a sessão com os dados do usuario a página index lê a sessão e inicia a mesma
  *  Na navbar temos um if e else para cado o usuario esteja conectado ou não, mudando sendo que: 
@@ -56,7 +56,7 @@ try {
                 <li><a href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a>
                 </li>
                 <li><a href="criar-mapa.php">Mundos</a></li>
-                <li><a href="rolagem-de-dados.php">Dados</a></li>
+                <li><a href="rolador-de-dados.php">Dados</a></li>
                 <li><a href="sobre-nos.php">Sobre Nós</a></li>
             </ul>
 
@@ -219,6 +219,13 @@ try {
 
             <button class="btn-carrossel btn-proximo"><i class="fas fa-chevron-right"></i></button>
         </div>
+
+        <!-- Indicadores (dots) para mobile -->
+        <div class="carrossel-dots" id="carrossel-dots">
+            <button class="carrossel-dot ativo" data-index="0" aria-label="Slide 1"></button>
+            <button class="carrossel-dot" data-index="1" aria-label="Slide 2"></button>
+            <button class="carrossel-dot" data-index="2" aria-label="Slide 3"></button>
+        </div>
     </main>
 
     <footer class="rodape-principal">
@@ -239,7 +246,7 @@ try {
                             href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a>
                     </li>
                     <li><a href="criar-mapa.php">Mundos</a></li>
-                    <li><a href="rolagem-de-dados.php">Dados</a></li>
+                    <li><a href="rolador-de-dados.php">Dados</a></li>
                     <li><a href="sobre-nos.php">Sobre Nós</a></li>
                 </ul>
             </div>
@@ -266,6 +273,73 @@ try {
 
     <script src="../js/script.js" defer></script>
     <script src="../js/nav-global.js" defer></script>
+    <script>
+    /* --- Suporte a swipe no carrossel (mobile) + sincroniza dots --- */
+    document.addEventListener('DOMContentLoaded', function () {
+        var trilho      = document.querySelector('.carrossel-trilho');
+        var container   = document.querySelector('.carrossel-trilho-container');
+        var dots        = document.querySelectorAll('.carrossel-dot');
+        var slides      = document.querySelectorAll('.carrossel-slide');
+        var totalSlides = slides.length;
+
+        if (!trilho || !container) return;
+
+        /* ---- Sincroniza dots com o slide atual ---- */
+        function atualizarDots(idx) {
+            dots.forEach(function (d, i) {
+                d.classList.toggle('ativo', i === idx);
+            });
+        }
+
+        /* Clique nos dots */
+        dots.forEach(function (dot) {
+            dot.addEventListener('click', function () {
+                var idx = parseInt(dot.dataset.index, 10);
+                /* Move o trilho do JS se existir; senão usa scroll */
+                var largura = container.offsetWidth;
+                if (container.scrollWidth > largura) {
+                    container.scrollTo({ left: largura * idx, behavior: 'smooth' });
+                } else {
+                    trilho.style.transform = 'translateX(-' + (idx * 100) + '%)';
+                }
+                atualizarDots(idx);
+            });
+        });
+
+        /* ---- Detecta slide atual pelo scroll nativo (mobile) ---- */
+        container.addEventListener('scroll', function () {
+            var idx = Math.round(container.scrollLeft / container.offsetWidth);
+            atualizarDots(idx);
+        });
+
+        /* ---- Swipe touch para qualquer tamanho de tela ---- */
+        var startX = 0;
+        container.addEventListener('touchstart', function (e) {
+            startX = e.touches[0].clientX;
+        }, { passive: true });
+
+        container.addEventListener('touchend', function (e) {
+            var diff = startX - e.changedTouches[0].clientX;
+            if (Math.abs(diff) > 40) {
+                /* Dispara clique no botão correto para compatibilidade com script.js */
+                var btn = diff > 0
+                    ? document.querySelector('.btn-proximo')
+                    : document.querySelector('.btn-anterior');
+                if (btn) btn.click();
+            }
+        }, { passive: true });
+
+        /* ---- Observa mudança de transform (JS do script.js) para dots ---- */
+        var observer = new MutationObserver(function () {
+            var match = trilho.style.transform.match(/-?([\d.]+)%/);
+            if (match) {
+                var pct = Math.abs(parseFloat(match[1]));
+                atualizarDots(Math.round(pct / 100));
+            }
+        });
+        observer.observe(trilho, { attributes: true, attributeFilter: ['style'] });
+    });
+    </script>
 </body>
 
 </html>
