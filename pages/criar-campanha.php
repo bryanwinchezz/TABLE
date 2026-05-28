@@ -5,8 +5,8 @@ session_start();
 // ============================================================
 // DDDICE — Credenciais (usadas pelo escudo do mestre)
 // ============================================================
-define('DDDICE_API_KEY',   'Insira sua API Key do DDDice aqui');
-define('DDDICE_ROOM_SLUG', 'Insira seu room slug do DDDice aqui');
+define('DDDICE_API_KEY',   'loKtWZoIgQgepNUC44LpaeYJZdAU7mqs1S9FxHTabc00dd7b');
+define('DDDICE_ROOM_SLUG', 'mF9ol6O');
 
 require_once __DIR__ . '/../app/config/database.php';
 $pdo = Database::getConexao();

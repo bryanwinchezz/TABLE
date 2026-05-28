@@ -4,8 +4,8 @@ session_start();
 // ============================================================
 //  DDDICE — Configurações (mesmas do dddice-hybrid.php)
 // ============================================================
-define('DDDICE_API_KEY',   'Insira sua API Key do DDDice aqui');
-define('DDDICE_ROOM_SLUG', 'Insira seu room slug do DDDice aqui');
+define('DDDICE_API_KEY',   'loKtWZoIgQgepNUC44LpaeYJZdAU7mqs1S9FxHTabc00dd7b');
+define('DDDICE_ROOM_SLUG', 'mF9ol6O');
 
 // ---- Endpoint AJAX: ?action=roll (POST) ----
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['action'] ?? '') === 'roll') {
