@@ -97,8 +97,8 @@ session_start();
             position: relative;
             z-index: 2;
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 18px;
+            grid-template-columns: repeat(2, 2fr);
+            gap: 50px;
             margin-top: 36px;
         }
 
@@ -275,9 +275,11 @@ session_start();
                     <p>Comece grátis e teste os recursos básicos da plataforma.</p>
                 </div>
                 <div class="plano-preco">
-                    <button type="button" onclick="abrirModalSerMestre()" class="btn-gratis">
-                        Grátis
-                    </button>
+                    <form method="POST" style="display: inline;">
+                        <button type="submit" name="virar_mestre" class="btn-gratis">
+                            Grátis
+                        </button>
+                    </form>
                 </div>
             </div>
 
@@ -367,6 +369,33 @@ session_start();
             </div>
         </div>
     </footer>
+
+    <?php
+    require_once '../app/config/database.php';
+
+    // ======================
+    // PROCESSAMENTO: VIRAR MESTRE
+    // ======================
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['virar_mestre'])) {
+        if (!isset($_SESSION['usuario'])) {
+            header("Location: login.php");
+            exit;
+        }
+        try {
+            $conn = Database::getConexao();
+            $stmt = $conn->prepare("UPDATE tb_usuario SET tp_cargo = 'mestre' WHERE id_usuario = :id");
+            $stmt->execute([':id' => $_SESSION['usuario']['id']]);
+            $_SESSION['usuario']['cargo'] = 'mestre';
+            
+            // Alterado: agora redireciona para editar-perfil.php
+            header("Location: editar-perfil.php?sucesso_mestre=1");
+            exit;
+        } catch (PDOException $e) {
+            header("Location: planos.php?erro=mestre");
+            exit;
+        }
+    }
+    ?>
 
     <script src="../js/script.js" defer></script>
     <script src="../js/nav-global.js" defer></script>
