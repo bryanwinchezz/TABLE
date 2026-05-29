@@ -188,6 +188,12 @@ body.pagina-edicao {
     margin-top: 15px;
 }
 
+.area-botoes-centro{
+    display: flex;
+    justify-content: space-evenly;
+    margin-top: 15px;
+}
+
 /* Estilos de Botões */
 .botao-roxo {
     background-color: #4a2a85; 
