@@ -356,7 +356,7 @@ $permissao = obterClassificacao($idade);
                         : 'Torne-se um verdadeiro mestre e desbloqueie a habilidade de criar seus próprios sistemas de RPG. Construa mundos, regras e experiências únicas, compartilhe tudo com a comunidade para que outros vivam as aventuras que você imaginar.'
                         ?>
                 </p>
-                <div class="area-botao-centro">
+                <div class="area-botoes-centro">
                     <?php if (strtolower($usuario['tp_cargo']) === 'mestre'): ?>
                         <button type="button" onclick="abrirModalDesistirMestre()" class="botao-roxo"
                             style="background: #6c757d;">
@@ -367,17 +367,7 @@ $permissao = obterClassificacao($idade);
                             <i class="fas fa-book"></i> <span>Seja mestre</span>
                         </button>
                     <?php endif; ?>
-                </div>
-            </section>
 
-            <hr class="divisor">
-
-            <section>
-                <h3 class="titulo-roxo">Planos</h3>
-                <p class="texto-descricao">
-                    Adquira ou gerencie seus planos de assinatura da TABLE! Desbloqueie ferramentas profissionais de criação de mapas avançados e sistemas de regras personalizados, ou resgate uma chave de ativação para a sua conta.
-                </p>
-                <div class="area-botao-centro">
                     <button type="button" onclick="window.location.href='planos.php'" class="botao-roxo" style="background: #6c757d;">
                         <i class="fas fa-ticket-alt"></i> <span>Planos</span>
                     </button>
