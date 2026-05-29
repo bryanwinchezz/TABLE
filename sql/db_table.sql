@@ -35,7 +35,7 @@ CREATE TABLE tb_usuario (
     ds_senha        VARCHAR(255)   NOT NULL,           -- Hash bcrypt
     dt_nascimento   DATE           DEFAULT NULL,
     tp_cargo        ENUM('jogador','mestre','admin') NOT NULL DEFAULT 'jogador',
-    ds_foto         VARCHAR(300)   NOT NULL DEFAULT '../img/uploads/perfil/avatar1.png',
+    ds_foto         VARCHAR(300)   NOT NULL DEFAULT '../img/uploads/perfil/avatar.png',
     ds_bio          VARCHAR(500)   DEFAULT NULL,
     dt_cadastro     DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
     dt_atualizacao  DATETIME       DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
@@ -753,7 +753,7 @@ INSERT INTO tb_pericia (nm_pericia, ds_atributo_base, id_sistema) VALUES
 -- Inserindo o novo Admin: Kauan Bryan
 -- Lembre-se: A senha continua sendo: admin123
 INSERT INTO tb_usuario (id_usuario, nm_exibicao, nm_usuario, ds_email, ds_senha, dt_nascimento, tp_cargo, ds_foto, ds_bio) VALUES 
-(1, 'Kauan Bryan', 'Kauan Bryan', 'table@gmail.com', '$2y$10$eIVnZbA5xAVj1dDjDHQnKOhTiTj0LbibokkPhLuWtO.mgIgfDplfq', '1990-01-01', 'admin', '../img/uploads/perfil/avatar1.png', 'Administrador principal da plataforma TABLE. Responsável pelo gerenciamento de sistemas e manutenção da ordem.');
+(1, 'Kauan Bryan', 'Kauan Bryan', 'table@gmail.com', '$2y$10$eIVnZbA5xAVj1dDjDHQnKOhTiTj0LbibokkPhLuWtO.mgIgfDplfq', '1990-01-01', 'admin', '../img/uploads/perfil/avatar.png', 'Administrador principal da plataforma TABLE. Responsável pelo gerenciamento de sistemas e manutenção da ordem.');
 
 
 -- Atualizando o Sistema para pertencer ao usuário recém-criado
@@ -2255,3 +2255,4 @@ INSERT INTO tb_habilidade (nm_habilidade, ds_habilidade, tp_habilidade, qt_custo
 --   Escuta de Ruídos, Medidor de Membrana, Scanner (×4)
 --
 -- TOTAL: ~86 itens
+

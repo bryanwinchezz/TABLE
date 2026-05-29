@@ -1,4 +1,4 @@
-/* css/criar-sistema.css */
+﻿/* css/criar-sistema.css */
 
 /* ==========================================
    LAYOUT BASE
@@ -12,12 +12,14 @@ body.pagina-criacao-sistema {
     flex-direction: column;
     min-height: 100vh;
     overflow-x: hidden;
-    overflow-y: auto; /* Permite scroll para ver o footer */
+    overflow-y: auto;
+    /* Permite scroll para ver o footer */
 }
 
 .container-sistema {
     flex: 1;
-    padding: 120px 5% 100px 5%; /* Aumentado padding inferior para o footer */
+    padding: 120px 5% 100px 5%;
+    /* Aumentado padding inferior para o footer */
     max-width: 1000px;
     margin: 0 auto;
     width: 100%;
@@ -350,7 +352,8 @@ body.pagina-criacao-sistema {
 }
 
 .painel-direito {
-    flex: 0 0 350px; /* Fixa a largura em 350px para evitar expansão */
+    flex: 0 0 350px;
+    /* Fixa a largura em 350px para evitar expansão */
     background-color: #8c8c8c;
     padding: 25px;
     color: #333;
@@ -495,15 +498,18 @@ body.pagina-criacao-sistema {
     overflow-x: auto;
     overflow-y: hidden;
     width: 100%;
-    max-width: 100%; /* CRUCIAL: Impede que o container se expanda além do painel */
+    max-width: 100%;
+    /* CRUCIAL: Impede que o container se expanda além do painel */
     padding: 5px 2px 10px 2px;
     margin-top: 5px;
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; /* Esconde no Firefox */
+    scrollbar-width: none;
+    /* Esconde no Firefox */
 }
 
 .grupo-botoes-sel::-webkit-scrollbar {
-    display: none; /* Esconde no Chrome/Edge */
+    display: none;
+    /* Esconde no Chrome/Edge */
 }
 
 /* Barra de Rolagem Customizada para Atributo Base */
@@ -516,7 +522,7 @@ body.pagina-criacao-sistema {
     position: relative;
     cursor: pointer;
     display: block !important;
-    box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 #scroll-thumb-base {
@@ -529,7 +535,7 @@ body.pagina-criacao-sistema {
     min-width: 50px;
     display: block !important;
     opacity: 1 !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
     transition: background 0.2s;
 }
 
@@ -544,7 +550,8 @@ body.pagina-criacao-sistema {
 .btn-sel-base {
     width: auto;
     padding: 0 15px;
-    flex-shrink: 0 !important; /* Impede que os botões achatem individualmente */
+    flex-shrink: 0 !important;
+    /* Impede que os botões achatem individualmente */
 }
 
 .scrollbar-custom-track {
@@ -757,8 +764,10 @@ body.pagina-criacao-sistema {
     display: flex;
     flex-direction: column;
     gap: 15px;
-    padding: 0 15px 20px 5px; /* Adicionado padding inferior */
-    max-height: 480px; /* Altura fixa para permitir scroll interno */
+    padding: 0 15px 20px 5px;
+    /* Adicionado padding inferior */
+    max-height: 480px;
+    /* Altura fixa para permitir scroll interno */
     overflow-y: auto;
     overflow-x: hidden;
 }
@@ -937,7 +946,8 @@ body.pagina-criacao-sistema {
         margin-bottom: 50px;
     }
 
-    .btn-form-nav, .btn-concluir {
+    .btn-form-nav,
+    .btn-concluir {
         width: 100%;
         justify-content: center;
     }
@@ -1084,68 +1094,76 @@ body.pagina-criacao-sistema {
     transform: translateY(-3px);
     box-shadow: 0 10px 25px rgba(139, 92, 246, 0.6);
 }
+
 /* ========================================== 
    INPUTS PREMIUM (USADOS EM MODAIS) 
-========================================== */ 
-.input-premium-group { 
-    margin-bottom: 12px; 
-} 
- 
-.input-premium-label { 
-    display: block; 
-    color: #888; 
-    font-size: 0.65rem; 
-    font-weight: 800; 
-    margin-bottom: 5px; 
-    margin-left: 2px; 
-    text-transform: uppercase; 
-    letter-spacing: 0.5px; 
-} 
- 
-.input-premium-field { 
-    width: 100%; 
-    background: rgba(255, 255, 255, 0.03); 
-    border: 1px solid rgba(255, 255, 255, 0.1); 
-    border-radius: 10px; 
-    padding: 10px 15px; 
-    color: #fff; 
-    font-size: 0.9rem; 
-    transition: 0.3s; 
-    font-family: 'Montserrat', sans-serif; 
-    outline: none; 
-} 
- 
-.input-premium-field:focus { 
-    border-color: #9d7aff; 
-    background: rgba(157, 122, 255, 0.05); 
-} 
- 
-.attr-input-premium { 
-    text-align: center; 
-    font-weight: 900; 
-    font-size: 1.1rem; 
-    color: #9d7aff; 
-    padding: 8px !important; 
-} 
- 
-.form-section-title { 
-    color: #9d7aff; 
-    font-size: 0.7rem; 
-    font-weight: 900; 
-    text-transform: uppercase; 
-    letter-spacing: 2px; 
-    margin: 25px 0 15px; 
-    display: flex; 
-    align-items: center; 
-    gap: 10px; 
-} 
- 
-.form-section-title::after { 
-    content: ''; 
-    flex: 1; 
-    height: 1px; 
-    background: linear-gradient(to right, rgba(157, 122, 255, 0.3), transparent); 
+========================================== */
+.input-premium-group {
+    margin-bottom: 12px;
 }
 
-#modal-select-val3 { background-color: rgba(255, 255, 255, 0.07); color: #fff; }
-#modal-select-val3 option { background-color: #110e1a; color: #fff; }
+.input-premium-label {
+    display: block;
+    color: #888;
+    font-size: 0.65rem;
+    font-weight: 800;
+    margin-bottom: 5px;
+    margin-left: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.input-premium-field {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 10px 15px;
+    color: #fff;
+    font-size: 0.9rem;
+    transition: 0.3s;
+    font-family: 'Montserrat', sans-serif;
+    outline: none;
+}
+
+.input-premium-field:focus {
+    border-color: #9d7aff;
+    background: rgba(157, 122, 255, 0.05);
+}
+
+.attr-input-premium {
+    text-align: center;
+    font-weight: 900;
+    font-size: 1.1rem;
+    color: #9d7aff;
+    padding: 8px !important;
+}
+
+.form-section-title {
+    color: #9d7aff;
+    font-size: 0.7rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin: 25px 0 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.form-section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, rgba(157, 122, 255, 0.3), transparent);
+}
+
+#modal-select-val3 {
+    background-color: rgba(255, 255, 255, 0.07);
+    color: #fff;
+}
+
+#modal-select-val3 option {
+    background-color: #110e1a;
+    color: #fff;
+}

@@ -46,3 +46,4 @@ if (move_uploaded_file($arquivo['tmp_name'], $caminhoFinal)) {
 } else {
     echo json_encode(['success' => false, 'error' => 'Erro ao mover arquivo']);
 }
+

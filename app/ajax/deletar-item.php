@@ -223,3 +223,4 @@ try {
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'error' => 'Erro no servidor: ' . $e->getMessage()]);
 }
+

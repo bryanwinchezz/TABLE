@@ -8,6 +8,13 @@
  * ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
  */
 
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+if (isset($_SESSION['usuario']['foto'])) {
+    $_SESSION['usuario']['foto'] = str_replace('avatar1.png', 'avatar.png', $_SESSION['usuario']['foto']);
+}
+
 class Database {
     private static ?PDO $instancia = null;
     
@@ -22,39 +29,76 @@ class Database {
             $host = 'localhost';
             $dbname = 'db_table';
             $usuario = 'root';
-            $port = 3306;
             $charset = 'utf8mb4';
             
-            // Senha primária configurada (ex: MAMP/Docker/Ambiente específico)
-            $senhaPrimaria = 'root';
-            // Senha secundária (ex: XAMPP local padrão)
-            $senhaSecundaria = '';
+            $ports = [3306, 3307, 3308];
+            $senhas = ['root', ''];
             
-            $dsn = "mysql:host={$host};dbname={$dbname};port={$port};charset={$charset}";
+            $conexaoSucesso = false;
+            $ultimoErro = null;
             
-            try {
-                // Tenta conectar usando a senha primária ('root')
-                self::$instancia = new PDO($dsn, $usuario, $senhaPrimaria, [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                    PDO::ATTR_EMULATE_PREPARES => false,
-                ]);
-            } catch (PDOException $e) {
-                // Se falhar devido a erro de credenciais (Código de erro MySQL 1045)
-                if ($e->getCode() == 1045 || strpos($e->getMessage(), 'Access denied') !== false) {
+            foreach ($ports as $port) {
+                foreach ($senhas as $senha) {
                     try {
-                        // Tenta com a senha secundária (vazia - padrão do XAMPP)
-                        self::$instancia = new PDO($dsn, $usuario, $senhaSecundaria, [
+                        $dsn = "mysql:host={$host};dbname={$dbname};port={$port};charset={$charset}";
+                        self::$instancia = new PDO($dsn, $usuario, $senha, [
                             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                             PDO::ATTR_EMULATE_PREPARES => false,
+                            PDO::ATTR_TIMEOUT => 2
                         ]);
-                    } catch (PDOException $ex) {
-                        self::exibirErroConexao($ex);
+                        $conexaoSucesso = true;
+                        
+                        // Executa Migration Automática Silenciosa de Tabelas e Colunas de Planos
+                        try {
+                            // 1. Criar tabela tb_chave_ativacao se não existir
+                            self::$instancia->exec("
+                                CREATE TABLE IF NOT EXISTS tb_chave_ativacao (
+                                    id_chave INT AUTO_INCREMENT PRIMARY KEY,
+                                    ds_codigo VARCHAR(50) UNIQUE NOT NULL,
+                                    tp_plano VARCHAR(50) NOT NULL,
+                                    fl_usada TINYINT(1) DEFAULT 0 NOT NULL,
+                                    id_usuario_comprador INT NOT NULL,
+                                    id_usuario_ativador INT NULL,
+                                    mp_assinatura_id VARCHAR(100) NULL,
+                                    dt_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                    dt_ativacao DATETIME NULL
+                                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                            ");
+
+                            $chkAssin = self::$instancia->query("SHOW COLUMNS FROM tb_chave_ativacao LIKE 'mp_assinatura_id'");
+                            if ($chkAssin->rowCount() === 0) {
+                                self::$instancia->exec("ALTER TABLE tb_chave_ativacao ADD COLUMN mp_assinatura_id VARCHAR(100) NULL");
+                            }
+
+                            // 2. Adicionar flags de planos na tabela tb_usuario se não existirem
+                            $chkMapas = self::$instancia->query("SHOW COLUMNS FROM tb_usuario LIKE 'fl_plano_mapas'");
+                            if ($chkMapas->rowCount() === 0) {
+                                self::$instancia->exec("ALTER TABLE tb_usuario ADD COLUMN fl_plano_mapas TINYINT(1) DEFAULT 0 NOT NULL");
+                            }
+                            
+                            $chkSist = self::$instancia->query("SHOW COLUMNS FROM tb_usuario LIKE 'fl_plano_sistemas'");
+                            if ($chkSist->rowCount() === 0) {
+                                self::$instancia->exec("ALTER TABLE tb_usuario ADD COLUMN fl_plano_sistemas TINYINT(1) DEFAULT 0 NOT NULL");
+                            }
+                            
+                            $chkComp = self::$instancia->query("SHOW COLUMNS FROM tb_usuario LIKE 'fl_plano_completo'");
+                            if ($chkComp->rowCount() === 0) {
+                                self::$instancia->exec("ALTER TABLE tb_usuario ADD COLUMN fl_plano_completo TINYINT(1) DEFAULT 0 NOT NULL");
+                            }
+                        } catch (Exception $migError) {
+                            // Silencioso
+                        }
+
+                        break 2;
+                    } catch (PDOException $e) {
+                        $ultimoErro = $e;
                     }
-                } else {
-                    self::exibirErroConexao($e);
                 }
+            }
+            
+            if (!$conexaoSucesso) {
+                self::exibirErroConexao($ultimoErro);
             }
         }
         

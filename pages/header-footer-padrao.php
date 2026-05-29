@@ -1,4 +1,4 @@
-﻿<!-- HEADER / CABEÇALHO -->
+<!-- HEADER / CABEÇALHO -->
 
 <header>
     <div class="logotipo">
@@ -16,7 +16,7 @@
             <li><a href="cm-jogar.php" class="ativo">Como Jogar</a></li>
             <li><a href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a>
             </li>
-            <li><a href="criar-mapa.php">Mundos</a></li>
+            <li><a href="<?= isset($_SESSION['usuario']['cargo']) && in_array(strtolower($_SESSION['usuario']['cargo']), ['mestre','admin']) ? 'criar-mapa.php' : 'editar-perfil.php?abrir_mestre=1'; ?>">Mundos</a></li>
             <li><a href="rolagem-de-dados.php">Dados</a></li>
             <li><a href="sobre-nos.php">Sobre Nós</a></li>
         </ul>
@@ -25,7 +25,7 @@
         <div class="nav-mobile-footer">
             <?php if (isset($_SESSION['usuario'])): ?>
                 <div class="usuario-logado-nav" onclick="window.location.href='perfil.php'">
-                    <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
+                    <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png' ?>"
                         alt="Avatar Navbar" class="avatar-nav">
                     <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
                 </div>
@@ -43,7 +43,7 @@
     <?php if (isset($_SESSION['usuario'])): ?>
         <div class="usuario-logado-nav desktop-only" id="nav-logado" onclick="window.location.href='perfil.php'"
             title="Ir para o Perfil">
-            <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
+            <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png' ?>"
                 alt="Avatar Navbar" class="avatar-nav">
             <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
         </div>
@@ -77,7 +77,7 @@
                 <li><a href="cm-jogar.php" class="ativo">Como Jogar</a></li>
                 <li><a href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a>
                 </li>
-                <li><a href="criar-mapa.php">Mundos</a></li>
+                <li><a href="<?= isset($_SESSION['usuario']['cargo']) && in_array(strtolower($_SESSION['usuario']['cargo']), ['mestre','admin']) ? 'criar-mapa.php' : 'editar-perfil.php?abrir_mestre=1'; ?>">Mundos</a></li>
                 <li><a href="rolagem-de-dados.php">Dados</a></li>
                 <li><a href="sobre-nos.php">Sobre Nós</a></li>
             </ul>
@@ -101,4 +101,5 @@
         </div>
     </div>
 </footer>
+
 

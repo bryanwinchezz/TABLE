@@ -72,3 +72,4 @@ try {
     echo json_encode(['sucesso' => false, 'mensagem' => $e->getMessage()]);
 }
 exit;
+

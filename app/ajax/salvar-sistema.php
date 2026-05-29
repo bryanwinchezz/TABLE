@@ -61,7 +61,7 @@ try {
     $descricao = $data['descricao'] ?? '';
     
     // Processamento da Imagem (Base64)
-    $imagem = '../img/foto-regra.jpg'; // Default
+    $imagem = '../img/logo_icone.png'; // Default
     if (!empty($data['imagem_base64'])) {
         $base64 = $data['imagem_base64'];
         if (preg_match('/^data:image\/(\w+);base64,/', $base64, $type)) {
@@ -197,3 +197,4 @@ try {
     }
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
+

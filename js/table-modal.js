@@ -160,3 +160,4 @@
     // Disponibiliza o componente globalmente
     window.TableModal = TableModal;
 })();
+

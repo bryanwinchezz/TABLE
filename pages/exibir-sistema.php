@@ -207,6 +207,7 @@ try {
     <link rel="stylesheet" href="../css/nav-footer.css?v=1.4">
     <link rel="stylesheet" href="../css/table-modal.css">
     <link rel="stylesheet" href="../css/ficha.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="../css/criar-sistema.css?v=1.4">
     <script src="../js/table-modal.js"></script>
     <link rel="shortcut icon" href="../img/logo_icone.png" type="image/x-icon">
     <style>
@@ -592,17 +593,23 @@ try {
         }
 
         /* Tooltip padrão para perícias (à esquerda com seta para a direita) */
-        .p-values .tooltip {
-            right: 40px;
+        .p-values .tooltip,
+        .info-icon-wrapper .tooltip {
+            right: 120%;
+            top: 50%;
+            left: auto;
+            bottom: auto;
             transform: translateY(-50%) scale(0.9);
         }
-        .p-values .tooltip::after {
+        .p-values .tooltip::after,
+        .info-icon-wrapper .tooltip::after {
             content: "";
             position: absolute;
             top: 50%;
-            left: 100%;
-            margin-top: -5px;
-            border-width: 5px;
+            left: 100%; /* Seta à direita */
+            margin-top: -6px;
+            margin-left: 0;
+            border-width: 6px;
             border-style: solid;
             border-color: transparent transparent transparent var(--premium-accent);
         }
@@ -612,16 +619,19 @@ try {
             transform: translateY(-50%) scale(1);
         }
 
-        /* Tooltip Premium para Atributos e Bolhas de Info (no topo com seta para baixo) */
-        .premium-attr-box .tooltip,
+        /* As tooltips de info-icon-wrapper agora são geridas por JS para evitar cortes do overflow */
         .info-icon-wrapper .tooltip {
+            display: none !important;
+        }
+
+        /* Tooltip Premium para Atributos e Bolhas de Info (no topo com seta para baixo) */
+        .premium-attr-box .tooltip {
             left: 50%;
             bottom: 135%;
             top: auto; /* Desfaz o top: 50% geral */
             transform: translateX(-50%) translateY(10px) scale(0.9);
         }
-        .premium-attr-box .tooltip::after,
-        .info-icon-wrapper .tooltip::after {
+        .premium-attr-box .tooltip::after {
             content: "";
             position: absolute;
             top: 100%; /* Seta no rodapé da tooltip */
@@ -634,8 +644,7 @@ try {
         .premium-attr-box .attr-abbr {
             cursor: help;
         }
-        .premium-attr-box .attr-abbr:hover ~ .tooltip,
-        .info-icon-wrapper:hover .tooltip {
+        .premium-attr-box .attr-abbr:hover ~ .tooltip {
             visibility: visible;
             opacity: 1;
             transform: translateX(-50%) translateY(0) scale(1);
@@ -672,11 +681,11 @@ try {
         .premium-col-right,
         .premium-col-left,
         .pericias-premium-container,
-        .tab-content-sistema,
-        .pericias-premium-list {
+        .tab-content-sistema {
             overflow: visible !important;
         }
 
+        .pericias-premium-list,
         #lista-monstros-sistema {
             max-height: 500px;
             overflow-y: auto;
@@ -684,14 +693,17 @@ try {
             padding: 5px 15px 5px 5px;
         }
 
+        .pericias-premium-list::-webkit-scrollbar,
         #lista-monstros-sistema::-webkit-scrollbar {
             width: 6px;
         }
 
+        .pericias-premium-list::-webkit-scrollbar-track,
         #lista-monstros-sistema::-webkit-scrollbar-track {
             background: rgba(0, 0, 0, 0.2);
         }
 
+        .pericias-premium-list::-webkit-scrollbar-thumb,
         #lista-monstros-sistema::-webkit-scrollbar-thumb {
             background: var(--premium-accent);
             border-radius: 10px;
@@ -829,21 +841,7 @@ try {
             box-sizing: border-box;
         }
 
-        /* Estilo responsivo e estrutural para o form de Criar Ameaça */
-        .monstro-identidade-container {
-            display: flex;
-            gap: 25px;
-            align-items: stretch;
-            margin-bottom: 25px;
-        }
-
-        .monstro-identidade-inputs {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-
+        /* Estilo responsivo mobile do modal-box */
         @media (max-width: 600px) {
             .modal-box {
                 padding: 25px 15px !important;
@@ -851,37 +849,9 @@ try {
                 width: 100% !important;
             }
 
-            .monstro-identidade-container {
-                flex-direction: column !important;
-                align-items: center !important;
-                gap: 15px !important;
-                margin-bottom: 15px !important;
-            }
-
-            #preview-monstro-container {
-                width: 110px !important;
-                height: 110px !important;
-            }
-
-            .monstro-identidade-inputs {
-                width: 100% !important;
-                gap: 12px !important;
-            }
-
-            #grid-atributos-monstro-form {
-                grid-template-columns: repeat(3, 1fr) !important;
-                gap: 8px !important;
-                padding: 10px !important;
-            }
-
             .modal-box div[style*="grid-template-columns: repeat(2, 1fr)"] {
                 grid-template-columns: 1fr !important;
                 gap: 12px !important;
-            }
-
-            .modal-close {
-                top: 15px !important;
-                right: 15px !important;
             }
         }
 
@@ -897,86 +867,7 @@ try {
             }
         }
 
-        .modal-close {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            color: #666;
-            font-size: 1.5rem;
-            cursor: pointer;
-            transition: 0.3s;
-            z-index: 100;
-        }
-
-        .modal-close:hover {
-            color: #ff4d4d;
-            transform: rotate(90deg);
-        }
-
-        .form-section-title {
-            color: var(--premium-accent);
-            font-size: 0.7rem;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin: 25px 0 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .form-section-title::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: linear-gradient(to right, rgba(157, 122, 255, 0.3), transparent);
-        }
-
-        .input-premium-group {
-            margin-bottom: 20px;
-        }
-
-        .input-premium-label {
-            display: block;
-            color: #aaa;
-            font-size: 0.75rem;
-            font-weight: 700;
-            margin-bottom: 8px;
-            margin-left: 5px;
-        }
-
-        .input-premium-field {
-            width: 100%;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 10px 15px;
-            color: #fff;
-            font-size: 0.9rem;
-            transition: 0.3s;
-            outline: none;
-        }
-
-        .input-premium-field:focus {
-            border-color: var(--premium-accent);
-            background: rgba(157, 122, 255, 0.05);
-        }
-
-        .attr-input-premium {
-            text-align: center;
-            font-weight: 900;
-            font-size: 1.2rem;
-            color: var(--premium-accent);
-            padding: 8px !important;
-            transition: 0.3s;
-        }
-
-        .input-premium-field:focus {
-            outline: none;
-            border-color: var(--premium-accent);
-            background: rgba(157, 122, 255, 0.05);
-            box-shadow: 0 0 15px rgba(157, 122, 255, 0.1);
-        }
+        /* Estilos de inputs/labels/form do modal agora vêm de criar-sistema.css */
 
         .btn-card-ficha {
             background: linear-gradient(135deg, var(--premium-purple), var(--premium-accent));
@@ -999,68 +890,7 @@ try {
             filter: brightness(1.2);
         }
 
-        .btn-premium-dragon {
-            background: linear-gradient(135deg, #1e0b3a 0%, #3d147a 50%, #6127c9 100%);
-            background-size: 200% 200%;
-            animation: gradientMove 3s ease infinite;
-            color: #fff;
-            padding: 8px 18px;
-            border-radius: 8px;
-            border: 1px solid rgba(157, 122, 255, 0.3);
-            font-weight: 900;
-            font-size: 0.78rem;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4), 0 0 0 0 rgba(157, 122, 255, 0);
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            position: relative;
-            overflow: hidden;
-        }
-
-        @keyframes gradientMove {
-            0% {
-                background-position: 0% 50%;
-            }
-
-            50% {
-                background-position: 100% 50%;
-            }
-
-            100% {
-                background-position: 0% 50%;
-            }
-        }
-
-        .btn-premium-dragon::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-            transform: scale(0);
-            transition: 0.6s;
-        }
-
-        .btn-premium-dragon:hover {
-            transform: translateY(-5px) scale(1.05);
-            border-color: var(--premium-accent);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), 0 0 20px rgba(157, 122, 255, 0.4);
-        }
-
-        .btn-premium-dragon:hover::before {
-            transform: scale(1);
-        }
-
-        .btn-premium-dragon i {
-            font-size: 0.9rem;
-            filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.3));
-        }
+        /* .btn-premium-dragon agora vem de criar-sistema.css */
 
         .card-ameaca-actions {
             margin-left: auto;
@@ -1099,7 +929,7 @@ try {
         body.tema-ordem-paranormal .btn-pilula {
             font-weight: 700 !important;
             color: white !important;
-            text-shadow: 0 0 10px rgba(255,255,255,0.8) !important;
+            text-shadow: none !important;
             letter-spacing: 2px !important;
         }
 
@@ -1221,7 +1051,7 @@ try {
                 <li><a href="cm-jogar.php">Como Jogar</a></li>
                 <li><a href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a>
                 </li>
-                <li><a href="criar-mapa.php">Mundos</a></li>
+                <li><a href="<?= isset($_SESSION['usuario']['cargo']) && in_array(strtolower($_SESSION['usuario']['cargo']), ['mestre','admin']) ? 'criar-mapa.php' : 'editar-perfil.php?abrir_mestre=1'; ?>">Mundos</a></li>
                 <li><a href="rolagem-de-dados.php">Dados</a></li>
                 <li><a href="sobre-nos.php">Sobre Nós</a></li>
             </ul>
@@ -1230,7 +1060,7 @@ try {
             <div class="nav-mobile-footer">
                 <?php if (isset($_SESSION['usuario'])): ?>
                     <div class="usuario-logado-nav" onclick="window.location.href='perfil.php'">
-                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
+                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png' ?>"
                             alt="Avatar Navbar" class="avatar-nav">
                         <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
                     </div>
@@ -1248,7 +1078,7 @@ try {
         <?php if (isset($_SESSION['usuario'])): ?>
             <div class="usuario-logado-nav desktop-only" id="nav-logado" onclick="window.location.href='perfil.php'"
                 title="Ir para o Perfil">
-                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
+                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png' ?>"
                     alt="Avatar Navbar" class="avatar-nav">
                 <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
             </div>
@@ -1401,7 +1231,7 @@ try {
                             onclick="switchSistemaTab('classes', this)">Classes</button>
                         <button class="btn-tab-sistema" onclick="switchSistemaTab('pericias', this)">Perícias</button>
                         <button class="btn-tab-sistema" onclick="switchSistemaTab('origens', this)">Origens</button>
-                        <button class="btn-tab-sistema" onclick="switchSistemaTab('criaturas', this)">Criaturas</button>
+                        <button class="btn-tab-sistema" onclick="switchSistemaTab('criaturas', this)">Ameaças</button>
                     </div>
 
                     <!-- CLASSES -->
@@ -1410,7 +1240,7 @@ try {
                         <div class="pericias-premium-header">
                             <span class="h-main"><i class="fas fa-users-cog"></i> CLASSES DO SISTEMA</span>
                         </div>
-                        <div class="pericias-premium-list" style="overflow: visible !important;">
+                        <div class="pericias-premium-list">
                             <?php if (empty($classes)): ?>
                                 <p style="text-align:center; opacity:0.5; margin-top:20px;">Nenhuma classe cadastrada.</p>
                             <?php else: ?>
@@ -1435,7 +1265,7 @@ try {
                         <div class="pericias-premium-header">
                             <span class="h-main"><i class="fas fa-scroll"></i> PERÍCIAS ATIVAS</span>
                         </div>
-                        <div class="pericias-premium-list" style="overflow: visible !important;">
+                        <div class="pericias-premium-list">
                             <?php if (empty($pericias)): ?>
                                 <p style="text-align:center; opacity:0.5; margin-top:20px;">Nenhuma perícia cadastrada.</p>
                             <?php else: ?>
@@ -1466,7 +1296,7 @@ try {
                         <div class="pericias-premium-header">
                             <span class="h-main"><i class="fas fa-history"></i> ORIGENS DISPONÍVEIS</span>
                         </div>
-                        <div class="pericias-premium-list" style="overflow: visible !important;">
+                        <div class="pericias-premium-list">
                             <?php if (empty($origens)): ?>
                                 <p style="text-align:center; opacity:0.5; margin-top:20px;">Nenhuma origem cadastrada.</p>
                             <?php else: ?>
@@ -1488,10 +1318,10 @@ try {
                     <!-- CRIATURAS -->
                     <div id="tab-criaturas" class="tab-content-sistema escondido" style="min-height: 300px; margin-bottom: 40px;">
                         <div class="pericias-premium-header" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                            <span class="h-main"><i class="fas fa-dragon"></i> CRIATURAS</span>
+                            <span class="h-main"><i class="fas fa-dragon"></i> AMEAÇAS</span>
                             <?php if ($sistema['id_usuario_criador'] == $_SESSION['usuario']['id']): ?>
                                 <button class="btn-premium-dragon" onclick="resetarModalMonstro(); abrirModal('modal-criar-monstro')">
-                                    <i class="fas fa-dragon"></i> + CRIAR Criatura
+                                    <i class="fas fa-dragon"></i> + CRIAR Ameaça
                                 </button>
                             <?php endif; ?>
                         </div>
@@ -1505,11 +1335,11 @@ try {
                             <?php if (empty($monstros)): ?>
                                 <p
                                     style="text-align:center; opacity:0.5; margin-top:40px; padding: 20px; border: 1px dashed rgba(255,255,255,0.1); border-radius: 10px;">
-                                    Nenhuma criatura catalogada no sistema.</p>
+                                    Nenhuma ameaça catalogada no sistema.</p>
                             <?php else: ?>
                                 <?php foreach ($monstros as $m): ?>
                                     <div class="card-ameaca-premium">
-                                        <img src="<?= (!empty($m['ds_imagem']) && $m['ds_imagem'] !== '../img/logo_icone.png') ? htmlspecialchars($m['ds_imagem']) : '../img/uploads/perfil/avatar1.png' ?>"
+                                        <img src="<?= (!empty($m['ds_imagem']) && $m['ds_imagem'] !== '../img/logo_icone.png') ? htmlspecialchars($m['ds_imagem']) : '../img/logo_icone.png' ?>"
                                             alt="Monstro" class="card-ameaca-img">
                                         <div class="card-ameaca-body">
                                             <h4 style="color: #fff; font-weight: 800; font-size: 0.95rem; margin-bottom: 3px;">
@@ -1522,7 +1352,7 @@ try {
                                                     <b><?= $m['qt_vd'] ?? '???' ?></b></span>
                                                 <span style="display: flex; align-items: center; gap: 4px;"><i
                                                         class="fas fa-tag"></i>
-                                                    <?= htmlspecialchars($m['tp_monstro'] ?? 'Criatura') ?></span>
+                                                    <?= htmlspecialchars($m['tp_monstro'] ?? 'Ameaça') ?></span>
                                             </div>
                                         </div>
                                         <div class="card-ameaca-actions">
@@ -1530,11 +1360,11 @@ try {
                                                 onclick="exibirFichaMonstro(<?= $m['id_monstro'] ?>)">FICHA</button>
                                             <?php if ($sistema['id_usuario_criador'] == $_SESSION['usuario']['id'] || (isset($_SESSION['usuario']['cargo']) && strtolower($_SESSION['usuario']['cargo']) === 'admin')): ?>
                                                 <button class="btn-card-edit" onclick="editarMonstro(<?= $m['id_monstro'] ?>)"
-                                                    title="Editar Criatura">
+                                                    title="Editar Ameaça">
                                                     <i class="fas fa-edit"></i> EDITAR
                                                 </button>
                                                 <button class="btn-card-delete" onclick="removerMonstro(<?= $m['id_monstro'] ?>)"
-                                                    title="Excluir Criatura">
+                                                    title="Excluir Ameaça">
                                                     <i class="fas fa-trash-alt"></i>
                                                 </button>
                                             <?php endif; ?>
@@ -1556,7 +1386,7 @@ try {
 
             <div style="text-align: center; margin-bottom: 30px;">
                 <h2 style="color: #fff; font-size: 1.8rem; font-weight: 900; letter-spacing: -1px; margin-bottom: 5px;">
-                    NOVA Criatura</h2>
+                    NOVA AMEAÇA</h2>
                 <p style="color: #666; font-size: 0.9rem;">Catalogando perigos do Outro Lado</p>
             </div>
             <div id="form-criar-ameaca">
@@ -1573,7 +1403,7 @@ try {
                     </div>
                     <div class="monstro-identidade-inputs">
                         <div class="input-premium-group" style="margin-bottom: 10px;">
-                            <label class="input-premium-label">NOME DA CRIATURA</label>
+                            <label class="input-premium-label">NOME DA AMEAÇA</label>
                             <input type="text" id="m-nome" class="input-premium-field" placeholder="Ex: Degolador, Aniquilação...">
                         </div>
                         <input type="file" id="m-foto" accept="image/*" style="display: none;" onchange="previewImagemMonstro(this)">
@@ -1621,11 +1451,11 @@ try {
                 <div class="form-section-title"><i class="fas fa-align-left"></i> DETALHES</div>
                 <div class="input-premium-group">
                     <label class="input-premium-label">DESCRIÇÃO E HABILIDADES</label>
-                    <textarea id="m-desc" class="input-premium-field" style="height: 120px; resize: none;" placeholder="Descreva as peculiaridades e poderes desta criatura..."></textarea>
+                    <textarea id="m-desc" class="input-premium-field" style="height: 120px; resize: none;" placeholder="Descreva as peculiaridades e poderes desta ameaça..."></textarea>
                 </div>
 
                 <button type="button" class="btn-premium-dragon" id="btn-save-monstro" style="width: 100%; padding: 20px; justify-content: center;" onclick="salvarMonstro()">
-                    <i class="fas fa-skull"></i> CONVOCAR Criatura
+                    <i class="fas fa-skull"></i> CONVOCAR Ameaça
                 </button>
             </div>
         </div>
@@ -1675,7 +1505,7 @@ try {
                     <li><a
                             href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a>
                     </li>
-                    <li><a href="criar-mapa.php">Mundos</a></li>
+                    <li><a href="<?= isset($_SESSION['usuario']['cargo']) && in_array(strtolower($_SESSION['usuario']['cargo']), ['mestre','admin']) ? 'criar-mapa.php' : 'editar-perfil.php?abrir_mestre=1'; ?>">Mundos</a></li>
                     <li><a href="rolagem-de-dados.php">Dados</a></li>
                     <li><a href="sobre-nos.php">Sobre Nós</a></li>
                 </ul>
@@ -1869,6 +1699,58 @@ try {
                     }
                 });
             }
+
+            // GESTÃO GLOBAL DE TOOLTIPS (EVITA CORTE DO OVERFLOW)
+            const globalTooltip = document.createElement('div');
+            globalTooltip.className = 'tooltip global-tooltip';
+            globalTooltip.style.position = 'fixed';
+            globalTooltip.style.zIndex = '999999';
+            globalTooltip.style.pointerEvents = 'none';
+            globalTooltip.style.transition = 'opacity 0.2s, transform 0.2s';
+            globalTooltip.style.opacity = '0';
+            globalTooltip.style.transform = 'translateY(-50%) scale(0.9)';
+            globalTooltip.style.visibility = 'hidden';
+            globalTooltip.style.display = 'block';
+            
+            const arrow = document.createElement('div');
+            arrow.style.position = 'absolute';
+            arrow.style.top = '50%';
+            arrow.style.left = '100%';
+            arrow.style.marginTop = '-6px';
+            arrow.style.borderWidth = '6px';
+            arrow.style.borderStyle = 'solid';
+            arrow.style.borderColor = 'transparent transparent transparent var(--premium-accent)';
+            globalTooltip.appendChild(arrow);
+            
+            const contentDiv = document.createElement('div');
+            globalTooltip.appendChild(contentDiv);
+            document.body.appendChild(globalTooltip);
+
+            document.querySelectorAll('.info-icon-wrapper').forEach(wrapper => {
+                const innerTooltip = wrapper.querySelector('.tooltip');
+                if(!innerTooltip) return;
+
+                wrapper.addEventListener('mouseenter', () => {
+                    contentDiv.innerHTML = innerTooltip.innerHTML;
+                    globalTooltip.style.visibility = 'visible';
+                    globalTooltip.style.opacity = '1';
+                    globalTooltip.style.transform = 'translateY(-50%) scale(1)';
+                    
+                    const rect = wrapper.getBoundingClientRect();
+                    globalTooltip.style.top = (rect.top + rect.height / 2) + 'px';
+                    globalTooltip.style.left = (rect.left - globalTooltip.offsetWidth - 15) + 'px';
+                });
+
+                wrapper.addEventListener('mouseleave', () => {
+                    globalTooltip.style.opacity = '0';
+                    globalTooltip.style.transform = 'translateY(-50%) scale(0.9)';
+                    setTimeout(() => {
+                        if(globalTooltip.style.opacity === '0') {
+                            globalTooltip.style.visibility = 'hidden';
+                        }
+                    }, 200);
+                });
+            });
         });
 
         async function removerSistema(idS) {
@@ -1899,7 +1781,7 @@ try {
                 if (el) el.value = (id === 'm-nome' || id === 'm-desc' || id === 'm-imagem-atual' || id === 'm-id') ? '' : 0;
             });
             const tipo = document.getElementById('m-tipo');
-            if (tipo) tipo.value = 'Criatura';
+            if (tipo) tipo.value = 'Ameaça';
             
             const preview = document.getElementById('preview-monstro-container');
             if (preview) {
@@ -1910,7 +1792,7 @@ try {
             }
             
             const btnSave = document.getElementById('btn-save-monstro');
-            if (btnSave) btnSave.innerHTML = '<i class="fas fa-skull"></i> CONVOCAR Criatura';
+            if (btnSave) btnSave.innerHTML = '<i class="fas fa-skull"></i> CONVOCAR Ameaça';
             
             document.querySelectorAll('.attr-input-premium').forEach(input => input.value = 0);
         }
@@ -1934,7 +1816,7 @@ try {
                     const m = data.monstro;
                     document.getElementById('m-id').value = m.id_monstro;
                     document.getElementById('m-nome').value = m.nm_monstro;
-                    document.getElementById('m-tipo').value = m.tp_monstro || 'Criatura';
+                    document.getElementById('m-tipo').value = m.tp_monstro || 'Ameaça';
                     document.getElementById('m-vd').value = m.qt_vd || 0;
                     document.getElementById('m-vida').value = m.qt_vida || 0;
                     document.getElementById('m-defesa').value = m.qt_defesa || 0;
@@ -1950,7 +1832,7 @@ try {
                         const input = document.querySelector(`.attr-input-premium[data-id="${at.id_atributo}"]`);
                         if (input) input.value = at.qt_valor;
                     });
-                    document.getElementById('btn-save-monstro').innerHTML = '<i class="fas fa-skull"></i> ATUALIZAR Criatura';
+                    document.getElementById('btn-save-monstro').innerHTML = '<i class="fas fa-skull"></i> ATUALIZAR Ameaça';
                     abrirModal('modal-criar-monstro');
                 }
             } catch (e) { console.error(e); }
@@ -1969,7 +1851,7 @@ try {
             const foto = document.getElementById('m-foto').files[0];
             const imgAtual = document.getElementById('m-imagem-atual').value;
 
-            if (!nome) return await TableModal.alert('Dê um nome à criatura!', 'Nome Requerido', 'warning');
+            if (!nome) return await TableModal.alert('Dê um nome à ameaça!', 'Nome Requerido', 'warning');
 
             const atributos = [];
             document.querySelectorAll('.attr-input-premium').forEach(input => {
@@ -2011,12 +1893,12 @@ try {
             }
             finally { 
                 btn.disabled = false; 
-                btn.innerHTML = '<i class="fas fa-skull"></i> CONVOCAR Criatura'; 
+                btn.innerHTML = '<i class="fas fa-skull"></i> CONVOCAR Ameaça'; 
             }
         }
 
         async function removerMonstro(idM) {
-            if (!await TableModal.confirm("Tem certeza que deseja banir esta criatura para o Outro Lado?", "Banir Criatura", "warning")) return;
+            if (!await TableModal.confirm("Tem certeza que deseja banir esta ameaça para o Outro Lado?", "Banir Ameaça", "warning")) return;
 
             try {
                 const res = await fetch('../app/ajax/remover-monstro.php', {
@@ -2047,7 +1929,7 @@ try {
                 if (data.success) {
                     const m = data.monstro;
                     const attrs = data.atributos;
-                    const imgCriatura = (m.ds_imagem && m.ds_imagem !== '../img/logo_icone.png') ? m.ds_imagem : '../img/uploads/perfil/avatar1.png';
+                    const imgCriatura = (m.ds_imagem && m.ds_imagem !== '../img/logo_icone.png') ? m.ds_imagem : '../img/logo_icone.png';
                     container.innerHTML = `
                         <div class="ficha-header-comp" style="position: relative; background: linear-gradient(135deg, rgba(30, 11, 58, 0.95), rgba(49, 28, 97, 0.9)), url('${imgCriatura}') center/cover; padding: 30px; border-bottom: 2px solid var(--premium-accent); display: flex; align-items: center; gap: 20px;">
                             <img src="${imgCriatura}" style="width: 100px; height: 100px; border-radius: 15px; border: 3px solid var(--premium-accent); object-fit: cover; box-shadow: 0 10px 30px rgba(0,0,0,0.8);" />
@@ -2152,4 +2034,50 @@ try {
     </div>
 </body>
 </html>
+
+            font-size: 1rem; text-align: center; margin-bottom: 30px; outline: none; transition: border-color 0.3s;
+            color: #333; background: #fff;
+        }
+        .input-perfil-modal:focus { border-color: #e63946; }
+        .modal-perfil-footer { display: flex; gap: 15px; justify-content: center; }
+        .btn-perfil-cancelar {
+            background: #718096; color: white; border: none; padding: 12px 25px;
+            border-radius: 10px; font-weight: 700; cursor: pointer; transition: opacity 0.2s; font-size: 1rem;
+        }
+        .btn-perfil-cancelar:hover { opacity: 0.8; }
+        .btn-perfil-deletar {
+            background: #e63946; color: white; border: none; padding: 12px 35px;
+            border-radius: 10px; font-weight: 700; cursor: pointer; transition: all 0.3s; font-size: 1rem;
+        }
+        .btn-perfil-deletar:disabled { background: #ccc; cursor: not-allowed; opacity: 0.6; }
+        .btn-perfil-deletar:not(:disabled):hover { background: #c92a3a; transform: translateY(-2px); }
+    </style>
+
+    <div id="modal-excluir-sistema" class="modal-overlay">
+        <div class="modal-perfil-content">
+            <div class="modal-perfil-header">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h2>Excluir Sistema</h2>
+            </div>
+            <div class="modal-perfil-body">
+                <?php if ($sistema['fl_importado']): ?>
+                    <p>Tem certeza que deseja remover este sistema importado da sua conta?</p>
+                <?php else: ?>
+                    <p>Esta ação é <strong>permanente</strong> e excluirá o sistema para <strong>TODOS</strong> os usuários que o importaram.</p>
+                    <p style="margin-top: 15px; font-size: 0.9rem; color: #555;">Para confirmar, digite o nome do sistema duas vezes abaixo:</p>
+                    <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;">
+                        <input type="text" id="input-confirm-1" placeholder="Nome do sistema..." class="input-perfil-modal" style="margin-bottom: 0;">
+                        <input type="text" id="input-confirm-2" placeholder="Repita o nome..." class="input-perfil-modal" style="margin-bottom: 20px;">
+                    </div>
+                <?php endif; ?>
+            </div>
+            <div class="modal-perfil-footer">
+                <button class="btn-perfil-cancelar" onclick="fecharModal('modal-excluir-sistema')">Cancelar</button>
+                <button id="btn-confirmar-exclusao-sistema" class="btn-perfil-deletar" <?= (!$sistema['fl_importado']) ? 'disabled' : '' ?>>Deletar</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
 

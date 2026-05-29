@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  *  Após a página de login definir a sessão com os dados do usuario a página index lê a sessão e inicia a mesma
  *  Na navbar temos um if e else para cado o usuario esteja conectado ou não, mudando sendo que: 
@@ -13,6 +13,8 @@ if (!isset($_SESSION['usuario'])) {
 }
 require_once __DIR__ . '/../app/config/database.php';
 $pdo = Database::getConexao();
+
+$fotoNavbar = (!empty($_SESSION['usuario']['foto']) && file_exists(dirname(__DIR__) . '/' . ltrim(str_replace('../', '', $_SESSION['usuario']['foto']), '/'))) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png';
 
 // Buscar todos os sistemas disponíveis (Oficiais, Criados pelo usuário e Vinculados)
 $stmt = $pdo->prepare("
@@ -83,7 +85,7 @@ $sistemas = $stmt->fetchAll();
                 <li><a href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>"
                         class="ativo">Personagens</a>
                 </li>
-                <li><a href="criar-mapa.php">Mundos</a></li>
+                <li><a href="<?= isset($_SESSION['usuario']['cargo']) && in_array(strtolower($_SESSION['usuario']['cargo']), ['mestre','admin']) ? 'criar-mapa.php' : 'editar-perfil.php?abrir_mestre=1'; ?>">Mundos</a></li>
                 <li><a href="rolagem-de-dados.php">Dados</a></li>
                 <li><a href="sobre-nos.php">Sobre Nós</a></li>
             </ul>
@@ -92,7 +94,7 @@ $sistemas = $stmt->fetchAll();
             <div class="nav-mobile-footer">
                 <?php if (isset($_SESSION['usuario'])): ?>
                     <div class="usuario-logado-nav" onclick="window.location.href='perfil.php'">
-                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
+                        <img src="<?= htmlspecialchars($fotoNavbar) ?>"
                             alt="Avatar Navbar" class="avatar-nav">
                         <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
                     </div>
@@ -110,7 +112,7 @@ $sistemas = $stmt->fetchAll();
         <?php if (isset($_SESSION['usuario'])): ?>
             <div class="usuario-logado-nav desktop-only" id="nav-logado" onclick="window.location.href='perfil.php'"
                 title="Ir para o Perfil">
-                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
+                <img src="<?= htmlspecialchars($fotoNavbar) ?>"
                     alt="Avatar Navbar" class="avatar-nav">
                 <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
             </div>
@@ -234,8 +236,8 @@ $sistemas = $stmt->fetchAll();
             <div id="aba-origem" class="conteudo-aba">
                 <section class="desc">
                     <h1>2. ORIGEM</h1>
-                    <p>Com a identidade definida, de onde você veio? A origem dita o seu passado, oferecendo vantagens
-                        únicas e ganchos narrativos. Escolha a que melhor se alinha com a sua história.</p>
+                    <p>Com a identidade definida, de onde vocêê veio? A origem dita o seu passado, oferecendo vantagens
+                        úúnicas e ganchos narrativos. Escolha a que melhor se alinha com a sua história.</p>
                 </section>
 
                 <div class="origens-container" id="container-origens-dinamico">
@@ -260,7 +262,7 @@ $sistemas = $stmt->fetchAll();
                 <section class="desc">
                     <h1>3. ATRIBUTOS</h1>
                     <p>Seu passado moldou suas capacidades naturais. Todos começam com 5 pontos básicos de um humano
-                        médio. Você possui <strong>10 pontos extras</strong> para distribuir como quiser. Valores que
+                        médio. Vocêê possui <strong>10 pontos extras</strong> para distribuir como quiser. Valores que
                         passam de 13 são excepcionais.</p>
 
                     <div class="pontos-disponiveis">
@@ -290,7 +292,7 @@ $sistemas = $stmt->fetchAll();
                 <section class="desc">
                     <h1>4. CLASSE</h1>
                     <p>Para finalizar, o seu treinamento dita o seu futuro. A Classe determina suas habilidades de
-                        combate, perícias técnicas e o papel definitivo que você exercerá dentro do grupo.</p>
+                        combate, perícias técúnicas e o papel definitivo que vocêê exercerá dentro do grupo.</p>
                 </section>
 
                 <div class="tri-class" id="container-classes-dinamico">
@@ -329,7 +331,7 @@ $sistemas = $stmt->fetchAll();
                     <li><a
                             href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a>
                     </li>
-                    <li><a href="criar-mapa.php">Mundos</a></li>
+                    <li><a href="<?= isset($_SESSION['usuario']['cargo']) && in_array(strtolower($_SESSION['usuario']['cargo']), ['mestre','admin']) ? 'criar-mapa.php' : 'editar-perfil.php?abrir_mestre=1'; ?>">Mundos</a></li>
                     <li><a href="rolagem-de-dados.php">Dados</a></li>
                     <li><a href="sobre-nos.php">Sobre Nós</a></li>
                 </ul>
@@ -349,7 +351,7 @@ $sistemas = $stmt->fetchAll();
             </div>
         </div>
         <div class="rodape-inferior">
-            <p>© 2026 TABLE. Todos os direitos reservados.</p>
+            <p>©© 2026 TABLE. Todos os direitos reservados.</p>
             <div class="redes-sociais">
                 <a href="#"><i class="fa-brands fa-discord"></i></a>
                 <a href="#"><i class="fa-brands fa-instagram"></i></a>
@@ -363,4 +365,5 @@ $sistemas = $stmt->fetchAll();
 </body>
 
 </html>
+
 

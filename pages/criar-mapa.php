@@ -1,4 +1,7 @@
-﻿<?php
+<?php
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
 /**
  *  Após a página de login definir a sessão com os dados do usuario a página index lê a sessão e inicia a mesma
  *  Na navbar temos um if e else para cado o usuario esteja conectado ou não, mudando sendo que: 
@@ -6,6 +9,28 @@
  *  SE NÃO irá mostrar os botões para navegar até a página de login ou cadastro
  */
 session_start();
+
+// Redireciona para login se não estiver logado
+if (!isset($_SESSION['usuario'])) {
+    header('Location: login.php');
+    exit;
+}
+
+// Verificação de Paywall Granular - Plano de Mapas
+require_once __DIR__ . '/../app/config/database.php';
+try {
+    $pdo = Database::getConexao();
+    $stmt = $pdo->prepare("SELECT fl_plano_mapas, fl_plano_completo, tp_cargo FROM tb_usuario WHERE id_usuario = ? LIMIT 1");
+    $stmt->execute([$_SESSION['usuario']['id']]);
+    $userPlan = $stmt->fetch();
+    
+    if (!$userPlan || ((int)$userPlan['fl_plano_mapas'] !== 1 && (int)$userPlan['fl_plano_completo'] !== 1 && $userPlan['tp_cargo'] !== 'admin')) {
+        header('Location: planos.php?aviso=mapas');
+        exit;
+    }
+} catch (Exception $e) {
+    // Permite em caso de falha de DB
+}
 ?>
 
 <!DOCTYPE html>
@@ -29,8 +54,8 @@ session_start();
 
 
         :root {
-            --fundo-pagina-inicio: #492499;
-            --fundo-pagina-fim: #190e35;
+            --fundo-pagina-inicio: #ffffff;
+            --fundo-pagina-fim: #ffffff;
             --fundo-cartao: #ffffff;
             --fundo-cartao-escuro: #1F1A2C;
             --borda-escura: #4a4063;
@@ -126,7 +151,7 @@ session_start();
         /* ── VARIÁVEIS ─────────────────────────────────────────────────── */
         :root {
             /* Cores do editor — harmonizadas com o tema TABLE */
-            --bg-color: #0d091a;
+            --bg-color: #ffffff;
             --panel-bg: rgba(30, 26, 50, 0.9);
             --panel-bg-light: rgba(44, 37, 61, 0.95);
             --border-color: rgba(139, 92, 246, 0.15);
@@ -138,7 +163,7 @@ session_start();
             --accent-hover: #a78bfa;
             --accent-glow: rgba(139, 92, 246, 0.25);
             --accent-light: #c4b5fd;
-            --canvas-bg: #05030a;
+            --canvas-bg: #ffffff;
             --danger: #ef4444;
             --success: #10b981;
             --glass-bg: rgba(25, 20, 45, 0.65);
@@ -841,7 +866,7 @@ session_start();
             height: 134px;
             border: 2px solid rgba(139, 92, 246, 0.6);
             border-radius: 10px;
-            background: #07040f;
+            background: #ffffff;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(139, 92, 246, 0.2);
             display: none;
             pointer-events: auto;
@@ -1984,7 +2009,7 @@ session_start();
     </style>
 </head>
 
-<body style="display:flex;flex-direction:column;min-height:100vh;background:#0d091a;color:#fff;">
+<body style="display:flex;flex-direction:column;min-height:100vh;background:#ffffff;color:#000000;">
 
     <!-- HEADER -->
     <header>
@@ -2012,7 +2037,7 @@ session_start();
             <div class="nav-mobile-footer">
                 <?php if (isset($_SESSION['usuario'])): ?>
                     <div class="usuario-logado-nav" onclick="window.location.href='perfil.php'">
-                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
+                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png' ?>"
                             alt="Avatar Navbar" class="avatar-nav">
                         <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
                     </div>
@@ -2030,7 +2055,7 @@ session_start();
         <?php if (isset($_SESSION['usuario'])): ?>
             <div class="usuario-logado-nav desktop-only" id="nav-logado" onclick="window.location.href='perfil.php'"
                 title="Ir para o Perfil">
-                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
+                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png' ?>"
                     alt="Avatar Navbar" class="avatar-nav">
                 <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
             </div>
@@ -2079,7 +2104,7 @@ session_start();
             <button class="action-btn" onclick="undo()" title="Desfazer (Ctrl+Z)">
                 <i class="fas fa-undo"></i> Desfazer <span id="undoCount" class="undo-count"></span>
             </button>
-            <button class="action-btn text-red" onclick="showModal('modalClear')" title="Limpar tudo">
+            <button class="action-btn text-red" onclick="if(confirm('Tem certeza que deseja apagar todo o mapa? Esta ação não pode ser desfeita.')) confirmClear();" title="Limpar tudo">
                 <i class="fas fa-trash"></i> Limpar
             </button>
             <div class="sep"></div>
@@ -2135,7 +2160,7 @@ session_start();
 
             <!-- Arquivo -->
             <div class="toolbar-group">
-                <button onclick="showModal('modalExport')" class="action-btn highlight" title="Exportar PNG">
+                <button onclick="confirmExport(false)" class="action-btn highlight" title="Exportar PNG (Fundo Branco)">
                     <i class="fas fa-file-image"></i> PNG
                 </button>
                 <button onclick="saveJSON()" class="action-btn highlight" title="Salvar projeto (Ctrl+S)">
@@ -2588,7 +2613,7 @@ session_start();
 
         // ─── AUTOSAVE ─────────────────────────────────────────────────────────────────
         const AutoSave = (() => {
-            const KEY = 'table_rpg_v3'; let timer = null;
+            const KEY = 'table_rpg_v4'; let timer = null;
             function serialize() {
                 const snap = State.snapshot();
                 const safeProps = snap.props.map(p => {
@@ -3190,7 +3215,7 @@ session_start();
         function render() {
             ctx.setTransform(1, 0, 0, 1, 0, 0);
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#15101f';
+            ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             ctx.save();
@@ -3254,15 +3279,61 @@ session_start();
             }
         }
 
+        function strokeWallSegment(ctxD, x1, y1, x2, y2, currentRoomId, allRooms) {
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            if (len === 0) return;
+            
+            ctxD.beginPath();
+            let drawing = false;
+            const step = 2; // 2 pixels steps
+            for (let d = 0; d <= len; d += step) {
+                const t = d / len;
+                const px = x1 + dx * t;
+                const py = y1 + dy * t;
+                
+                let insideAny = false;
+                for (let i = 0; i < allRooms.length; i++) {
+                    const other = allRooms[i];
+                    if (other.id === currentRoomId) continue;
+                    // Usa eps negativo para que bordas coladas sejam consideradas "dentro" e não sejam desenhadas, mesclando as masmorras
+                    const eps = -0.5;
+                    if (px > other.x + eps && px < other.x + other.w - eps &&
+                        py > other.y + eps && py < other.y + other.h - eps) {
+                        insideAny = true;
+                        break;
+                    }
+                }
+                
+                if (!insideAny) {
+                    if (!drawing) {
+                        ctxD.moveTo(px, py);
+                        drawing = true;
+                    } else {
+                        ctxD.lineTo(px, py);
+                    }
+                } else {
+                    if (drawing) {
+                        ctxD.stroke();
+                        drawing = false;
+                    }
+                }
+            }
+            if (drawing) {
+                ctxD.stroke();
+            }
+        }
+
         function renderMap(ctxD, isExport = false) {
             if (!isExport) {
                 if (showGridLines) {
-                    ctxD.strokeStyle = 'rgba(139,92,246,0.1)'; ctxD.lineWidth = 0.5;
+                    ctxD.strokeStyle = 'rgba(139,92,246,0.25)'; ctxD.lineWidth = 0.5;
                     const sx = Math.floor(-panX / scale / CELL) * CELL, sy = Math.floor(-panY / scale / CELL) * CELL;
                     for (let x = sx; x < sx + (width / scale) + CELL; x += CELL) { ctxD.beginPath(); ctxD.moveTo(x, -50000); ctxD.lineTo(x, 50000); ctxD.stroke(); }
                     for (let y = sy; y < sy + (height / scale) + CELL; y += CELL) { ctxD.beginPath(); ctxD.moveTo(-50000, y); ctxD.lineTo(50000, y); ctxD.stroke(); }
                 } else {
-                    ctxD.fillStyle = 'rgba(139,92,246,0.18)';
+                    ctxD.fillStyle = 'rgba(139,92,246,0.3)';
                     const sx = Math.floor(-panX / scale / CELL) * CELL, sy = Math.floor(-panY / scale / CELL) * CELL;
                     for (let x = sx; x < sx + (width / scale) + CELL; x += CELL)
                         for (let y = sy; y < sy + (height / scale) + CELL; y += CELL) { ctxD.beginPath(); ctxD.arc(x, y, 1.5, 0, Math.PI * 2); ctxD.fill(); }
@@ -3281,7 +3352,10 @@ session_start();
                         // Sub-passos das salas (Pisos, depois Sombras, depois Labels, depois Paredes)
                         const allR = State.rooms.slice(); if (currentRoom) allR.push(currentRoom);
 
-                        // 1. Pisos
+                        // 1. Sombras/Outer (Desenhado antes para que os pisos cubram e mesclem divisórias internas)
+                        allR.forEach(r => { ctxD.save(); ctxD.globalAlpha = r.opacity ?? 1; drawRoomOuter(ctxD, r); ctxD.restore(); });
+
+                        // 2. Pisos (Preenche e cobre quaisquer bordas internas)
                         allR.forEach(r => {
                             ctxD.save();
                             ctxD.globalAlpha = (r.opacity ?? 1);
@@ -3294,9 +3368,6 @@ session_start();
                             for (let y = sY; y <= r.y + r.h; y += CELL) { ctxD.beginPath(); ctxD.moveTo(r.x, y); ctxD.lineTo(r.x + r.w, y); ctxD.stroke(); }
                             ctxD.restore();
                         });
-
-                        // 2. Sombras/Outer
-                        allR.forEach(r => { ctxD.save(); ctxD.globalAlpha = r.opacity ?? 1; drawRoomOuter(ctxD, r); ctxD.restore(); });
 
                         // 3. Labels
                         allR.forEach(r => {
@@ -3337,13 +3408,16 @@ session_start();
                             }
                         });
 
-                        // 4. Paredes
+                        // 4. Paredes (com mesclagem dinâmica)
                         allR.forEach(r => {
                             if (r.wallWidth > 0) {
                                 ctxD.save(); ctxD.globalAlpha = r.opacity ?? 1;
                                 ctxD.strokeStyle = r.wallColor; ctxD.lineWidth = r.wallWidth;
                                 ctxD.lineJoin = 'miter'; ctxD.lineCap = 'square';
-                                ctxD.strokeRect(r.x, r.y, r.w, r.h);
+                                strokeWallSegment(ctxD, r.x, r.y, r.x + r.w, r.y, r.id, allR);
+                                strokeWallSegment(ctxD, r.x + r.w, r.y, r.x + r.w, r.y + r.h, r.id, allR);
+                                strokeWallSegment(ctxD, r.x + r.w, r.y + r.h, r.x, r.y + r.h, r.id, allR);
+                                strokeWallSegment(ctxD, r.x, r.y + r.h, r.x, r.y, r.id, allR);
                                 drawRoomDetail(ctxD, r);
                                 ctxD.restore();
                             }
@@ -3961,13 +4035,13 @@ session_start();
             if (!mel || !mel.classList.contains('visible')) return;
             const mW = mel.width = mel.offsetWidth, mH = mel.height = mel.offsetHeight;
             const mc = mel.getContext('2d');
-            mc.fillStyle = '#07040f'; mc.fillRect(0, 0, mW, mH);
+            mc.fillStyle = '#ffffff'; mc.fillRect(0, 0, mW, mH);
             let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
             State.rooms.forEach(r => { minX = Math.min(minX, r.x); minY = Math.min(minY, r.y); maxX = Math.max(maxX, r.x + r.w); maxY = Math.max(maxY, r.y + r.h); });
             State.props.forEach(p => { minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x + p.w); maxY = Math.max(maxY, p.y + p.h); });
             State.textLabels.forEach(t => { minX = Math.min(minX, t.x); minY = Math.min(minY, t.y); maxX = Math.max(maxX, t.x + 100); maxY = Math.max(maxY, t.y + t.fontSize); });
             for (const k in State.terrainCells) { const [c, r] = k.split(','); const p2 = CELL / 2; minX = Math.min(minX, c * p2); minY = Math.min(minY, r * p2); maxX = Math.max(maxX, c * p2 + p2); maxY = Math.max(maxY, r * p2 + p2); }
-            if (minX === Infinity) { mc.fillStyle = 'rgba(255,255,255,0.08)'; mc.font = '10px Montserrat,sans-serif'; mc.textAlign = 'center'; mc.fillText('vazio', mW / 2, mH / 2); return; }
+            if (minX === Infinity) { mc.fillStyle = 'rgba(0,0,0,0.25)'; mc.font = '10px Montserrat,sans-serif'; mc.textAlign = 'center'; mc.fillText('vazio', mW / 2, mH / 2); return; }
             const pad = 16, cW = maxX - minX + pad * 2, cH = maxY - minY + pad * 2;
             const ms = Math.min(mW / cW, mH / cH) * 0.9;
             const ox = (mW - cW * ms) / 2 - (minX - pad) * ms, oy = (mH - cH * ms) / 2 - (minY - pad) * ms;
@@ -3975,8 +4049,24 @@ session_start();
             mc.save(); mc.translate(ox, oy); mc.scale(ms, ms);
             // Terrenos
             for (const k in State.terrainCells) { const [c, r] = k.split(','); const p2 = CELL / 2; const _tc = State.terrainCells[k]; const _col = Array.isArray(_tc) ? (_tc[_tc.length - 1]?.color || '#888') : _tc.color; mc.globalAlpha = 0.8; mc.fillStyle = _col || '#888'; mc.fillRect(c * p2, r * p2, p2, p2); mc.globalAlpha = 1; }
-            // Salas
-            State.rooms.forEach(r => { mc.fillStyle = r.fillColor + 'cc'; mc.fillRect(r.x - 15, r.y - 15, r.w + 30, r.h + 30); mc.fillStyle = r.floorColor; mc.fillRect(r.x, r.y, r.w, r.h); if (r.wallWidth > 0) { mc.strokeStyle = r.wallColor; mc.lineWidth = r.wallWidth / ms; mc.strokeRect(r.x, r.y, r.w, r.h); } });
+            // Salas (com mesclagem dinâmica) - Passo 1: Sombras/Outer
+            State.rooms.forEach(r => {
+                mc.fillStyle = r.fillColor + 'cc';
+                mc.fillRect(r.x - 15, r.y - 15, r.w + 30, r.h + 30);
+            });
+            // Salas (com mesclagem dinâmica) - Passo 2: Pisos e Paredes
+            State.rooms.forEach(r => {
+                mc.fillStyle = r.floorColor;
+                mc.fillRect(r.x, r.y, r.w, r.h);
+                if (r.wallWidth > 0) {
+                    mc.strokeStyle = r.wallColor;
+                    mc.lineWidth = r.wallWidth / ms;
+                    strokeWallSegment(mc, r.x, r.y, r.x + r.w, r.y, r.id, State.rooms);
+                    strokeWallSegment(mc, r.x + r.w, r.y, r.x + r.w, r.y + r.h, r.id, State.rooms);
+                    strokeWallSegment(mc, r.x + r.w, r.y + r.h, r.x, r.y + r.h, r.id, State.rooms);
+                    strokeWallSegment(mc, r.x, r.y + r.h, r.x, r.y, r.id, State.rooms);
+                }
+            });
             State.internalWalls.forEach(w => { mc.strokeStyle = w.wallColor; mc.lineWidth = w.wallWidth / ms; mc.beginPath(); mc.moveTo(w.x1, w.y1); mc.lineTo(w.x2, w.y2); mc.stroke(); });
             State.props.forEach(p => {
                 if (p.type === 'emoji') { mc.save(); mc.font = `${Math.max(8, p.w * 0.7)}px Arial`; mc.textAlign = 'center'; mc.textBaseline = 'middle'; mc.fillText(p.content, p.x + p.w / 2, p.y + p.h / 2); mc.restore(); }
@@ -4243,30 +4333,50 @@ session_start();
         // ─── MODAIS ──────────────────────────────────────────────────────────────────
         function showModal(id) { document.getElementById('modalOverlay').style.display = 'flex'; document.querySelectorAll('.modal-box').forEach(m => m.style.display = 'none'); document.getElementById(id).style.display = 'flex'; }
         function closeModals() { document.getElementById('modalOverlay').style.display = 'none'; }
-        function confirmClear() { History.save(); State.rooms = []; State.internalWalls = []; State.props = []; State.terrainCells = {}; State.textLabels = []; selectedItem = null; multiSelection = []; closeModals(); AutoSave.scheduleSave(); }
+        function confirmClear() { 
+            History.save(); 
+            State.rooms = []; State.internalWalls = []; State.props = []; State.terrainCells = {}; State.textLabels = []; 
+            selectedItem = null; multiSelection = []; 
+            closeModals(); 
+            AutoSave.scheduleSave(); 
+            loadInputsFromSelection(); 
+            render(); renderMinimap(); buildLayersPanel(); 
+            showToast('✅ Mapa limpo completamente!', 'success');
+        }
 
         // ─── EXPORT PNG ──────────────────────────────────────────────────────────────
         function confirmExport(isDark) {
             closeModals();
-            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-            State.rooms.forEach(r => { minX = Math.min(minX, r.x - 30); minY = Math.min(minY, r.y - 30); maxX = Math.max(maxX, r.x + r.w + 30); maxY = Math.max(maxY, r.y + r.h + 30); });
-            State.props.forEach(p => { minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x + p.w); maxY = Math.max(maxY, p.y + p.h); });
-            State.internalWalls.forEach(w => { minX = Math.min(minX, w.x1, w.x2); minY = Math.min(minY, w.y1, w.y2); maxX = Math.max(maxX, w.x1, w.x2); maxY = Math.max(maxY, w.y1, w.y2); });
-            State.textLabels.forEach(t => { minX = Math.min(minX, t.x - 10); minY = Math.min(minY, t.y - t.fontSize); maxX = Math.max(maxX, t.x + 300); maxY = Math.max(maxY, t.y + t.fontSize); });
-            for (const k in State.terrainCells) { const [c, r] = k.split(','); const x = c * (CELL / 2), y = r * (CELL / 2); minX = Math.min(minX, x - 40); minY = Math.min(minY, y - 40); maxX = Math.max(maxX, x + 60); maxY = Math.max(maxY, y + 60); }
-            if (minX === Infinity) return showToast('Nada para exportar!', true);
-            const pad = 80, ew = (maxX - minX) + pad * 2, eh = (maxY - minY) + pad * 2;
-            const ec = document.createElement('canvas'); ec.width = ew; ec.height = eh;
-            const ex = ec.getContext('2d');
-            ex.fillStyle = isDark ? '#15101f' : '#ffffff'; ex.fillRect(0, 0, ew, eh);
-            if (!isDark) { ex.fillStyle = 'rgba(0,0,0,0.08)'; for (let x = 0; x < ew; x += CELL)for (let y = 0; y < eh; y += CELL) { ex.beginPath(); ex.arc(x, y, 1.5, 0, Math.PI * 2); ex.fill(); } }
-            // Freeze animFrame so terrain animations are consistent during export
-            const savedAnimFrame = animFrame;
-            ex.translate(-minX + pad, -minY + pad);
-            renderMap(ex, true);
-            // (animFrame restored automatically since it's a let, not modified during export)
-            const link = document.createElement('a'); link.download = 'mapa_rpg_table.png'; link.href = ec.toDataURL('image/png'); link.click();
-            showToast('\ud83d\uddbc\ufe0f Imagem exportada!');
+            try {
+                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                State.rooms.forEach(r => { minX = Math.min(minX, r.x - 30); minY = Math.min(minY, r.y - 30); maxX = Math.max(maxX, r.x + r.w + 30); maxY = Math.max(maxY, r.y + r.h + 30); });
+                State.props.forEach(p => { minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x + p.w); maxY = Math.max(maxY, p.y + p.h); });
+                State.internalWalls.forEach(w => { minX = Math.min(minX, w.x1, w.x2); minY = Math.min(minY, w.y1, w.y2); maxX = Math.max(maxX, w.x1, w.x2); maxY = Math.max(maxY, w.y1, w.y2); });
+                State.textLabels.forEach(t => { minX = Math.min(minX, t.x - 10); minY = Math.min(minY, t.y - t.fontSize); maxX = Math.max(maxX, t.x + 300); maxY = Math.max(maxY, t.y + t.fontSize); });
+                for (const k in State.terrainCells) { const [c, r] = k.split(','); const x = c * (CELL / 2), y = r * (CELL / 2); minX = Math.min(minX, x - 40); minY = Math.min(minY, y - 40); maxX = Math.max(maxX, x + 60); maxY = Math.max(maxY, y + 60); }
+                
+                if (minX === Infinity) return showToast('Nada para exportar!', true);
+                
+                const pad = 80, ew = (maxX - minX) + pad * 2, eh = (maxY - minY) + pad * 2;
+                const ec = document.createElement('canvas'); ec.width = ew; ec.height = eh;
+                const ex = ec.getContext('2d');
+                ex.fillStyle = isDark ? '#15101f' : '#ffffff'; ex.fillRect(0, 0, ew, eh);
+                if (!isDark) { ex.fillStyle = 'rgba(0,0,0,0.08)'; for (let x = 0; x < ew; x += CELL)for (let y = 0; y < eh; y += CELL) { ex.beginPath(); ex.arc(x, y, 1.5, 0, Math.PI * 2); ex.fill(); } }
+                
+                ex.translate(-minX + pad, -minY + pad);
+                renderMap(ex, true);
+                
+                const link = document.createElement('a');
+                link.download = 'mapa_rpg_table.png';
+                link.href = ec.toDataURL('image/png');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                showToast('🖼️ Imagem exportada com sucesso!', 'success');
+            } catch (err) {
+                console.error("Erro no export:", err);
+                showToast('Erro ao exportar. Tente remover imagens externas.', true);
+            }
         }
 
         // ─── CONTEXT MENU no canvas ──────────────────────────────────────────────────
@@ -4455,11 +4565,8 @@ session_start();
             const restored = AutoSave.load();
             if (!restored) {
                 panX = width / 2 - 200; panY = height / 2 - 150;
-                for (let i = 0; i < 8; i++) { State.terrainCells[`${4 + i},${4 + i}`] = { style: 'water', color: '#3b82f6' }; State.terrainCells[`${5 + i},${4 + i}`] = { style: 'water', color: '#3b82f6' }; }
-                State.rooms.push({ x: 80, y: 80, w: 240, h: 160, style: 'cavern', fillColor: '#374151', wallColor: '#1a1520', wallWidth: 4, floorColor: '#0e0b14', opacity: 1, id: 1005, label: 'Caverna Inicial' });
-                State.internalWalls.push({ x1: 200, y1: 80, x2: 200, y2: 240, wallColor: '#000000', wallWidth: 4 });
-                State.textLabels.push({ type: 'label', content: 'Masmorra das Sombras', x: 60, y: 50, fontSize: 22, color: '#c4b5fd', bold: true, opacity: 1, id: 1 });
-                addEmojiProp('\ud83d\udeb6'); State.props[0].x = 180; State.props[0].y = 140;
+                State.rooms.push({ x: 100, y: 80, w: 200, h: 160, style: 'solid', fillColor: '#374151', wallColor: '#1a1520', wallWidth: 4, floorColor: '#15101f', opacity: 1, id: 1005, label: 'Masmorra Inicial' });
+                AutoSave.scheduleSave();
             }
             setTool('select'); buildLayersPanel(); initEmojiPicker();
         }, 100);
@@ -4515,4 +4622,5 @@ session_start();
 </body>
 
 </html>
+
 

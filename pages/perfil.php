@@ -1,4 +1,4 @@
-﻿<?php
+<?php
     /**
      *  Após a página de login definir a sessão com os dados do usuario a página index lê a sessão e inicia a mesma
      *  Na navbar temos um if e else para cado o usuario esteja conectado ou não, mudando sendo que: 
@@ -27,6 +27,8 @@
         $idadeUsuario = $hoje->diff($nasc)->y;
     }
 
+    $possuiPlanoSistemas = (isset($userCompleto['fl_plano_sistemas']) && (int)$userCompleto['fl_plano_sistemas'] === 1) || (isset($userCompleto['fl_plano_completo']) && (int)$userCompleto['fl_plano_completo'] === 1) || ($userCompleto['tp_cargo'] === 'admin');
+
     function canAccess($classificacao, $idade) {
         if ($classificacao == 'L') return true;
         $idx = (int)$classificacao;
@@ -47,7 +49,8 @@
     $usuarioAtivo = $_SESSION['usuario'];
     $cargoUsuario = strtolower($usuarioAtivo['cargo'] ?? 'jogador');
     $classeLayout = ($cargoUsuario === 'mestre') ? 'grid-mestre' : 'grid-jogador';
-    $fotoUsuario = !empty($usuarioAtivo['foto']) ? $usuarioAtivo['foto'] : '../img/uploads/perfil/avatar1.png';
+    $fotoUsuario = (!empty($usuarioAtivo['foto']) && realpath(__DIR__ . '/' . $usuarioAtivo['foto']) !== false) ? $usuarioAtivo['foto'] : '../img/uploads/perfil/avatar.png';
+    $fotoNavbar = $fotoUsuario;
 
     // Buscar personagens do usuário
     require_once __DIR__ . '/../app/config/database.php';
@@ -162,7 +165,7 @@
             <li><a href="cm-jogar.php">Como Jogar</a></li>
             <li><a href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a>
             </li>
-            <li><a href="criar-mapa.php">Mundos</a></li>
+            <li><a href="<?= isset($_SESSION['usuario']['cargo']) && in_array(strtolower($_SESSION['usuario']['cargo']), ['mestre','admin']) ? 'criar-mapa.php' : 'editar-perfil.php?abrir_mestre=1'; ?>">Mundos</a></li>
             <li><a href="rolagem-de-dados.php">Dados</a></li>
             <li><a href="sobre-nos.php">Sobre Nós</a></li>
         </ul>
@@ -171,7 +174,7 @@
         <div class="nav-mobile-footer">
             <?php if (isset($_SESSION['usuario'])): ?>
                 <div class="usuario-logado-nav" onclick="window.location.href='perfil.php'">
-                    <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
+                    <img src="<?= htmlspecialchars($fotoNavbar) ?>"
                         alt="Avatar Navbar" class="avatar-nav">
                     <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
                 </div>
@@ -189,7 +192,7 @@
     <?php if (isset($_SESSION['usuario'])): ?>
         <div class="usuario-logado-nav desktop-only" id="nav-logado" onclick="window.location.href='perfil.php'"
             title="Ir para o Perfil">
-            <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
+            <img src="<?= htmlspecialchars($fotoNavbar) ?>"
                 alt="Avatar Navbar" class="avatar-nav">
             <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
         </div>
@@ -233,7 +236,7 @@
                         <?php foreach ($personagens as $p): ?>
                             <div class="lista-item" onclick="window.location.href='exibir-ficha.php?id=<?= $p['id_personagem'] ?>'" style="cursor: pointer; position: relative;">
                                 <div class="item-avatar-quadrado">
-                                    <img src="<?= !empty($p['ds_foto']) ? $p['ds_foto'] : '../img/uploads/perfil/avatar1.png' ?>" alt="Avatar">
+                                    <img src="<?= !empty($p['ds_foto']) ? $p['ds_foto'] : '../img/uploads/perfil/avatar.png' ?>" alt="Avatar">
                                 </div>
                                 <div class="item-dados">
                                     <h3><?= htmlspecialchars($p['nm_personagem']) ?></h3>
@@ -280,7 +283,11 @@
             <div class="painel-dark" id="painel-sistemas" <?php if ($cargoUsuario !== 'mestre') echo 'style="display: none;"'; ?>>
                 <div class="painel-header">
                     <h2>Sistemas:</h2>
-                    <button class="btn-criar" onclick="window.location.href='criar-sistema.php'">Criar <i class="fas fa-plus-circle"></i></button>
+                    <?php if ($possuiPlanoSistemas): ?>
+                        <button class="btn-criar" onclick="window.location.href='criar-sistema.php'">Criar <i class="fas fa-plus-circle"></i></button>
+                    <?php else: ?>
+                        <button class="btn-criar" onclick="window.location.href='planos.php?aviso=sistemas'" style="opacity: 0.6;" title="Desbloqueie o Plano de Sistemas para criar seus próprios universos!"><i class="fas fa-lock"></i> Criar</button>
+                    <?php endif; ?>
                 </div>
                 <div class="painel-body scroller">
                     <?php if (empty($sistemas)): ?>
@@ -295,7 +302,7 @@
                                  style="cursor: <?= $bloqueado ? 'not-allowed' : 'pointer' ?>; position: relative;">
                                 
                                 <div class="item-avatar">
-                                    <img src="<?= !empty($s['ds_imagem']) ? $s['ds_imagem'] : '../img/foto-regra.jpg' ?>" alt="Sistema">
+                                    <img src="<?= !empty($s['ds_imagem']) ? $s['ds_imagem'] : '../img/logo_icone.png' ?>" alt="Sistema">
                                     <span class="badget-classificacao" style="background: <?= $classStyle['cor'] ?>;"><?= $classStyle['label'] ?></span>
                                 </div>
                                 <div class="item-dados">
@@ -343,7 +350,7 @@
                 <li><a href="cm-jogar.php" class="ativo">Como Jogar</a></li>
                 <li><a href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a>
                 </li>
-                <li><a href="criar-mapa.php">Mundos</a></li>
+                <li><a href="<?= isset($_SESSION['usuario']['cargo']) && in_array(strtolower($_SESSION['usuario']['cargo']), ['mestre','admin']) ? 'criar-mapa.php' : 'editar-perfil.php?abrir_mestre=1'; ?>">Mundos</a></li>
                 <li><a href="rolagem-de-dados.php">Dados</a></li>
                 <li><a href="sobre-nos.php">Sobre Nós</a></li>
             </ul>
@@ -498,4 +505,5 @@
 </body>
 
 </html>
+
 

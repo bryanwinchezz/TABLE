@@ -751,7 +751,6 @@ document.addEventListener('DOMContentLoaded', () => {
         paineisCategoria[abaCompAtual].innerHTML = '';
 
         catData.items.forEach(comp => {
-            const isMonstro = catAtiva === 'MONSTROS';
             paineisCategoria[abaCompAtual].insertAdjacentHTML('beforeend', `
                 <div class="item-comp">
                     <h3 class="titulo-comp">${comp.nome}</h3>
@@ -765,7 +764,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span class="val">${comp.val2}</span> 
                         </div>
                     </div>
-                    ${!isMonstro ? `<button type="button" class="btn-pilula btn-editar-comp" data-id="${comp.id}">EDITAR</button>` : `<span style="color:var(--premium-accent); font-size:0.7rem; font-weight:800; opacity:0.6;">(Adicionado)</span>`}
+                    <button type="button" class="btn-pilula btn-editar-comp" data-id="${comp.id}">EDITAR</button>
                 </div>
             `);
         });
@@ -857,6 +856,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (catData.items.length >= catData.limit) return alert(`Limite atingido!`);
 
         if (catAtiva === 'AMEAÇAS' || catAtiva === 'MONSTROS') {
+            document.getElementById('m-id-local').value = '';
+            document.getElementById('m-nome').value = '';
+            document.getElementById('m-tipo').value = 'Ameaça';
+            document.getElementById('m-vd').value = 0;
+            document.getElementById('m-vida').value = 0;
+            document.getElementById('m-defesa').value = 0;
+            document.getElementById('m-xp').value = 0;
+            document.getElementById('m-desc').value = '';
+            document.getElementById('preview-monstro-container').innerHTML = '<i class="fas fa-cloud-upload-alt" style="font-size: 2rem; color: var(--premium-accent); opacity: 0.5;"></i>';
+            document.querySelector('#modal-criar-monstro h2').textContent = 'Nova Ameaça';
+            document.getElementById('btn-save-monstro-local').innerHTML = '<i class="fas fa-skull"></i> CONVOCAR AMEAÇA';
+
             // Renderiza atributos dinamicamente
             const grid = document.getElementById('grid-atributos-monstro');
             grid.innerHTML = '';
@@ -864,7 +875,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 grid.insertAdjacentHTML('beforeend', `
                     <div class="input-premium-group" style="margin-bottom: 0; display: flex; flex-direction: column;">
                         <label class="input-premium-label" style="text-align: center; margin: 0 0 5px 0; font-size: 0.6rem; color: #888; font-weight: 800;">${at.abrev}</label>
-                        <input type="number" class="input-premium-field attr-input-premium" data-id="${at.id}" value="0" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 8px; border-radius: 8px; text-align: center; font-weight: 900; font-family: 'Montserrat', sans-serif; outline: none;">
+                        <input type="number" class="input-premium-field attr-input-premium" data-id="${at.id}" data-abrev="${at.abrev}" value="0" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 8px; border-radius: 8px; text-align: center; font-weight: 900; font-family: 'Montserrat', sans-serif; outline: none;">
                     </div>
                 `);
             });
@@ -915,6 +926,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!comp) return;
 
+            if (catAtiva === 'AMEAÇAS' || catAtiva === 'MONSTROS') {
+                abrirModalEdicaoMonstro(comp);
+                return;
+            }
+
             compEditandoID = id;
             document.getElementById('lbl-val1').textContent = catData.labels[0];
             document.getElementById('lbl-val2').textContent = catData.labels[1];
@@ -958,30 +974,67 @@ function previewImagemMonstro(input) {
     }
 }
 
+function abrirModalEdicaoMonstro(comp) {
+    document.getElementById('m-id-local').value = comp.id;
+    document.getElementById('m-nome').value = comp.nome;
+    document.getElementById('m-tipo').value = comp.val1;
+    document.getElementById('m-vd').value = comp.val2;
+    document.getElementById('m-vida').value = comp.vida || 0;
+    document.getElementById('m-defesa').value = comp.defesa || 0;
+    document.getElementById('m-xp').value = comp.xp || 0;
+    document.getElementById('m-desc').value = comp.desc || '';
+    
+    const grid = document.getElementById('grid-atributos-monstro');
+    grid.innerHTML = '';
+    window.atributosObj.forEach(at => {
+        // Fallback for different object formats since it can be either during create/edit
+        let valAttr = 0;
+        if (comp.atributos_monstro) {
+            const attrMatch = comp.atributos_monstro.find(a => a.abrev === at.abrev || a.id_atributo_temp === at.id);
+            if (attrMatch) valAttr = attrMatch.valor;
+        }
+
+        grid.insertAdjacentHTML('beforeend', `
+            <div class="input-premium-group" style="margin-bottom: 0; display: flex; flex-direction: column;">
+                <label class="input-premium-label" style="text-align: center; margin: 0 0 5px 0; font-size: 0.6rem; color: #888; font-weight: 800;">${at.abrev}</label>
+                <input type="number" class="input-premium-field attr-input-premium" data-id="${at.id}" data-abrev="${at.abrev}" value="${valAttr}" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 8px; border-radius: 8px; text-align: center; font-weight: 900; font-family: 'Montserrat', sans-serif; outline: none;">
+            </div>
+        `);
+    });
+
+    if (comp.foto_base64) {
+        document.getElementById('preview-monstro-container').innerHTML = `<img src="${comp.foto_base64}" style="width:100%; height:100%; object-fit:cover;">`;
+    } else {
+        document.getElementById('preview-monstro-container').innerHTML = '<i class="fas fa-cloud-upload-alt" style="font-size: 2rem; color: var(--premium-accent); opacity: 0.5;"></i>';
+    }
+
+    document.querySelector('#modal-criar-monstro h2').textContent = 'Editar Ameaça';
+    document.getElementById('btn-save-monstro-local').textContent = 'ATUALIZAR';
+    document.getElementById('modal-criar-monstro').classList.add('ativo');
+}
+
 function salvarMonstro() {
     const nome = document.getElementById('m-nome').value.toUpperCase();
-    const tipo = document.getElementById('m-tipo').value || 'Criatura';
+    const idLocal = document.getElementById('m-id-local').value;
+    const tipo = document.getElementById('m-tipo').value || 'Ameaça';
     const vd = document.getElementById('m-vd').value || 0;
     const vida = document.getElementById('m-vida').value || 0;
     const defesa = document.getElementById('m-defesa').value || 0;
     const xp = document.getElementById('m-xp').value || 0;
     const desc = document.getElementById('m-desc').value || '';
 
-    if(!nome) return alert('Dê um nome à criatura!');
+    if(!nome) return alert('Dê um nome à ameaça!');
 
     const atributos = [];
     document.querySelectorAll('.attr-input-premium').forEach(input => {
         atributos.push({
             id_atributo_temp: input.getAttribute('data-id'),
+            abrev: input.getAttribute('data-abrev'),
             valor: input.value || 0
         });
     });
 
-    const gerarIDComp = () => '_' + Math.random().toString(36).substr(2, 9);
-
-    // Salva na memória da aba Componentes
-    componentesDb['AMEAÇAS'].items.push({
-        id: gerarIDComp(),
+    const ameacaData = {
         nome: nome,
         val1: tipo,
         val2: vd,
@@ -989,46 +1042,24 @@ function salvarMonstro() {
         vida: vida,
         defesa: defesa,
         xp: xp,
-        atributos_monstro: atributos
-    });
+        atributos_monstro: atributos,
+        foto_base64: document.querySelector('#preview-monstro-container img')?.src || null
+    };
+
+    if (idLocal) {
+        const idx = componentesDb['AMEAÇAS'].items.findIndex(c => c.id == idLocal);
+        componentesDb['AMEAÇAS'].items[idx] = { ...componentesDb['AMEAÇAS'].items[idx], ...ameacaData };
+    } else {
+        const gerarIDComp = () => '_' + Math.random().toString(36).substr(2, 9);
+        componentesDb['AMEAÇAS'].items.push({
+            id: gerarIDComp(),
+            ...ameacaData
+        });
+    }
 
     fecharModal('modal-criar-monstro');
     
-    // Atualiza a listagem
-    const abaCompAtual = document.querySelector('.btn-comp-aba.ativa').getAttribute('data-index');
-    document.getElementById('contador-comp-atual').textContent = `${componentesDb['MONSTROS'].items.length}/${componentesDb['MONSTROS'].limit}`;
-    
-    const painelCat = document.querySelectorAll('.painel-categoria')[abaCompAtual];
-    painelCat.innerHTML = '';
-    componentesDb['AMEAÇAS'].items.forEach(comp => {
-        painelCat.insertAdjacentHTML('beforeend', `
-            <div class="item-comp">
-                <h3 class="titulo-comp">${comp.nome}</h3>
-                <div class="item-comp-info">
-                    <div class="item-comp-col">
-                        <span class="lbl">${componentesDb['MONSTROS'].labels[0]}</span>
-                        <span class="val">${comp.val1}</span> 
-                    </div>
-                    <div class="item-comp-col">
-                        <span class="lbl">${componentesDb['MONSTROS'].labels[1]}</span>
-                        <span class="val">${comp.val2}</span> 
-                    </div>
-                </div>
-                <span style="color:var(--premium-accent); font-size:0.7rem; font-weight:800; opacity:0.6;">(Adicionado)</span>
-            </div>
-        `);
-    });
-
-    // Limpar modal
-    document.getElementById('m-nome').value = '';
-    document.getElementById('m-tipo').value = '';
-    document.getElementById('m-vd').value = '';
-    document.getElementById('m-vida').value = '';
-    document.getElementById('m-defesa').value = '';
-    document.getElementById('m-xp').value = '';
-    document.getElementById('m-desc').value = '';
-    document.getElementById('preview-monstro-container').innerHTML = `
-        <i class="fas fa-cloud-upload-alt" style="font-size: 2rem; color: var(--premium-accent); opacity: 0.5;"></i>
-        <span style="position: absolute; bottom: 10px; font-size: 0.6rem; color: #aaa; font-weight: 800; text-transform: uppercase;">Imagem</span>
-    `;
+    // Atualiza a listagem programaticamente simulando clique na aba atual
+    const btnAtivo = document.querySelector('.btn-comp-aba.ativa');
+    if(btnAtivo && btnAtivo.textContent.trim() === 'AMEAÇAS') btnAtivo.click();
 }

@@ -56,10 +56,13 @@ if ($conviteExistente) {
     ")->execute([$id_sistema, $token]);
 }
 
-$protocolo = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
+$protocolo = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $host = $_SERVER['HTTP_HOST'];
-$base_path = '/TABLE%20-%2012052026/TABLE-main'; // Mantendo o padrão do projeto
-$link = "$protocolo://$host$base_path/pages/invite-sistema.php?token=$token";
+$current_dir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
+$project_root = str_replace('\\', '/', dirname(dirname($current_dir)));
+$project_root = rtrim($project_root, '/');
+$link = "$protocolo://$host$project_root/pages/invite-sistema.php?token=$token";
 
 echo json_encode(['sucesso' => true, 'link' => $link, 'token' => $token]);
 exit;
+

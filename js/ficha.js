@@ -1060,3 +1060,4 @@ function recalcularValoresFicha() {
         salvarDados('defesa_calc', 'qt_esquiva', totalEsquiva);
     }
 }
+

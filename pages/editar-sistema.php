@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 require_once __DIR__ . '/../app/config/database.php';
 
@@ -114,7 +114,7 @@ try {
                 <li><a href="cm-jogar.php" class="ativo">Como Jogar</a></li>
                 <li><a href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a>
                 </li>
-                <li><a href="criar-mapa.php">Mundos</a></li>
+                <li><a href="<?= isset($_SESSION['usuario']['cargo']) && in_array(strtolower($_SESSION['usuario']['cargo']), ['mestre','admin']) ? 'criar-mapa.php' : 'editar-perfil.php?abrir_mestre=1'; ?>">Mundos</a></li>
                 <li><a href="rolagem-de-dados.php">Dados</a></li>
                 <li><a href="sobre-nos.php">Sobre Nós</a></li>
             </ul>
@@ -122,7 +122,7 @@ try {
         <?php if (isset($_SESSION['usuario'])): ?>
             <div class="usuario-logado-nav" id="nav-logado" onclick="window.location.href='perfil.php'"
                 title="Ir para o Perfil">
-                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
+                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png' ?>"
                     alt="Avatar Navbar" class="avatar-nav">
                 <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
             </div>
@@ -405,121 +405,73 @@ try {
     <!-- MODAL CRIAR MONSTRO (PREMIUM) -->
     <div class="modal-overlay" id="modal-criar-monstro">
         <div class="modal-box" style="max-width: 650px; max-height: 90vh; overflow-y: auto;">
-            <i class="fas fa-times modal-close" onclick="fecharModal('modal-criar-monstro')"
-                style="position: absolute; top: 20px; right: 20px; font-size: 1.5rem; color: #fff; cursor: pointer; transition: 0.3s;"></i>
+            <i class="fas fa-times modal-close" onclick="fecharModal('modal-criar-monstro')"></i>
 
             <div style="text-align: center; margin-bottom: 30px;">
                 <h2 style="color: #fff; font-size: 1.8rem; font-weight: 900; letter-spacing: -1px; margin-bottom: 5px;">
                     NOVA AMEAÇA</h2>
-                <p style="color: #666; font-size: 0.9rem;">Catalogando perigos do Outro Lado no sistema.</p>
+                <p style="color: #666; font-size: 0.9rem;">Catalogando perigos do Outro Lado</p>
             </div>
-
             <div id="form-criar-ameaca">
                 <input type="hidden" id="m-id-local" value="">
-                <div class="form-section-title"
-                    style="color: var(--premium-accent); font-size: 0.8rem; font-weight: 900; text-transform: uppercase; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">
-                    <i class="fas fa-fingerprint"></i> IDENTIDADE
-                </div>
+                <div class="form-section-title"><i class="fas fa-fingerprint"></i> IDENTIDADE</div>
 
-                <div style="display: flex; gap: 25px; align-items: stretch; margin-bottom: 25px;">
+                <div class="monstro-identidade-container">
                     <div id="preview-monstro-container" onclick="document.getElementById('m-foto').click()" style="width: 120px; height: 120px; border: 2px dashed rgba(157, 122, 255, 0.3); border-radius: 20px; 
-                                display: flex; align-items: center; justify-content: center; cursor: pointer; 
-                                background: rgba(0,0,0,0.4); overflow: hidden; transition: 0.3s; position: relative;">
-                        <i class="fas fa-cloud-upload-alt"
-                            style="font-size: 2rem; color: var(--premium-accent); opacity: 0.5;"></i>
-                        <span
-                            style="position: absolute; bottom: 10px; font-size: 0.6rem; color: #aaa; font-weight: 800; text-transform: uppercase;">Imagem</span>
+                                 display: flex; align-items: center; justify-content: center; cursor: pointer; 
+                                 background: rgba(0,0,0,0.4); overflow: hidden; transition: 0.3s; position: relative; flex-shrink: 0;">
+                        <i class="fas fa-cloud-upload-alt" style="font-size: 2rem; color: var(--premium-accent); opacity: 0.5;"></i>
+                        <span style="position: absolute; bottom: 10px; font-size: 0.6rem; color: #aaa; font-weight: 800; text-transform: uppercase;">Imagem</span>
                     </div>
-                    <div style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
-                        <div class="input-premium-group"
-                            style="margin-bottom: 10px; display: flex; flex-direction: column;">
-                            <label class="input-premium-label"
-                                style="font-size: 0.7rem; font-weight: 800; color: #888; margin-bottom: 5px;">NOME DA
-                                CRIATURA</label>
-                            <input type="text" id="m-nome" class="input-premium-field"
-                                placeholder="Ex: Degolador, Aniquilação..."
-                                style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 12px 15px; border-radius: 10px; font-family: 'Montserrat', sans-serif; outline: none;">
+                    <div class="monstro-identidade-inputs">
+                        <div class="input-premium-group" style="margin-bottom: 10px;">
+                            <label class="input-premium-label">NOME DA AMEAÇA</label>
+                            <input type="text" id="m-nome" class="input-premium-field" placeholder="Ex: Degolador, Aniquilação...">
                         </div>
-                        <input type="file" id="m-foto" accept="image/*" style="display: none;"
-                            onchange="previewImagemMonstro(this)">
-                        <div class="input-premium-group" style="margin: 0; display: flex; flex-direction: column;">
-                            <label class="input-premium-label"
-                                style="font-size: 0.7rem; font-weight: 800; color: #888; margin-bottom: 5px;">TIPO /
-                                ELEMENTO</label>
-                            <input type="text" id="m-tipo" class="input-premium-field"
-                                placeholder="Ex: Medo, Conhecimento..."
-                                style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 12px 15px; border-radius: 10px; font-family: 'Montserrat', sans-serif; outline: none;">
+                        <input type="file" id="m-foto" accept="image/*" style="display: none;" onchange="previewImagemMonstro(this)">
+                        <div class="input-premium-group" style="margin: 0;">
+                            <label class="input-premium-label">TIPO / ELEMENTO</label>
+                            <input type="text" id="m-tipo" class="input-premium-field" placeholder="Ex: Medo, Conhecimento...">
                         </div>
                     </div>
                 </div>
 
-                <div class="form-section-title"
-                    style="color: var(--premium-accent); font-size: 0.8rem; font-weight: 900; text-transform: uppercase; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">
-                    <i class="fas fa-skull"></i> STATUS DE COMBATE
-                </div>
+                <div class="form-section-title"><i class="fas fa-skull"></i> STATUS DE COMBATE</div>
 
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 15px;">
-                    <div class="input-premium-group" style="display: flex; flex-direction: column;">
-                        <label class="input-premium-label"
-                            style="color: #ff4d4d; font-size: 0.7rem; font-weight: 800; margin-bottom: 5px;">NÍVEL DE
-                            PERIGO (VD)</label>
-                        <input type="number" id="m-vd" class="input-premium-field"
-                            style="background: rgba(255, 77, 77, 0.05); border: 1px solid rgba(255, 77, 77, 0.2); color: #ff4d4d; font-weight: 900; padding: 12px 15px; border-radius: 10px; font-family: 'Montserrat', sans-serif; outline: none;"
-                            placeholder="0">
+                    <div class="input-premium-group">
+                        <label class="input-premium-label" style="color: #ff4d4d;">NÍVEL DE PERIGO (VD)</label>
+                        <input type="number" id="m-vd" class="input-premium-field" style="border-color: rgba(255, 77, 77, 0.2); color: #ff4d4d; font-weight: 900;" placeholder="0">
                     </div>
-                    <div class="input-premium-group" style="display: flex; flex-direction: column;">
-                        <label class="input-premium-label"
-                            style="color: #f1c40f; font-size: 0.7rem; font-weight: 800; margin-bottom: 5px;">RECOMPENSA
-                            (XP)</label>
-                        <input type="number" id="m-xp" class="input-premium-field"
-                            style="background: rgba(241, 196, 15, 0.05); border: 1px solid rgba(241, 196, 15, 0.2); color: #f1c40f; font-weight: 900; padding: 12px 15px; border-radius: 10px; font-family: 'Montserrat', sans-serif; outline: none;"
-                            placeholder="0">
+                    <div class="input-premium-group">
+                        <label class="input-premium-label" style="color: #f1c40f;">RECOMPENSA (XP)</label>
+                        <input type="number" id="m-xp" class="input-premium-field" style="border-color: rgba(241, 196, 15, 0.2); color: #f1c40f; font-weight: 900;" placeholder="0">
                     </div>
                 </div>
 
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 25px;">
-                    <div class="input-premium-group" style="display: flex; flex-direction: column;">
-                        <label class="input-premium-label"
-                            style="font-size: 0.7rem; font-weight: 800; color: #888; margin-bottom: 5px;">PONTOS DE
-                            VIDA</label>
-                        <input type="number" id="m-vida" class="input-premium-field"
-                            style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 12px 15px; border-radius: 10px; font-family: 'Montserrat', sans-serif; outline: none;"
-                            placeholder="0">
+                    <div class="input-premium-group">
+                        <label class="input-premium-label">PONTOS DE VIDA</label>
+                        <input type="number" id="m-vida" class="input-premium-field" placeholder="0">
                     </div>
-                    <div class="input-premium-group" style="display: flex; flex-direction: column;">
-                        <label class="input-premium-label"
-                            style="font-size: 0.7rem; font-weight: 800; color: #888; margin-bottom: 5px;">DEFESA</label>
-                        <input type="number" id="m-defesa" class="input-premium-field"
-                            style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 12px 15px; border-radius: 10px; font-family: 'Montserrat', sans-serif; outline: none;"
-                            placeholder="0">
+                    <div class="input-premium-group">
+                        <label class="input-premium-label">DEFESA</label>
+                        <input type="number" id="m-defesa" class="input-premium-field" placeholder="0">
                     </div>
                 </div>
 
-                <div class="form-section-title"
-                    style="color: var(--premium-accent); font-size: 0.8rem; font-weight: 900; text-transform: uppercase; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">
-                    <i class="fas fa-dice-d20"></i> ATRIBUTOS
-                </div>
-                <div id="grid-atributos-monstro"
-                    style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.03); margin-bottom: 25px;">
+                <div class="form-section-title"><i class="fas fa-dice-d20"></i> ATRIBUTOS</div>
+                <div id="grid-atributos-monstro" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.03); margin-bottom: 25px;">
                     <!-- Preenchido via JS dinamicamente com base em atributosObj -->
                 </div>
 
-                <div class="form-section-title"
-                    style="color: var(--premium-accent); font-size: 0.8rem; font-weight: 900; text-transform: uppercase; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">
-                    <i class="fas fa-align-left"></i> DETALHES
-                </div>
-                <div class="input-premium-group" style="display: flex; flex-direction: column;">
-                    <label class="input-premium-label"
-                        style="font-size: 0.7rem; font-weight: 800; color: #888; margin-bottom: 5px;">DESCRIÇÃO E
-                        HABILIDADES</label>
-                    <textarea id="m-desc" class="input-premium-field"
-                        style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 12px 15px; border-radius: 10px; font-family: 'Montserrat', sans-serif; outline: none; height: 120px; resize: none;"
-                        placeholder="Descreva as peculiaridades e poderes desta ameaça..."></textarea>
+                <div class="form-section-title"><i class="fas fa-align-left"></i> DETALHES</div>
+                <div class="input-premium-group">
+                    <label class="input-premium-label">DESCRIÇÃO E HABILIDADES</label>
+                    <textarea id="m-desc" class="input-premium-field" style="height: 120px; resize: none;" placeholder="Descreva as peculiaridades e poderes desta ameaça..."></textarea>
                 </div>
 
-                <button type="button" class="btn-p" id="btn-save-monstro-local"
-                    style="width: 100%; margin-top: 10px; padding: 20px; background: linear-gradient(135deg, var(--premium-purple), var(--premium-accent)); border: none; border-radius: 15px; color: #fff; font-weight: 900; font-size: 1rem; letter-spacing: 3px; text-transform: uppercase; cursor: pointer; transition: 0.4s; box-shadow: 0 10px 40px rgba(157, 122, 255, 0.3);"
-                    onclick="salvarMonstro()">
+                <button type="button" class="btn-premium-dragon" id="btn-save-monstro-local" style="width: 100%; padding: 20px; justify-content: center;" onclick="salvarMonstro()">
                     <i class="fas fa-skull"></i> CONVOCAR AMEAÇA
                 </button>
             </div>
@@ -543,7 +495,7 @@ try {
                     <li><a
                             href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a>
                     </li>
-                    <li><a href="criar-mapa.php">Mundos</a></li>
+                    <li><a href="<?= isset($_SESSION['usuario']['cargo']) && in_array(strtolower($_SESSION['usuario']['cargo']), ['mestre','admin']) ? 'criar-mapa.php' : 'editar-perfil.php?abrir_mestre=1'; ?>">Mundos</a></li>
                     <li><a href="rolagem-de-dados.php">Dados</a></li>
                     <li><a href="sobre-nos.php">Sobre Nós</a></li>
                 </ul>
@@ -583,8 +535,9 @@ try {
     </script>
 
     <script src="../js/nav-global.js?v=1.2" defer></script>
-    <script src="../js/editar-sistema.js?v=1.7" defer></script>
+    <script src="../js/editar-sistema.js?v=1.8" defer></script>
 </body>
 
 </html>
+
 

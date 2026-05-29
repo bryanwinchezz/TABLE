@@ -498,7 +498,7 @@ function exibirErro(string $titulo, string $detalhe): never {
                     class="sel-personagem" required>
                 <option value="" disabled selected>-- Selecione --</option>
                 <?php foreach ($personagens_disponiveis as $p): 
-                    $fotoUrl = !empty($p['ds_foto']) ? $p['ds_foto'] : '../img/uploads/perfil/avatar1.png';
+                    $fotoUrl = !empty($p['ds_foto']) ? $p['ds_foto'] : '../img/uploads/perfil/avatar.png';
                 ?>
                     <option value="<?= (int) $p['id_personagem'] ?>" 
                             data-foto="<?= htmlspecialchars($fotoUrl) ?>"
@@ -572,3 +572,4 @@ document.getElementById('sel-personagem').addEventListener('change', function() 
 </script>
 </body>
 </html>
+

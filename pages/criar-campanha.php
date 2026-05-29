@@ -11,6 +11,20 @@ define('DDDICE_ROOM_SLUG', 'mF9ol6O');
 require_once __DIR__ . '/../app/config/database.php';
 $pdo = Database::getConexao();
 
+$flPlanoMapas = 0;
+if (isset($_SESSION['usuario'])) {
+    try {
+        $stmtPlan = $pdo->prepare("SELECT fl_plano_mapas, fl_plano_completo, tp_cargo FROM tb_usuario WHERE id_usuario = ? LIMIT 1");
+        $stmtPlan->execute([$_SESSION['usuario']['id']]);
+        $userPlan = $stmtPlan->fetch();
+        if ($userPlan) {
+            if ((int)$userPlan['fl_plano_mapas'] === 1 || (int)$userPlan['fl_plano_completo'] === 1 || $userPlan['tp_cargo'] === 'admin') {
+                $flPlanoMapas = 1;
+            }
+        }
+    } catch (Exception $e) {}
+}
+
 try {
     $stmtCheckCol = $pdo->query("SHOW COLUMNS FROM tb_campanha_personagem LIKE 'fl_publico'");
     if ($stmtCheckCol->rowCount() === 0) {
@@ -220,7 +234,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             VALUES (?, ?, 'pendente', NOW(), DATE_ADD(NOW(), INTERVAL 7 DAY))
         ")->execute([$campaign_id, $token]);
 
-        $link = 'https://' . $_SERVER['HTTP_HOST'] . '/TABLE%20-%2012052026/TABLE-main/pages/invite.php?token=' . $token;
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
+        $current_dir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
+        $current_dir = rtrim($current_dir, '/');
+        $link = $protocol . $_SERVER['HTTP_HOST'] . $current_dir . '/invite.php?token=' . $token;
         echo json_encode(['sucesso' => true, 'link' => $link, 'token' => $token]);
         exit;
     }
@@ -1106,7 +1123,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
             <div class="nav-mobile-footer">
                 <?php if (isset($_SESSION['usuario'])): ?>
                     <div class="usuario-logado-nav" onclick="window.location.href='perfil.php'">
-                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
+                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png' ?>"
                             alt="Avatar Navbar" class="avatar-nav">
                         <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
                     </div>
@@ -1124,7 +1141,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
         <?php if (isset($_SESSION['usuario'])): ?>
             <div class="usuario-logado-nav desktop-only" id="nav-logado" onclick="window.location.href='perfil.php'"
                 title="Ir para o Perfil">
-                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
+                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png' ?>"
                     alt="Avatar Navbar" class="avatar-nav">
                 <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
             </div>
@@ -1233,7 +1250,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                     ?>
                         <div class="card-Personagem">
                             <div class="avatar-Personagem">
-                                <img src="<?= !empty($Personagem['ds_foto']) ? $Personagem['ds_foto'] : '../img/uploads/perfil/avatar1.png' ?>" alt="Avatar">
+                                <img src="<?= !empty($Personagem['ds_foto']) ? $Personagem['ds_foto'] : '../img/uploads/perfil/avatar.png' ?>" alt="Avatar">
                             </div>
                             <div class="info-Personagem">
                                 <h3 style="display: flex; align-items: center; gap: 8px;">
@@ -1303,7 +1320,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                         <p style="text-align:center;opacity:.5;margin-top:20px;">Nenhum participante na campanha ainda.</p>
                     <?php endif; ?>
                     <?php foreach ($jogadoresAgrupados as $jog): 
-                        $fotoUsuario = !empty($jog['foto_usuario']) ? $jog['foto_usuario'] : '../img/uploads/perfil/avatar1.png';
+                        $fotoUsuario = !empty($jog['foto_usuario']) ? $jog['foto_usuario'] : '../img/uploads/perfil/avatar.png';
                         $nomeUsuario = htmlspecialchars(!empty($jog['nm_exibicao']) ? $jog['nm_exibicao'] : $jog['nm_usuario']);
                         $eMestre = $jog['papel_campanha'] === 'mestre';
                     ?>
@@ -1503,7 +1520,11 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                             <a class="escudo-link-nav"       onclick="switchEscudoTab('relatorios',this)">Relatórios</a>
                             <a class="escudo-link-nav"       onclick="switchEscudoTab('dados',this)">Dados</a>
                             <a class="escudo-link-nav"       onclick="switchEscudoTab('anotacoes',this)">Anotações</a>
-                            <a href="criar-mapa.php?id=<?= $id_campanha ?>" target="_blank" class="escudo-link-nav link-mapa-especial">Mapas <i class="fas fa-external-link-alt"></i></a>
+                            <?php if ($flPlanoMapas): ?>
+                                <a href="criar-mapa.php?id=<?= $id_campanha ?>" target="_blank" class="escudo-link-nav link-mapa-especial">Mapas <i class="fas fa-external-link-alt"></i></a>
+                            <?php else: ?>
+                                <a href="planos.php?aviso=mapas" class="escudo-link-nav link-mapa-especial" style="opacity: 0.5; cursor: pointer;" title="Desbloqueie o Plano de Mapas para acessar!"><i class="fas fa-lock"></i> Mapas</a>
+                            <?php endif; ?>
                         </div>
 
                         <!-- Personagens -->
@@ -1825,7 +1846,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                 <button onclick="fecharModal('modal-detalhes-jogador')" style="position: absolute; top: 20px; right: 20px; background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer; opacity: 0.7; transition: opacity 0.2s;"><i class="fas fa-times"></i></button>
                 <div style="display: flex; align-items: center; gap: 20px;">
                     <div style="width: 90px; height: 90px; border-radius: 50%; border: 3px solid var(--premium-accent); overflow: hidden; box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);">
-                        <img id="player-modal-foto" src="../img/uploads/perfil/avatar1.png" alt="Foto do Jogador" style="width: 100%; height: 100%; object-fit: cover;">
+                        <img id="player-modal-foto" src="../img/uploads/perfil/avatar.png" alt="Foto do Jogador" style="width: 100%; height: 100%; object-fit: cover;">
                     </div>
                     <div>
                         <h2 id="player-modal-nome" style="color: #fff; font-weight: 800; font-size: 1.6rem; margin: 0 0 5px 0;">Nome do Jogador</h2>
@@ -2311,7 +2332,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                 if (!data.personagens.length) { container.innerHTML='<p style="text-align:center;padding:20px;color:#888;">Você não tem personagens disponíveis.</p>'; return; }
                 container.innerHTML = data.personagens.map(p=>`
                     <div class="card-Personagem">
-                        <div class="avatar-Personagem"><img src="${p.ds_foto||'../img/uploads/perfil/avatar1.png'}" alt="Avatar"></div>
+                        <div class="avatar-Personagem"><img src="${p.ds_foto||'../img/uploads/perfil/avatar.png'}" alt="Avatar"></div>
                         <div class="info-Personagem"><h3>${p.nm_personagem}</h3><p>${p.nm_sistema} - ${p.nm_classe||'Sem Classe'}</p></div>
                         <button class="btn-ver-ficha" onclick="vincularPersonagem(${p.id_personagem})"><i class="fas fa-plus-circle"></i> Adicionar</button>
                     </div>`).join('');
@@ -2425,7 +2446,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
         
         container.innerHTML = filtrados.map(a=>`
             <div class="card-ameaca-premium">
-                <img src="${(a.ds_imagem && a.ds_imagem !== '../img/logo_icone.png') ? a.ds_imagem : '../img/uploads/perfil/avatar1.png'}" class="card-ameaca-img">
+                <img src="${(a.ds_imagem && a.ds_imagem !== '../img/logo_icone.png') ? a.ds_imagem : '../img/logo_icone.png'}" class="card-ameaca-img">
                 <div class="card-ameaca-body">
                     <h4>${a.nm_monstro}</h4>
                     <div class="card-ameaca-details">
@@ -2621,7 +2642,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
             qt_sanidade_maxima: parseInt(p.qt_sanidade_maxima) || 1,
             qt_esforco: parseInt(p.qt_esforco) || 0,
             qt_esforco_maximo: parseInt(p.qt_esforco_maximo) || 1,
-            ds_foto: p.ds_foto || '../img/uploads/perfil/avatar1.png'
+            ds_foto: p.ds_foto || '../img/uploads/perfil/avatar.png'
         }));
         
         // Monstros reais do combate
@@ -2632,7 +2653,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
             iniciativa: Math.floor(Math.random() * 20) + 1,
             qt_vida: parseInt(m.qt_vida) || 0,
             qt_vida_maxima: parseInt(m.qt_vida) || 1,
-            ds_foto: m.ds_imagem && m.ds_imagem !== '../img/logo_icone.png' ? m.ds_imagem : '../img/uploads/perfil/avatar1.png'
+            ds_foto: m.ds_imagem && m.ds_imagem !== '../img/logo_icone.png' ? m.ds_imagem : '../img/logo_icone.png'
         }));
         
         iniciativaLista = [...persList, ...monstList].sort((a, b) => b.iniciativa - a.iniciativa);
@@ -2647,7 +2668,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
         const c = document.getElementById('lista-iniciativa-escudo'); if (!c) return;
         c.innerHTML = iniciativaLista.map((p,i)=>`
             <div class="item-iniciativa ${i===indexTurno?'ativo':''}" onclick="selecionarParticipanteEscudo(${i})">
-                <img src="${p.ds_foto||'../img/uploads/perfil/avatar1.png'}" class="img-iniciativa">
+                <img src="${p.ds_foto||'../img/uploads/perfil/avatar.png'}" class="img-iniciativa">
                 <div class="info-iniciativa">
                     <h4 style="color:#fff;margin:0;font-size:.95rem;">${p.nm_personagem||p.nm_monstro}</h4>
                     <div style="display:flex;gap:10px;margin-top:4px;">
@@ -3510,4 +3531,5 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
     </script>
 </body>
 </html>
+
 

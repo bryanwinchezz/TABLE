@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 session_start();
 
@@ -122,6 +122,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['foto_perfil'])) {
 }
 
 // ======================
+// PROCESSAMENTO: VIRAR MESTRE
+// ======================
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['virar_mestre'])) {
+    try {
+        $stmt = $conn->prepare("UPDATE tb_usuario SET tp_cargo = 'mestre' WHERE id_usuario = :id");
+        $stmt->execute([':id' => $_SESSION['usuario']['id']]);
+        $_SESSION['usuario']['cargo'] = 'mestre';
+        header("Location: editar-perfil.php?sucesso_mestre=1");
+        exit;
+    } catch (PDOException $e) {
+        $erro = "Erro ao promover usuário a mestre.";
+    }
+}
+
+// ======================
 // PROCESSAMENTO: DESISTIR DE MESTRAR
 // ======================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['desistir_mestre'])) {
@@ -170,6 +185,9 @@ try {
     $erro = "Erro ao carregar seus dados.";
     $usuario = $_SESSION['usuario']; // fallback
 }
+
+$fotoPerfil = (!empty($usuario['ds_foto']) && realpath(__DIR__ . '/' . $usuario['ds_foto']) !== false) ? $usuario['ds_foto'] : '../img/uploads/perfil/avatar.png';
+$fotoNavbar = (!empty($_SESSION['usuario']['foto']) && realpath(__DIR__ . '/' . $_SESSION['usuario']['foto']) !== false) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png';
 
 // Lógica de Classificação Indicativa
 $idade = 0;
@@ -231,7 +249,7 @@ $permissao = obterClassificacao($idade);
         <?php if (isset($_SESSION['usuario'])): ?>
             <div class="usuario-logado-nav" id="nav-logado" onclick="window.location.href='perfil.php'"
                 title="Ir para o Perfil">
-                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
+                <img src="<?= htmlspecialchars($fotoNavbar) ?>"
                     alt="Avatar Navbar" class="avatar-nav">
                 <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
             </div>
@@ -257,7 +275,7 @@ $permissao = obterClassificacao($idade);
             <div class="cabecalho-edicao">
                 <div class="foto-container" onclick="document.getElementById('input-foto').click()"
                     style="cursor:pointer;" title="Clique para mudar a foto">
-                    <img src="<?= htmlspecialchars(!empty($usuario['ds_foto']) ? $usuario['ds_foto'] : '../img/uploads/perfil/avatar1.png') ?>"
+                    <img src="<?= htmlspecialchars($fotoPerfil) ?>"
                         alt="Foto de perfil" class="foto-perfil">
                     <div class="icone-camera">
                         <i class="fas fa-camera"></i>
@@ -345,12 +363,24 @@ $permissao = obterClassificacao($idade);
                             <i class="fas fa-undo"></i> <span>Desistir de Mestrar</span>
                         </button>
                     <?php else: ?>
-                        <a href="planos.php">
-                            <button type="button" class="botao-roxo">
-                                <i class="fas fa-book"></i> <span>Seja mestre</span>
-                            </button>
-                        </a>
+                        <button type="button" onclick="window.location.href='planos.php'" class="botao-roxo">
+                            <i class="fas fa-book"></i> <span>Seja mestre</span>
+                        </button>
                     <?php endif; ?>
+                </div>
+            </section>
+
+            <hr class="divisor">
+
+            <section>
+                <h3 class="titulo-roxo">Planos</h3>
+                <p class="texto-descricao">
+                    Adquira ou gerencie seus planos de assinatura da TABLE! Desbloqueie ferramentas profissionais de criação de mapas avançados e sistemas de regras personalizados, ou resgate uma chave de ativação para a sua conta.
+                </p>
+                <div class="area-botao-centro">
+                    <button type="button" onclick="window.location.href='planos.php'" class="botao-roxo" style="background: #6c757d;">
+                        <i class="fas fa-ticket-alt"></i> <span>Planos</span>
+                    </button>
                 </div>
             </section>
 
@@ -502,6 +532,13 @@ $permissao = obterClassificacao($idade);
         };
     <?php endif; ?>
 
+    // Funções para os Modais de Mestre
+    function abrirModalSerMestre() {
+        document.getElementById('modal-ser-mestre').style.display = 'flex';
+    }
+    function fecharModalSerMestre() {
+        document.getElementById('modal-ser-mestre').style.display = 'none';
+    }
     function abrirModalDesistirMestre() {
         document.getElementById('confirmacao-desistir-1').value = '';
         document.getElementById('confirmacao-desistir-2').value = '';
@@ -547,6 +584,29 @@ $permissao = obterClassificacao($idade);
     <?php endif; ?>
 </script>
 
+<!-- MODAL: SER MESTRE -->
+<div id="modal-ser-mestre"
+    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center;">
+    <div
+        style="background:#fff; padding:30px; border-radius:12px; width:90%; max-width:420px; color:#333; text-align:center;">
+        <h2 style="color:#4A3A69;"><i class="fas fa-crown"></i> Você tem certeza?</h2>
+        <p style="margin:20px 0 25px; line-height: 1.5;">
+            Ser Mestre é uma grande responsabilidade! <br>
+            Você desbloqueia a opção de <strong>criar suas próprias campanhas, sistemas e mundos</strong> para outros
+            jogadores.
+        </p>
+        <form method="POST">
+            <div style="display:flex; gap:12px; justify-content:center;">
+                <button type="button" onclick="fecharModalSerMestre()"
+                    style="padding:10px 25px; background:#6c757d; color:white; border:none; border-radius:6px; cursor:pointer;">Cancelar</button>
+                <button type="submit" name="virar_mestre"
+                    style="padding:10px 25px; background:#4A3A69; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:700;">Sim,
+                    quero ser Mestre!</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- MODAL: DESISTIR MESTRE -->
 <div id="modal-desistir-mestre"
     style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center;">
@@ -586,3 +646,5 @@ $permissao = obterClassificacao($idade);
 </div>
 
 </html>
+
+

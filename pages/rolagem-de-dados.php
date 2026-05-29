@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 
 // ============================================================
@@ -244,7 +244,7 @@ if (($_GET['action'] ?? '') === 'themes') {
             100% { transform: rotate(360deg) scale(1); }
         }
 
-        /* ── BOLINHA CONTADOR (estilo do index.php enviado) ── */
+        /* -- BOLINHA CONTADOR (estilo do index.php enviado) -- */
         .bolinha-contador {
             position: absolute;
             top: -12px;
@@ -445,7 +445,7 @@ if (($_GET['action'] ?? '') === 'themes') {
             margin-left: 4px;
         }
 
-        /* ── CANVAS DDDICE — fullscreen overlay ── */
+        /* -- CANVAS DDDICE — fullscreen overlay -- */
         #dddice-canvas {
             position: fixed;
             inset: 0;
@@ -456,7 +456,7 @@ if (($_GET['action'] ?? '') === 'themes') {
             pointer-events: none;
         }
 
-        /* ── POP-UP DE RESULTADO ── */
+        /* -- POP-UP DE RESULTADO -- */
         #result-popup {
             position: fixed;
             inset: 0;
@@ -589,7 +589,7 @@ if (($_GET['action'] ?? '') === 'themes') {
                 <li><a href="cm-jogar.php">Como Jogar</a></li>
                 <li><a href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a>
                 </li>
-                <li><a href="criar-mapa.php">Mundos</a></li>
+                <li><a href="<?= isset($_SESSION['usuario']['cargo']) && in_array(strtolower($_SESSION['usuario']['cargo']), ['mestre','admin']) ? 'criar-mapa.php' : 'editar-perfil.php?abrir_mestre=1'; ?>">Mundos</a></li>
                 <li><a href="rolagem-de-dados.php" class="ativo">Dados</a></li>
                 <li><a href="sobre-nos.php">Sobre Nós</a></li>
             </ul>
@@ -598,7 +598,7 @@ if (($_GET['action'] ?? '') === 'themes') {
             <div class="nav-mobile-footer">
                 <?php if (isset($_SESSION['usuario'])): ?>
                     <div class="usuario-logado-nav" onclick="window.location.href='perfil.php'">
-                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
+                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png' ?>"
                             alt="Avatar Navbar" class="avatar-nav">
                         <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
                     </div>
@@ -616,7 +616,7 @@ if (($_GET['action'] ?? '') === 'themes') {
         <?php if (isset($_SESSION['usuario'])): ?>
             <div class="usuario-logado-nav desktop-only" id="nav-logado" onclick="window.location.href='perfil.php'"
                 title="Ir para o Perfil">
-                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
+                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png' ?>"
                     alt="Avatar Navbar" class="avatar-nav">
                 <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
             </div>
@@ -724,7 +724,7 @@ if (($_GET['action'] ?? '') === 'themes') {
                     <li><a href="index.php">Início</a></li>
                     <li><a href="cm-jogar.php" class="ativo">Como Jogar</a></li>
                     <li><a href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a></li>
-                    <li><a href="criar-mapa.php">Mundos</a></li>
+                    <li><a href="<?= isset($_SESSION['usuario']['cargo']) && in_array(strtolower($_SESSION['usuario']['cargo']), ['mestre','admin']) ? 'criar-mapa.php' : 'editar-perfil.php?abrir_mestre=1'; ?>">Mundos</a></li>
                     <li><a href="rolagem-de-dados.php">Dados</a></li>
                     <li><a href="sobre-nos.php">Sobre Nós</a></li>
                 </ul>
@@ -755,7 +755,7 @@ if (($_GET['action'] ?? '') === 'themes') {
     const API_KEY   = <?php echo json_encode(DDDICE_API_KEY); ?>;
     const ROOM_SLUG = <?php echo json_encode(DDDICE_ROOM_SLUG); ?>;
 
-    // Mapa de lados → tipo dddice (só dados suportados)
+    // Mapa de lados ? tipo dddice (só dados suportados)
     const DDDICE_TYPE_MAP = {
         4:   'd4',
         6:   'd6',
@@ -771,14 +771,14 @@ if (($_GET['action'] ?? '') === 'themes') {
     let themeId   = '';
     let rolling   = false;
 
-    // ── INIT ──────────────────────────────────────────────────
+    // -- INIT --------------------------------------------------
     window.addEventListener('DOMContentLoaded', () => {
         inicializarEventosDados();
         initSDK();
         carregarHistoricoLocal();
     });
 
-    // ── EVENTOS DOS DADOS (clique = +1 bolinha) ───────────────
+    // -- EVENTOS DOS DADOS (clique = +1 bolinha) ---------------
     function inicializarEventosDados() {
         document.querySelectorAll('.item-dado').forEach(item => {
             item.addEventListener('click', () => {
@@ -841,7 +841,7 @@ if (($_GET['action'] ?? '') === 'themes') {
         }
 
         let html = parts.map(([l, q]) => `<span class="chip">${q}D${l}</span>`).join('');
-        html += `<button class="btn-limpar-selecao" onclick="limparSelecao()">✕ Limpar</button>`;
+        html += `<button class="btn-limpar-selecao" onclick="limparSelecao()">? Limpar</button>`;
         el.innerHTML = html;
     }
 
@@ -851,7 +851,7 @@ if (($_GET['action'] ?? '') === 'themes') {
         document.getElementById('btn-rolar').disabled = !(temDados && sdkPronto);
     }
 
-    // ── SDK dddice ────────────────────────────────────────────
+    // -- SDK dddice --------------------------------------------
     async function initSDK() {
         setStatus('loading');
 
@@ -889,7 +889,7 @@ if (($_GET['action'] ?? '') === 'themes') {
 
         if (!themes.length) {
             select.innerHTML = '<option value="">Nenhum tema na Dice Box</option>';
-            showToast('Adicione um tema em dddice.com → Account → Dice Box');
+            showToast('Adicione um tema em dddice.com ? Account ? Dice Box');
             return;
         }
 
@@ -906,7 +906,7 @@ if (($_GET['action'] ?? '') === 'themes') {
         atualizarBtnRolar();
     }
 
-    // ── ROLAR DADOS (híbrido: SDK animação + PHP resultado) ───
+    // -- ROLAR DADOS (híbrido: SDK animação + PHP resultado) ---
     async function executarRolagem() {
         if (rolling) return;
 
@@ -994,7 +994,7 @@ if (($_GET['action'] ?? '') === 'themes') {
         }
     }
 
-    // ── POP-UP RESULTADO ──────────────────────────────────────
+    // -- POP-UP RESULTADO --------------------------------------
     function mostrarResultado(total, values, label, viaDddice) {
         const totalEl     = document.getElementById('result-total');
         const breakdownEl = document.getElementById('result-breakdown');
@@ -1017,7 +1017,7 @@ if (($_GET['action'] ?? '') === 'themes') {
             breakdownEl.innerHTML = '';
         }
 
-        infoEl.textContent = viaDddice ? '🎲 Animado via dddice' : '🎲 Rolagem local';
+        infoEl.textContent = viaDddice ? '?? Animado via dddice' : '?? Rolagem local';
 
         document.getElementById('result-popup').classList.add('show');
     }
@@ -1028,7 +1028,7 @@ if (($_GET['action'] ?? '') === 'themes') {
 
     document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharResultado(); });
 
-    // ── HISTÓRICO ─────────────────────────────────────────────
+    // -- HISTÓRICO ---------------------------------------------
     function adicionarAoHistorico(resultado, descricao, viaDddice) {
         const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         renderizarItemHistorico(resultado, descricao, time, viaDddice);
@@ -1072,7 +1072,7 @@ if (($_GET['action'] ?? '') === 'themes') {
         }
     }
 
-    // ── HELPERS ───────────────────────────────────────────────
+    // -- HELPERS -----------------------------------------------
     function setStatus(state) {
         const dot  = document.getElementById('status-dot');
         dot.className = state;
@@ -1090,4 +1090,5 @@ if (($_GET['action'] ?? '') === 'themes') {
     <script src="../js/nav-global.js" defer></script>
 </body>
 </html>
+
 
