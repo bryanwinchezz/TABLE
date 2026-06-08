@@ -1,4 +1,4 @@
-﻿/* css/criar-sistema.css */
+/* css/criar-sistema.css */
 
 /* ==========================================
    LAYOUT BASE
@@ -1167,3 +1167,100 @@ body.pagina-criacao-sistema {
     background-color: #110e1a;
     color: #fff;
 }
+.btn-premium-dragon {
+    background: linear-gradient(135deg, #7b4ff7 0%, #5b2be0 100%);
+    color: #fff;
+    border: none;
+    border-radius: 50px;
+    font-weight: 800;
+    font-size: 0.95rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+    box-shadow: 0 4px 15px rgba(123, 79, 247, 0.35);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+.btn-premium-dragon:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 10px 25px rgba(123, 79, 247, 0.55);
+    background: linear-gradient(135deg, #8c66ff, #6a3df5);
+}
+.btn-premium-dragon:active {
+    transform: translateY(-1px) scale(0.98);
+}
+
+/* Estilo Temático Vermelho para Ordem Paranormal */
+body.tema-ordem-paranormal .btn-premium-dragon {
+    background: linear-gradient(135deg, #880000 0%, #ff3232 100%) !important;
+    border-color: rgba(255, 50, 50, 0.3) !important;
+    box-shadow: 0 6px 20px rgba(255, 50, 50, 0.4) !important;
+}
+body.tema-ordem-paranormal .btn-premium-dragon:hover {
+    background: linear-gradient(135deg, #aa0000 0%, #ff4d4d 100%) !important;
+    box-shadow: 0 10px 25px rgba(255, 50, 50, 0.6) !important;
+}
+.monstro-identidade-container {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    margin-bottom: 20px;
+    background: rgba(255,255,255,0.02);
+    padding: 15px;
+    border-radius: 15px;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+.monstro-identidade-inputs {
+    flex: 1;
+}
+
+/* ==========================================
+   ESTILIZAÇÃO PREMIUM DO BOTÃO DO MODAL DE AMEAÇAS
+   ========================================== */
+#btn-save-monstro-local.btn-premium-dragon,
+#btn-save-monstro.btn-premium-dragon {
+    font-family: 'Montserrat', sans-serif !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    font-size: 0.95rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    padding: 15px 35px !important;
+    border-radius: 12px !important; /* Visual minimalista moderno */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+}
+
+#btn-save-monstro-local.btn-premium-dragon:hover,
+#btn-save-monstro.btn-premium-dragon:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(123, 79, 247, 0.55) !important;
+}
+
+body.tema-ordem-paranormal #btn-save-monstro-local.btn-premium-dragon,
+body.tema-ordem-paranormal #btn-save-monstro.btn-premium-dragon {
+    background: linear-gradient(135deg, #880000 0%, #ff3232 100%) !important;
+    border: 1px solid rgba(255, 50, 50, 0.4) !important;
+    box-shadow: 0 6px 20px rgba(255, 50, 50, 0.35) !important;
+}
+
+body.tema-ordem-paranormal #btn-save-monstro-local.btn-premium-dragon:hover,
+body.tema-ordem-paranormal #btn-save-monstro.btn-premium-dragon:hover {
+    background: linear-gradient(135deg, #aa0000 0%, #ff4d4d 100%) !important;
+    box-shadow: 0 10px 25px rgba(255, 50, 50, 0.6) !important;
+}
+
+/* Padronização visual dos botões de rodapé do modal de monstros */
+#modal-criar-monstro .acoes-form-painel button {
+    border-radius: 12px !important;
+    font-family: 'Montserrat', sans-serif !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+

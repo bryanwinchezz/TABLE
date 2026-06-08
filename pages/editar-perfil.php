@@ -1,6 +1,6 @@
 <?php
 
-session_start();
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 if (!isset($_SESSION['usuario'])) {
     header('Location: login.php');
@@ -143,6 +143,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['desistir_mestre'])) {
     try {
         $conn->beginTransaction();
 
+        // Se for o admin Kauan Bryan desistindo, garante que os planos pagos fiquem marcados como adquiridos
+        // por 1 mês a partir da data de desistência
+        $stmtVerCargo = $conn->prepare("SELECT nm_usuario, tp_cargo FROM tb_usuario WHERE id_usuario = :id LIMIT 1");
+        $stmtVerCargo->execute([':id' => $_SESSION['usuario']['id']]);
+        $dadosAtual = $stmtVerCargo->fetch(PDO::FETCH_ASSOC);
+        $cargoAtual = strtolower($dadosAtual['tp_cargo'] ?? 'jogador');
+        $nmUsuario  = $dadosAtual['nm_usuario'] ?? '';
+
+        if ($cargoAtual === 'admin' && $nmUsuario === 'Kauan Bryan') {
+            // Admin Kauan Bryan perde o privilégio mas mantém os planos pagos ativados no banco por 1 mês
+            $stmtFlags = $conn->prepare("
+                UPDATE tb_usuario
+                SET fl_plano_mapas = 1, fl_plano_sistemas = 1, fl_plano_completo = 1, dt_desistencia_mestre = CURRENT_TIMESTAMP
+                WHERE id_usuario = :id
+            ");
+            $stmtFlags->execute([':id' => $_SESSION['usuario']['id']]);
+        }
+
         // 1. Excluir os sistemas criados por este usuário (exceto o oficial com ID 1)
         $stmtDelSistemas = $conn->prepare("DELETE FROM tb_sistema WHERE id_usuario_criador = :id AND id_sistema != 1");
         $stmtDelSistemas->execute([':id' => $_SESSION['usuario']['id']]);
@@ -186,8 +204,13 @@ try {
     $usuario = $_SESSION['usuario']; // fallback
 }
 
-$fotoPerfil = (!empty($usuario['ds_foto']) && realpath(__DIR__ . '/' . $usuario['ds_foto']) !== false) ? $usuario['ds_foto'] : '../img/uploads/perfil/avatar.png';
-$fotoNavbar = (!empty($_SESSION['usuario']['foto']) && realpath(__DIR__ . '/' . $_SESSION['usuario']['foto']) !== false) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png';
+$fotoPerfil = (!empty($usuario['ds_foto']) && realpath(__DIR__ . '/' . $usuario['ds_foto']) !== false) ? $usuario['ds_foto'] : '../img/uploads/perfil/avatar1.png';
+$fotoNavbar = (!empty($_SESSION['usuario']['foto']) && realpath(__DIR__ . '/' . $_SESSION['usuario']['foto']) !== false) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png';
+
+// Detectar cargo real do usuário
+$cargoRealPerfil = strtolower($usuario['tp_cargo'] ?? 'jogador');
+$isAdminPerfil   = ($cargoRealPerfil === 'admin');
+$isMestrePerfil  = ($cargoRealPerfil === 'mestre' || $isAdminPerfil);
 
 // Lógica de Classificação Indicativa
 $idade = 0;
@@ -348,23 +371,32 @@ $permissao = obterClassificacao($idade);
             <hr class="divisor">
 
             <section>
-                <h3 class="titulo-roxo"><?= strtolower($usuario['tp_cargo']) === 'mestre' ? 'Mestre' : 'Ser Mestre' ?>
-                </h3>
+                <h3 class="titulo-roxo"><?= $isMestrePerfil ? 'Mestre' : 'Ser Mestre' ?></h3>
                 <p class="texto-descricao">
-                    <?= strtolower($usuario['tp_cargo']) === 'mestre'
-                        ? 'Você é um Mestre! Possui acesso à criação de campanhas, sistemas e mundos. Se decidir que não quer mais essa responsabilidade, você pode voltar a ser um jogador a qualquer momento.'
-                        : 'Torne-se um verdadeiro mestre e desbloqueie a habilidade de criar seus próprios sistemas de RPG. Construa mundos, regras e experiências únicas, compartilhe tudo com a comunidade para que outros vivam as aventuras que você imaginar.'
-                        ?>
+                    <?php if ($isAdminPerfil): ?>
+                        Você é um Administrador do sistema. Seu acesso de Mestre é garantido por privilégio de sistema, independente de planos.
+                    <?php elseif ($isMestrePerfil): ?>
+                        Você é um Mestre! Possui acesso à criação de campanhas, sistemas e mundos. Se decidir que não quer mais essa responsabilidade, você pode voltar a ser um jogador a qualquer momento.
+                    <?php else: ?>
+                        Torne-se um verdadeiro mestre e desbloqueie a habilidade de criar seus próprios sistemas de RPG. Construa mundos, regras e experiências únicas, compartilhe tudo com a comunidade para que outros vivam as aventuras que você imaginar.
+                    <?php endif; ?>
                 </p>
                 <div class="area-botoes-centro">
-                    <?php if (strtolower($usuario['tp_cargo']) === 'mestre'): ?>
+                    <?php if ($isAdminPerfil): ?>
+                        <!-- Admin: pode desistir de mestrar (vira jogador com planos pagos mantidos) -->
+                        <button type="button" onclick="abrirModalDesistirMestre()" class="botao-roxo"
+                            style="background: #6c757d;"
+                            title="Ao desistir, seu cargo volta a Jogador, mas os planos pagos permanecem ativos por 1 mês.">
+                            <i class="fas fa-undo"></i> <span>Desistir de Mestrar</span>
+                        </button>
+                    <?php elseif ($isMestrePerfil): ?>
                         <button type="button" onclick="abrirModalDesistirMestre()" class="botao-roxo"
                             style="background: #6c757d;">
                             <i class="fas fa-undo"></i> <span>Desistir de Mestrar</span>
                         </button>
                     <?php else: ?>
                         <button type="button" onclick="window.location.href='planos.php'" class="botao-roxo">
-                            <i class="fas fa-book"></i> <span>Seja mestre</span>
+                            <i class="fas fa-book"></i> <span>Seja Mestre</span>
                         </button>
                     <?php endif; ?>
 

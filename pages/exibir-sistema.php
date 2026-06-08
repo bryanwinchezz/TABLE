@@ -1,5 +1,5 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 require_once __DIR__ . '/../app/config/database.php';
 
 if (!isset($_SESSION['usuario'])) {
@@ -85,8 +85,8 @@ try {
             'Sangue' => ['O Diabo', 'Aberração de Carne', 'Aniquilação', 'Carente', 'Dama de Sangue', 'Enpap-X', 'Kerberos', 'Minotauro', 'Mulher Afogada', 'Titã de Sangue', 'Zumbi de Sangue', 'Zumbi de Sangue Bestial'],
             'Morte' => ['Aracnasita', 'Carniçal Preto da Morte', 'Ceifador Espiral', 'Enraizado', 'Escutado', 'Esqueleto de Lodo', 'Marionete', 'Múmia Xipófaga', 'Nidere', 'Sempiternal', 'Succ', 'O Deus da Morte'],
             'Conhecimento' => ['Anjo', 'Bicho-Papão', 'Espreitador', 'Estrangeiro', 'Existido', 'Lembrado', 'Ocioso', 'Parasita de Culpa', 'Rastejador Sombrio', 'Silhueta', 'Vulto', 'Máscara do Desespero'],
-            'Energia' => ['Anárquico', 'Anárquico Descontrolado', 'Anomalia', 'Anomiático', 'Ciborgue', 'Infecticídio', 'Perturbado de Energia', 'Sukkalgir', 'Telopsia', 'Tempestuoso', 'Viajante', 'Anfitrião', 'Degolificada'],
-            'Medo' => ['Demogorgon']
+            'Energia' => ['Anárquico', 'Anárquico Descontrolado', 'Anomalia', 'Anomiático', 'Ciborgue', 'Infecticídio', 'Perturbado de Energia', 'Sukkalgir', 'Telopsia', 'Tempestuoso', 'Viajante', 'Anfitrião'],
+            'Medo' => ['Degolificada']
         ];
 
         foreach ($elementos_monstros as $elemento => $nomes) {
@@ -207,13 +207,173 @@ try {
     <link rel="stylesheet" href="../css/nav-footer.css?v=1.4">
     <link rel="stylesheet" href="../css/table-modal.css">
     <link rel="stylesheet" href="../css/ficha.css?v=<?= time() ?>">
-    <link rel="stylesheet" href="../css/criar-sistema.css?v=1.4">
+    <link rel="stylesheet" href="../css/criar-sistema.css?v=<?= time() ?>">
     <script src="../js/table-modal.js"></script>
     <link rel="shortcut icon" href="../img/logo_icone.png" type="image/x-icon">
     <style>
         /* ============================================================ 
            DESIGN SYSTEM: PREMIUM DARK (SISTEMA)
            ============================================================ */
+
+        .btn-premium-dragon {
+            background: linear-gradient(135deg, rgba(30, 20, 50, 0.95), rgba(60, 30, 100, 0.9));
+            color: #fff;
+            border: 1px solid rgba(157, 122, 255, 0.4);
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            border-radius: 10px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 5px 15px rgba(157, 122, 255, 0.2);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .btn-premium-dragon:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 10px 25px rgba(157, 122, 255, 0.4);
+            background: linear-gradient(135deg, rgba(40, 25, 70, 0.95), rgba(80, 40, 130, 0.9));
+            border-color: #fff;
+        }
+
+        /* ============================================================ 
+           MODAIS (OVERLAY E BOX) E INPUTS PREMIUM
+           ============================================================ */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999 !important;
+            padding: 20px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.ativa,
+        .modal-overlay.ativo {
+            display: flex !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+
+        .modal-box {
+            background: linear-gradient(135deg, rgba(20, 10, 30, 0.95), rgba(40, 20, 60, 0.95));
+            border: 1px solid rgba(157, 122, 255, 0.3);
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(157, 122, 255, 0.1);
+            transform: translateY(20px) scale(0.95);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        .modal-box::-webkit-scrollbar {
+            width: 8px;
+        }
+        .modal-box::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.2);
+            border-radius: 4px;
+        }
+        .modal-box::-webkit-scrollbar-thumb {
+            background: rgba(157, 122, 255, 0.5);
+            border-radius: 4px;
+        }
+
+        .modal-overlay.ativa .modal-box {
+            transform: translateY(0) scale(1);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.5rem;
+            color: #aaa;
+            cursor: pointer;
+            transition: color 0.2s, transform 0.2s;
+            z-index: 10;
+        }
+
+        .modal-close:hover {
+            color: #ff4d4d;
+            transform: scale(1.1) rotate(90deg);
+        }
+
+        /* Formulario Interno do Modal */
+        .form-section-title {
+            color: var(--premium-accent);
+            font-size: 0.9rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 30px 0 15px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .monstro-identidade-container {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            margin-bottom: 25px;
+        }
+
+        .monstro-identidade-inputs {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .input-premium-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .input-premium-label {
+            font-size: 0.75rem;
+            font-weight: 800;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .input-premium-field {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            padding: 12px 15px;
+            border-radius: 10px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.3s;
+            width: 100%;
+        }
+
+        .input-premium-field:focus {
+            border-color: var(--premium-accent);
+            box-shadow: 0 0 15px rgba(157, 122, 255, 0.2);
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .input-premium-field::placeholder {
+            color: rgba(255, 255, 255, 0.2);
+        }
 
         .system-display-container {
             margin-top: 40px;
@@ -822,9 +982,11 @@ try {
             transition: opacity 0.4s ease;
         }
 
-        .modal-overlay.ativa {
+        .modal-overlay.ativa,
+        .modal-overlay.ativo {
             display: flex !important;
             opacity: 1 !important;
+            visibility: visible !important;
         }
 
         /* ESTILIZAÇÃO PREMIUM DE INPUTS NO MODAL */
@@ -983,11 +1145,23 @@ try {
 
         body.tema-ordem-paranormal .secao-descricao-completa,
         body.tema-ordem-paranormal .card-ameaca-premium,
-        body.tema-ordem-paranormal .modal-box {
+        body.tema-ordem-paranormal .modal-box,
+        body.tema-ordem-paranormal .btn-importar-sistema {
             background: rgba(15, 5, 5, 0.7) !important;
             border: 1px solid rgba(255, 50, 50, 0.15) !important;
             box-shadow: 0 15px 35px rgba(0,0,0,0.6) !important;
         }
+
+        body.tema-ordem-paranormal .card-ameaca-premium.elemento-sangue { background: linear-gradient(90deg, rgba(30,0,0,0.9), rgba(60,20,20,0.6)) !important; border-color: rgba(255,50,50,0.4) !important; }
+        body.tema-ordem-paranormal .card-ameaca-premium.elemento-sangue::before { background: #ff3232 !important; box-shadow: 0 0 10px #ff3232 !important; }
+        body.tema-ordem-paranormal .card-ameaca-premium.elemento-morte { background: linear-gradient(90deg, rgba(10,10,10,0.9), rgba(20,20,20,0.6)) !important; border-color: rgba(100,100,100,0.4) !important; }
+        body.tema-ordem-paranormal .card-ameaca-premium.elemento-morte::before { background: #1a1a1a !important; box-shadow: 0 0 10px #666 !important; }
+        body.tema-ordem-paranormal .card-ameaca-premium.elemento-conhecimento { background: linear-gradient(90deg, rgba(30,25,0,0.9), rgba(50,40,0,0.6)) !important; border-color: rgba(241,196,15,0.4) !important; }
+        body.tema-ordem-paranormal .card-ameaca-premium.elemento-conhecimento::before { background: #f1c40f !important; box-shadow: 0 0 10px #f1c40f !important; }
+        body.tema-ordem-paranormal .card-ameaca-premium.elemento-energia { background: linear-gradient(90deg, rgba(0,30,25,0.9), rgba(0,50,40,0.6)) !important; border-color: rgba(0,209,178,0.4) !important; }
+        body.tema-ordem-paranormal .card-ameaca-premium.elemento-energia::before { background: #00d1b2 !important; box-shadow: 0 0 10px #00d1b2 !important; }
+        body.tema-ordem-paranormal .card-ameaca-premium.elemento-medo { background: linear-gradient(90deg, rgba(20,0,30,0.9), rgba(40,0,50,0.6)) !important; border-color: rgba(168,85,247,0.4) !important; }
+        body.tema-ordem-paranormal .card-ameaca-premium.elemento-medo::before { background: #a855f7 !important; box-shadow: 0 0 10px #a855f7 !important; }
 
         body.tema-ordem-paranormal .btn-tab-sistema.ativa,
         body.tema-ordem-paranormal .btn-pilula {
@@ -1010,13 +1184,14 @@ try {
         }
 
         body.tema-ordem-paranormal .attr-abbr {
-            background: #ff3232 !important;
-            color: #fff !important;
+            background: #fff !important;
+            color: #ff3232 !important;
         }
 
         body.tema-ordem-paranormal .attr-circle {
             border-color: #ff3232 !important;
-            background: rgba(255, 50, 50, 0.05) !important;
+            background: #ff3232 !important;
+            color: #fff !important;
         }
 
         body.tema-ordem-paranormal .info-sistema-item label,
@@ -1060,7 +1235,7 @@ try {
             <div class="nav-mobile-footer">
                 <?php if (isset($_SESSION['usuario'])): ?>
                     <div class="usuario-logado-nav" onclick="window.location.href='perfil.php'">
-                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png' ?>"
+                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
                             alt="Avatar Navbar" class="avatar-nav">
                         <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
                     </div>
@@ -1078,7 +1253,7 @@ try {
         <?php if (isset($_SESSION['usuario'])): ?>
             <div class="usuario-logado-nav desktop-only" id="nav-logado" onclick="window.location.href='perfil.php'"
                 title="Ir para o Perfil">
-                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png' ?>"
+                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
                     alt="Avatar Navbar" class="avatar-nav">
                 <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
             </div>
@@ -1101,19 +1276,21 @@ try {
                     style="color: #aaa; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;">
                     <i class="fas fa-arrow-left"></i> Voltar ao Perfil
                 </a>
-                        <?php if ($isDono || (isset($_SESSION['usuario']['cargo']) && strtolower($_SESSION['usuario']['cargo']) === 'admin')): ?>
+                        <?php if ($isDono || $isImportado || (isset($_SESSION['usuario']['cargo']) && strtolower($_SESSION['usuario']['cargo']) === 'admin')): ?>
                             <div style="display: flex; gap: 15px; align-items: center;">
                                 <?php if ($id_sistema != 1): ?>
-                                    <button class="btn-pilula" onclick="gerarLinkCompartilhamento()"
+                                    <button class="btn-pilula" onclick="gerarLinkCompartilhamento(this)"
                                             style="background: #27ae60; color: #fff; padding: 10px 25px; font-size: 0.85rem; border: none; border-radius: 30px; font-weight: 800; cursor: pointer; transition: 0.3s;">
                                         <i class="fas fa-share-alt"></i> COMPARTILHAR
                                     </button>
                                 <?php endif; ?>
-                                <a href="editar-sistema.php?id=<?= $id_sistema ?>" style="text-decoration: none;">
-                                    <button class="btn-pilula"
-                                        style="background: #b39ddb; color: #fff; padding: 10px 25px; font-size: 0.85rem; border: none; border-radius: 30px; font-weight: 800; cursor: pointer; transition: 0.3s;"><i
-                                            class="fas fa-edit"></i> EDITAR SISTEMA</button>
-                                </a>
+                                <?php if ($isDono || (isset($_SESSION['usuario']['cargo']) && strtolower($_SESSION['usuario']['cargo']) === 'admin')): ?>
+                                    <a href="editar-sistema.php?id=<?= $id_sistema ?>" style="text-decoration: none;">
+                                        <button class="btn-pilula"
+                                            style="background: #b39ddb; color: #fff; padding: 10px 25px; font-size: 0.85rem; border: none; border-radius: 30px; font-weight: 800; cursor: pointer; transition: 0.3s;"><i
+                                                class="fas fa-edit"></i> EDITAR SISTEMA</button>
+                                    </a>
+                                <?php endif; ?>
                                 <button class="btn-lixeira-item" onclick="abrirModalExclusaoSistema()" 
                                         title="Excluir Sistema" style="width: 42px; height: 42px; font-size: 1.1rem; background: rgba(230, 57, 70, 0.1); color: #e63946; border: 1px solid rgba(230, 57, 70, 0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
                                     <i class="fas fa-trash-alt"></i>
@@ -1150,7 +1327,7 @@ try {
                     </div>
                 </div>
 
-                <?php if (isset($sistema['fl_importado']) && $sistema['fl_importado']): ?>
+                <?php if ($isImportado && !$isDono): ?>
                     <div style="position: absolute; bottom: 15px; right: 20px; font-size: 0.6rem; color: rgba(255,255,255,0.25); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; pointer-events: none; padding: 4px 10px; border-radius: 6px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);">
                         <i class="fas fa-file-import" style="margin-right: 5px;"></i> Sistema Importado
                     </div>
@@ -1319,8 +1496,8 @@ try {
                     <div id="tab-criaturas" class="tab-content-sistema escondido" style="min-height: 300px; margin-bottom: 40px;">
                         <div class="pericias-premium-header" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; width: 100%;">
                             <span class="h-main"><i class="fas fa-dragon"></i> AMEAÇAS</span>
-                            <?php if ($sistema['id_usuario_criador'] == $_SESSION['usuario']['id']): ?>
-                                <button class="btn-premium-dragon" onclick="resetarModalMonstro(); abrirModal('modal-criar-monstro')">
+                            <?php if ($sistema['id_usuario_criador'] == $_SESSION['usuario']['id'] || (isset($_SESSION['usuario']['cargo']) && strtolower($_SESSION['usuario']['cargo']) === 'admin')): ?>
+                                <button type="button" class="btn-premium-dragon" onclick="forceAbrirModalCriarMonstro()">
                                     <i class="fas fa-dragon"></i> + CRIAR Ameaça
                                 </button>
                             <?php endif; ?>
@@ -1331,14 +1508,75 @@ try {
                             $stmtM = $pdo->prepare("SELECT * FROM tb_monstro WHERE id_sistema = ? ORDER BY qt_vd DESC");
                             $stmtM->execute([$id_sistema]);
                             $monstros = $stmtM->fetchAll();
+
+                            $nomeSistemaLower = strtolower($sistema['nm_sistema'] ?? '');
+                            $isOrdemParanormal = (strpos($nomeSistemaLower, 'ordem paranormal') !== false);
+
+                            if ($isOrdemParanormal) {
+                                $obterElementoMonstro = function($m) {
+                                    $dsLower = strtolower($m['ds_monstro'] ?? '');
+                                    $tpLower = strtolower($m['tp_monstro'] ?? '');
+
+                                    if (strpos($dsLower, 'sangue') !== false || strpos($tpLower, 'sangue') !== false) {
+                                        return 'sangue';
+                                    }
+                                    if (strpos($dsLower, 'conhecimento') !== false || strpos($tpLower, 'conhecimento') !== false) {
+                                        return 'conhecimento';
+                                    }
+                                    if (strpos($dsLower, 'morte') !== false || strpos($tpLower, 'morte') !== false) {
+                                        return 'morte';
+                                    }
+                                    if (strpos($dsLower, 'energia') !== false || strpos($tpLower, 'energia') !== false) {
+                                        return 'energia';
+                                    }
+                                    if (strpos($dsLower, 'medo') !== false || strpos($tpLower, 'medo') !== false) {
+                                        return 'medo';
+                                    }
+                                    return 'mundano';
+                                };
+
+                                $ordemElementos = [
+                                    'sangue' => 1,
+                                    'conhecimento' => 2,
+                                    'morte' => 3,
+                                    'energia' => 4,
+                                    'medo' => 5,
+                                    'mundano' => 6
+                                ];
+
+                                usort($monstros, function($a, $b) use ($obterElementoMonstro, $ordemElementos) {
+                                    $elA = $obterElementoMonstro($a);
+                                    $elB = $obterElementoMonstro($b);
+
+                                    $pesoA = $ordemElementos[$elA] ?? 6;
+                                    $pesoB = $ordemElementos[$elB] ?? 6;
+
+                                    if ($pesoA !== $pesoB) {
+                                        return $pesoA <=> $pesoB;
+                                    }
+
+                                    $vdA = (int)($a['qt_vd'] ?? 0);
+                                    $vdB = (int)($b['qt_vd'] ?? 0);
+                                    return $vdB <=> $vdA;
+                                });
+                            }
                             ?>
                             <?php if (empty($monstros)): ?>
                                 <p
                                     style="text-align:center; opacity:0.5; margin-top:40px; padding: 20px; border: 1px dashed rgba(255,255,255,0.1); border-radius: 10px;">
                                     Nenhuma ameaça catalogada no sistema.</p>
                             <?php else: ?>
-                                <?php foreach ($monstros as $m): ?>
-                                    <div class="card-ameaca-premium">
+                                <?php foreach ($monstros as $m): 
+                                    $elClass = '';
+                                    $dsLower = strtolower($m['ds_monstro'] ?? '');
+                                    $tpLower = strtolower($m['tp_monstro'] ?? '');
+                                    if (strpos($dsLower, 'sangue') !== false || strpos($tpLower, 'sangue') !== false) $elClass = ' elemento-sangue';
+                                    elseif (strpos($dsLower, 'morte') !== false || strpos($tpLower, 'morte') !== false) $elClass = ' elemento-morte';
+                                    elseif (strpos($dsLower, 'conhecimento') !== false || strpos($tpLower, 'conhecimento') !== false) $elClass = ' elemento-conhecimento';
+                                    elseif (strpos($dsLower, 'energia') !== false || strpos($tpLower, 'energia') !== false) $elClass = ' elemento-energia';
+                                    elseif (strpos($dsLower, 'medo') !== false || strpos($tpLower, 'medo') !== false) $elClass = ' elemento-medo';
+                                ?>
+                                    <div class="card-ameaca-premium<?= $elClass ?>">
                                         <img src="<?= (!empty($m['ds_imagem']) && $m['ds_imagem'] !== '../img/logo_icone.png') ? htmlspecialchars($m['ds_imagem']) : '../img/logo_icone.png' ?>"
                                             alt="Monstro" class="card-ameaca-img">
                                         <div class="card-ameaca-body">
@@ -1556,6 +1794,7 @@ try {
                 el.style.display = 'flex';
                 el.offsetHeight; // Force reflow
                 el.classList.add('ativa');
+                el.classList.add('ativo');
                 document.body.style.overflow = 'hidden';
             }
         }
@@ -1564,12 +1803,49 @@ try {
             const el = document.getElementById(id);
             if (el) {
                 el.classList.remove('ativa');
+                el.classList.remove('ativo');
                 setTimeout(() => { 
-                    if (!el.classList.contains('ativa')) {
+                    if (!el.classList.contains('ativa') && !el.classList.contains('ativo')) {
                         el.style.display = 'none'; 
                     }
                 }, 400);
                 document.body.style.overflow = '';
+            }
+        }
+
+        function forceAbrirModalCriarMonstro() {
+            try {
+                resetarModalMonstro();
+                const el = document.getElementById('modal-criar-monstro');
+                if (el) {
+                    document.body.appendChild(el);
+                    
+                    el.style.setProperty('display', 'flex', 'important');
+                    el.style.setProperty('position', 'fixed', 'important');
+                    el.style.setProperty('top', '0', 'important');
+                    el.style.setProperty('left', '0', 'important');
+                    el.style.setProperty('width', '100vw', 'important');
+                    el.style.setProperty('height', '100vh', 'important');
+                    el.style.setProperty('background-color', 'rgba(0, 0, 0, 0.95)', 'important');
+                    el.style.setProperty('z-index', '9999999', 'important');
+                    el.style.setProperty('opacity', '1', 'important');
+                    el.style.setProperty('visibility', 'visible', 'important');
+                    
+                    const box = el.querySelector('.modal-box');
+                    if (box) {
+                        box.style.setProperty('opacity', '1', 'important');
+                        box.style.setProperty('visibility', 'visible', 'important');
+                        box.style.setProperty('display', 'block', 'important');
+                    }
+                    
+                    el.classList.add('ativa');
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    alert('Erro crítico: HTML do modal não encontrado!');
+                }
+            } catch (e) {
+                alert('Erro JS identificado ao abrir modal: ' + e.message);
+                console.error(e);
             }
         }
 
@@ -1579,12 +1855,15 @@ try {
             }
         }
 
+
+
         // --- COMPARTILHAMENTO ---
-        async function gerarLinkCompartilhamento() {
-            const btn = event.currentTarget;
-            const originalHtml = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GERANDO...';
+        async function gerarLinkCompartilhamento(btn) {
+            const originalHtml = btn ? btn.innerHTML : 'COMPARTILHAR';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GERANDO...';
+            }
 
             try {
                 const formData = new FormData();
@@ -1606,8 +1885,10 @@ try {
                 console.error(e);
                 await TableModal.alert('Erro ao gerar o link de compartilhamento.', 'Erro', 'error');
             } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalHtml;
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                }
             }
         }
 
@@ -1680,7 +1961,7 @@ try {
                         const res = await fetch('../app/ajax/deletar-item.php', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ tipo: 'sistema', id: <?= $id_sistema ?> })
+                            body: JSON.stringify({ tipo: '<?= ($isDono || (isset($_SESSION['usuario']['cargo']) && strtolower($_SESSION['usuario']['cargo']) === 'admin')) ? 'sistema' : 'sistema_vinculo' ?>', id: <?= $id_sistema ?> })
                         });
                         const data = await res.json();
 
@@ -1840,18 +2121,26 @@ try {
 
         async function salvarMonstro() {
             const idS = <?= $id_sistema ?>;
-            const idM = document.getElementById('m-id').value;
-            const nome = document.getElementById('m-nome').value;
-            const tipo = document.getElementById('m-tipo').value;
-            const vd = document.getElementById('m-vd').value;
-            const vida = document.getElementById('m-vida').value;
-            const defesa = document.getElementById('m-defesa').value;
-            const xp = document.getElementById('m-xp').value;
-            const desc = document.getElementById('m-desc').value;
-            const foto = document.getElementById('m-foto').files[0];
-            const imgAtual = document.getElementById('m-imagem-atual').value;
+            const idM = document.getElementById('m-id') ? document.getElementById('m-id').value : '';
+            const nome = document.getElementById('m-nome') ? document.getElementById('m-nome').value : '';
+            const tipo = document.getElementById('m-tipo') ? document.getElementById('m-tipo').value : '';
+            const vd = document.getElementById('m-vd') ? document.getElementById('m-vd').value : 0;
+            const vida = document.getElementById('m-vida') ? document.getElementById('m-vida').value : 0;
+            const defesa = document.getElementById('m-defesa') ? document.getElementById('m-defesa').value : 0;
+            const xp = document.getElementById('m-xp') ? document.getElementById('m-xp').value : 0;
+            const desc = document.getElementById('m-desc') ? document.getElementById('m-desc').value : '';
+            const fotoInput = document.getElementById('m-foto');
+            const foto = (fotoInput && fotoInput.files) ? fotoInput.files[0] : null;
+            const imgAtual = document.getElementById('m-imagem-atual') ? document.getElementById('m-imagem-atual').value : '';
 
-            if (!nome) return await TableModal.alert('Dê um nome à ameaça!', 'Nome Requerido', 'warning');
+            if (!nome) {
+                if (typeof TableModal !== 'undefined') {
+                    await TableModal.alert('Dê um nome à ameaça!', 'Nome Requerido', 'warning');
+                } else {
+                    alert('Dê um nome à ameaça!');
+                }
+                return;
+            }
 
             const atributos = [];
             document.querySelectorAll('.attr-input-premium').forEach(input => {
@@ -1859,8 +2148,10 @@ try {
             });
 
             const btn = document.getElementById('btn-save-monstro');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SALVANDO...';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SALVANDO...';
+            }
 
             const formData = new FormData();
             formData.append('id_sistema', idS);
@@ -1885,15 +2176,19 @@ try {
                 if (data.success) {
                     location.reload();
                 } else {
-                    await TableModal.alert('Erro: ' + data.error, 'Erro ao Convocação', 'error');
+                    if (typeof TableModal !== 'undefined') await TableModal.alert('Erro: ' + data.error, 'Erro ao Convocação', 'error');
+                    else alert('Erro: ' + data.error);
                 }
             } catch (e) { 
                 console.error(e); 
-                await TableModal.alert("Erro de comunicação com o servidor.", "Erro de Conexão", "error");
+                if (typeof TableModal !== 'undefined') await TableModal.alert("Erro de comunicação com o servidor.", "Erro de Conexão", "error");
+                else alert("Erro de comunicação com o servidor.");
             }
             finally { 
-                btn.disabled = false; 
-                btn.innerHTML = '<i class="fas fa-skull"></i> CONVOCAR Ameaça'; 
+                if (btn) {
+                    btn.disabled = false; 
+                    btn.innerHTML = '<i class="fas fa-skull"></i> CONVOCAR Ameaça'; 
+                }
             }
         }
 
@@ -2015,7 +2310,7 @@ try {
                 <h2>Excluir Sistema</h2>
             </div>
             <div class="modal-perfil-body">
-                <?php if ($sistema['fl_importado']): ?>
+                <?php if ($isImportado && !$isDono): ?>
                     <p>Tem certeza que deseja remover este sistema importado da sua conta?</p>
                 <?php else: ?>
                     <p>Esta ação é <strong>permanente</strong> e excluirá o sistema para <strong>TODOS</strong> os usuários que o importaram.</p>
@@ -2028,52 +2323,7 @@ try {
             </div>
             <div class="modal-perfil-footer">
                 <button class="btn-perfil-cancelar" onclick="fecharModal('modal-excluir-sistema')">Cancelar</button>
-                <button id="btn-confirmar-exclusao-sistema" class="btn-perfil-deletar" <?= (!$sistema['fl_importado']) ? 'disabled' : '' ?>>Deletar</button>
-            </div>
-        </div>
-    </div>
-</body>
-</html>
-
-            font-size: 1rem; text-align: center; margin-bottom: 30px; outline: none; transition: border-color 0.3s;
-            color: #333; background: #fff;
-        }
-        .input-perfil-modal:focus { border-color: #e63946; }
-        .modal-perfil-footer { display: flex; gap: 15px; justify-content: center; }
-        .btn-perfil-cancelar {
-            background: #718096; color: white; border: none; padding: 12px 25px;
-            border-radius: 10px; font-weight: 700; cursor: pointer; transition: opacity 0.2s; font-size: 1rem;
-        }
-        .btn-perfil-cancelar:hover { opacity: 0.8; }
-        .btn-perfil-deletar {
-            background: #e63946; color: white; border: none; padding: 12px 35px;
-            border-radius: 10px; font-weight: 700; cursor: pointer; transition: all 0.3s; font-size: 1rem;
-        }
-        .btn-perfil-deletar:disabled { background: #ccc; cursor: not-allowed; opacity: 0.6; }
-        .btn-perfil-deletar:not(:disabled):hover { background: #c92a3a; transform: translateY(-2px); }
-    </style>
-
-    <div id="modal-excluir-sistema" class="modal-overlay">
-        <div class="modal-perfil-content">
-            <div class="modal-perfil-header">
-                <i class="fas fa-exclamation-triangle"></i>
-                <h2>Excluir Sistema</h2>
-            </div>
-            <div class="modal-perfil-body">
-                <?php if ($sistema['fl_importado']): ?>
-                    <p>Tem certeza que deseja remover este sistema importado da sua conta?</p>
-                <?php else: ?>
-                    <p>Esta ação é <strong>permanente</strong> e excluirá o sistema para <strong>TODOS</strong> os usuários que o importaram.</p>
-                    <p style="margin-top: 15px; font-size: 0.9rem; color: #555;">Para confirmar, digite o nome do sistema duas vezes abaixo:</p>
-                    <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;">
-                        <input type="text" id="input-confirm-1" placeholder="Nome do sistema..." class="input-perfil-modal" style="margin-bottom: 0;">
-                        <input type="text" id="input-confirm-2" placeholder="Repita o nome..." class="input-perfil-modal" style="margin-bottom: 20px;">
-                    </div>
-                <?php endif; ?>
-            </div>
-            <div class="modal-perfil-footer">
-                <button class="btn-perfil-cancelar" onclick="fecharModal('modal-excluir-sistema')">Cancelar</button>
-                <button id="btn-confirmar-exclusao-sistema" class="btn-perfil-deletar" <?= (!$sistema['fl_importado']) ? 'disabled' : '' ?>>Deletar</button>
+                <button id="btn-confirmar-exclusao-sistema" class="btn-perfil-deletar" <?= ($isImportado && !$isDono) ? '' : 'disabled' ?>>Deletar</button>
             </div>
         </div>
     </div>

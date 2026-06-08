@@ -4,7 +4,7 @@
  *  Na navbar temos um if e else para cado o usuario esteja conectado ou não, mudando sendo que: 
  *  SE o usuário estiver logado irá mostrar a foto e o nome do usuário
  */
-session_start();
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 // Redireciona para login se não estiver logado
 if (!isset($_SESSION['usuario'])) {
@@ -16,6 +16,18 @@ if (!isset($_SESSION['usuario'])) {
 require_once __DIR__ . '/../app/config/database.php';
 try {
     $pdo = Database::getConexao();
+
+    // Garante que o administrador Kauan Bryan sempre tenha seus privilégios ativos ao entrar
+    if ($_SESSION['usuario']['nome'] === 'Kauan Bryan') {
+        $stmtGarante = $pdo->prepare("
+            UPDATE tb_usuario 
+            SET tp_cargo = 'admin', fl_plano_mapas = 1, fl_plano_sistemas = 1, fl_plano_completo = 1, dt_desistencia_mestre = NULL 
+            WHERE id_usuario = ?
+        ");
+        $stmtGarante->execute([$_SESSION['usuario']['id']]);
+        $_SESSION['usuario']['cargo'] = 'admin';
+    }
+
     $stmt = $pdo->prepare("SELECT fl_plano_sistemas, fl_plano_completo, tp_cargo FROM tb_usuario WHERE id_usuario = ? LIMIT 1");
     $stmt->execute([$_SESSION['usuario']['id']]);
     $userPlan = $stmt->fetch();
@@ -42,7 +54,7 @@ try {
     <link rel="shortcut icon" href="../img/logo_icone.png" type="image/x-icon">
     <link rel="stylesheet" href="../css/nav-footer.css">
     <link rel="stylesheet" href="../css/table-modal.css">
-    <link rel="stylesheet" href="../css/criar-sistema.css?v=1.3">
+    <link rel="stylesheet" href="../css/criar-sistema.css?v=<?= time() ?>">
     <script src="../js/table-modal.js"></script>
 </head>
 
@@ -73,7 +85,7 @@ try {
             <div class="nav-mobile-footer">
                 <?php if (isset($_SESSION['usuario'])): ?>
                     <div class="usuario-logado-nav" onclick="window.location.href='perfil.php'">
-                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png' ?>"
+                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
                             alt="Avatar Navbar" class="avatar-nav">
                         <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
                     </div>
@@ -91,7 +103,7 @@ try {
         <?php if (isset($_SESSION['usuario'])): ?>
             <div class="usuario-logado-nav desktop-only" id="nav-logado" onclick="window.location.href='perfil.php'"
                 title="Ir para o Perfil">
-                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png' ?>"
+                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
                     alt="Avatar Navbar" class="avatar-nav">
                 <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
             </div>
@@ -461,9 +473,12 @@ try {
                     <textarea id="m-desc" class="input-premium-field" style="height: 120px; resize: none;" placeholder="Descreva as peculiaridades e poderes desta ameaça..."></textarea>
                 </div>
 
-                <button type="button" class="btn-premium-dragon" id="btn-save-monstro-local" style="width: 100%; padding: 20px; justify-content: center;" onclick="salvarMonstro()">
-                    <i class="fas fa-skull"></i> CONVOCAR AMEAÇA
-                </button>
+                <div class="acoes-form-painel" style="justify-content: flex-end; margin-top: 20px;">
+                    <button type="button" class="btn-cancelar-escuro" onclick="fecharModal('modal-criar-monstro')">Cancelar</button>
+                    <button type="button" class="btn-premium-dragon" id="btn-save-monstro-local" style="padding: 15px 30px;" onclick="salvarMonstro()">
+                        <i class="fas fa-skull"></i> CONVOCAR AMEAÇA
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -513,6 +528,22 @@ try {
 
     <script src="../js/nav-global.js" defer></script>
     <script src="../js/criar-sistema.js?v=1.11" defer></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const inputNome = document.getElementById('input-nome-sistema');
+            if (inputNome) {
+                const checkTheme = () => {
+                    if (inputNome.value.toLowerCase().includes('ordem paranormal')) {
+                        document.body.classList.add('tema-ordem-paranormal');
+                    } else {
+                        document.body.classList.remove('tema-ordem-paranormal');
+                    }
+                };
+                inputNome.addEventListener('input', checkTheme);
+                checkTheme();
+            }
+        });
+    </script>
 </body>
 
 </html>

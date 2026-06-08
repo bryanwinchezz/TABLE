@@ -4,7 +4,7 @@
      *  Na navbar temos um if e else para cado o usuario esteja conectado ou não, mudando sendo que: 
      *  SE o usuário estiver logado irá mostrar a foto e o nome do usuário
      */
-    session_start();
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
     // Redireciona para login se não estiver logado
     if (!isset($_SESSION['usuario'])) {
@@ -15,10 +15,46 @@
     require_once __DIR__ . '/../app/config/database.php';
     $pdo = Database::getConexao();
 
+    // Migração silenciosa individual para as colunas de planos e desistência caso não existam
+    $colunasAdd = [
+        'fl_plano_mapas' => "ALTER TABLE tb_usuario ADD COLUMN fl_plano_mapas TINYINT(1) NOT NULL DEFAULT 0",
+        'fl_plano_sistemas' => "ALTER TABLE tb_usuario ADD COLUMN fl_plano_sistemas TINYINT(1) NOT NULL DEFAULT 0",
+        'fl_plano_completo' => "ALTER TABLE tb_usuario ADD COLUMN fl_plano_completo TINYINT(1) NOT NULL DEFAULT 0",
+        'dt_desistencia_mestre' => "ALTER TABLE tb_usuario ADD COLUMN dt_desistencia_mestre DATETIME DEFAULT NULL"
+    ];
+
+    foreach ($colunasAdd as $col => $sql) {
+        try {
+            $stmtCheck = $pdo->query("SHOW COLUMNS FROM tb_usuario LIKE '$col'");
+            if ($stmtCheck->rowCount() === 0) {
+                $pdo->exec($sql);
+            }
+        } catch (Exception $e) {
+            // Silencioso por coluna
+        }
+    }
+
     // Buscar dados completos do usuário (para pegar dt_nascimento)
     $stmt = $pdo->prepare("SELECT * FROM tb_usuario WHERE id_usuario = ?");
     $stmt->execute([$_SESSION['usuario']['id']]);
     $userCompleto = $stmt->fetch();
+
+    // Garante que o administrador Kauan Bryan sempre tenha seus privilégios ativos ao entrar
+    if ($userCompleto && $userCompleto['nm_usuario'] === 'Kauan Bryan') {
+        if ($userCompleto['tp_cargo'] !== 'admin' || (int)$userCompleto['fl_plano_completo'] !== 1) {
+            $stmtGarante = $pdo->prepare("
+                UPDATE tb_usuario 
+                SET tp_cargo = 'admin', fl_plano_mapas = 1, fl_plano_sistemas = 1, fl_plano_completo = 1, dt_desistencia_mestre = NULL 
+                WHERE id_usuario = ?
+            ");
+            $stmtGarante->execute([$_SESSION['usuario']['id']]);
+            
+            // Recarrega os dados completos atualizados
+            $stmt->execute([$_SESSION['usuario']['id']]);
+            $userCompleto = $stmt->fetch();
+        }
+        $_SESSION['usuario']['cargo'] = 'admin';
+    }
 
     $idadeUsuario = 0;
     if (!empty($userCompleto['dt_nascimento'])) {
@@ -27,7 +63,7 @@
         $idadeUsuario = $hoje->diff($nasc)->y;
     }
 
-    $possuiPlanoSistemas = (isset($userCompleto['fl_plano_sistemas']) && (int)$userCompleto['fl_plano_sistemas'] === 1) || (isset($userCompleto['fl_plano_completo']) && (int)$userCompleto['fl_plano_completo'] === 1) || ($userCompleto['tp_cargo'] === 'admin');
+    $possuiPlanoSistemas = (isset($userCompleto['fl_plano_sistemas']) && (int)$userCompleto['fl_plano_sistemas'] === 1) || (isset($userCompleto['fl_plano_completo']) && (int)$userCompleto['fl_plano_completo'] === 1) || ($userCompleto['tp_cargo'] === 'admin') || ($userCompleto['nm_usuario'] === 'Kauan Bryan');
 
     function canAccess($classificacao, $idade) {
         if ($classificacao == 'L') return true;
@@ -48,8 +84,9 @@
     }
     $usuarioAtivo = $_SESSION['usuario'];
     $cargoUsuario = strtolower($usuarioAtivo['cargo'] ?? 'jogador');
-    $classeLayout = ($cargoUsuario === 'mestre') ? 'grid-mestre' : 'grid-jogador';
-    $fotoUsuario = (!empty($usuarioAtivo['foto']) && realpath(__DIR__ . '/' . $usuarioAtivo['foto']) !== false) ? $usuarioAtivo['foto'] : '../img/uploads/perfil/avatar.png';
+    $isMestreOuAdmin = ($cargoUsuario === 'mestre' || $cargoUsuario === 'admin' || $usuarioAtivo['nome'] === 'Kauan Bryan');
+    $classeLayout = $isMestreOuAdmin ? 'grid-mestre' : 'grid-jogador';
+    $fotoUsuario = (!empty($usuarioAtivo['foto']) && realpath(__DIR__ . '/' . $usuarioAtivo['foto']) !== false) ? $usuarioAtivo['foto'] : '../img/uploads/perfil/avatar1.png';
     $fotoNavbar = $fotoUsuario;
 
     // Buscar personagens do usuário
@@ -88,7 +125,16 @@
             LEFT JOIN tb_usuario u ON s.id_usuario_criador = u.id_usuario
             WHERE (s.id_usuario_criador = ? OR s.id_usuario_criador IS NULL OR u.tp_cargo = 'admin' OR s.id_sistema IN (SELECT id_sistema FROM tb_usuario_sistema WHERE id_usuario = ?))
             AND NOT (s.nm_sistema = 'Ordem Paranormal' AND s.fl_importado = 1)
-            ORDER BY s.nm_sistema ASC
+            ORDER BY 
+                CASE 
+                    WHEN s.id_usuario_criador IS NULL OR u.tp_cargo = 'admin' OR u.nm_usuario = 'Kauan Bryan' THEN 0 
+                    ELSE 1 
+                END ASC,
+                CASE 
+                    WHEN s.id_usuario_criador IS NULL OR u.tp_cargo = 'admin' OR u.nm_usuario = 'Kauan Bryan' THEN s.nm_sistema 
+                    ELSE NULL 
+                END ASC,
+                s.dt_cadastro DESC
         ");
         $stmt->execute([$usuarioAtivo['id'], $usuarioAtivo['id']]);
         $sistemas = $stmt->fetchAll();
@@ -112,7 +158,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="../css/nav-footer.css">
-    <link rel="stylesheet" href="../css/perfil.css?v=2.8">
+    <link rel="stylesheet" href="../css/perfil.css?v=3.0">
     <style>
         .badget-classificacao {
             position: absolute;
@@ -236,7 +282,7 @@
                         <?php foreach ($personagens as $p): ?>
                             <div class="lista-item" onclick="window.location.href='exibir-ficha.php?id=<?= $p['id_personagem'] ?>'" style="cursor: pointer; position: relative;">
                                 <div class="item-avatar-quadrado">
-                                    <img src="<?= !empty($p['ds_foto']) ? $p['ds_foto'] : '../img/uploads/perfil/avatar.png' ?>" alt="Avatar">
+                                    <img src="<?= !empty($p['ds_foto']) ? $p['ds_foto'] : '../img/uploads/perfil/avatar1.png' ?>" alt="Avatar">
                                 </div>
                                 <div class="item-dados">
                                     <h3><?= htmlspecialchars($p['nm_personagem']) ?></h3>
@@ -255,7 +301,7 @@
             <div class="painel-dark" id="painel-campanhas">
                 <div class="painel-header">
                     <h2>Campanhas:</h2>
-                    <button class="btn-criar btn-criar-mestre" <?php if ($cargoUsuario !== 'mestre') echo 'style="display: none;"'; ?> onclick="window.location.href='criar-campanha.php'">Criar <i class="fas fa-plus-circle"></i></button>
+                    <button class="btn-criar btn-criar-mestre" <?php if (!$isMestreOuAdmin) echo 'style="display: none;"'; ?> onclick="window.location.href='criar-campanha.php'">Criar <i class="fas fa-plus-circle"></i></button>
                 </div>
                 <div class="painel-body scroller">
                     <?php if (empty($campanhas)): ?>
@@ -280,7 +326,7 @@
                 </div>
             </div>
 
-            <div class="painel-dark" id="painel-sistemas" <?php if ($cargoUsuario !== 'mestre') echo 'style="display: none;"'; ?>>
+            <div class="painel-dark" id="painel-sistemas" <?php if (!$isMestreOuAdmin) echo 'style="display: none;"'; ?>>
                 <div class="painel-header">
                     <h2>Sistemas:</h2>
                     <?php if ($possuiPlanoSistemas): ?>

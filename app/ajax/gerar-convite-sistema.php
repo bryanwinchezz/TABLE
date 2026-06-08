@@ -1,5 +1,5 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 require_once __DIR__ . '/../config/database.php';
 
 if (!isset($_SESSION['usuario'])) {
@@ -24,12 +24,13 @@ if (!$id_sistema) {
     exit;
 }
 
-// Verifica se o usuário é o criador do sistema ou admin
+// Verifica se o usuário é o criador do sistema, se importou o sistema ou se é admin
 $stmt = $pdo->prepare("
-    SELECT id_sistema FROM tb_sistema 
-    WHERE id_sistema = ? AND (id_usuario_criador = ? OR (SELECT tp_cargo FROM tb_usuario WHERE id_usuario = ?) = 'admin')
+    SELECT s.id_sistema FROM tb_sistema s
+    LEFT JOIN tb_usuario_sistema us ON s.id_sistema = us.id_sistema AND us.id_usuario = ?
+    WHERE s.id_sistema = ? AND (s.id_usuario_criador = ? OR us.id_usuario IS NOT NULL OR (SELECT tp_cargo FROM tb_usuario WHERE id_usuario = ?) = 'admin')
 ");
-$stmt->execute([$id_sistema, $usuario_id, $usuario_id]);
+$stmt->execute([$usuario_id, $id_sistema, $usuario_id, $usuario_id]);
 
 if (!$stmt->fetch()) {
     echo json_encode(['sucesso' => false, 'mensagem' => 'Você não tem permissão para compartilhar este sistema.']);

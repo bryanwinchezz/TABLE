@@ -1,6 +1,6 @@
 <?php
 /* ATUALIZADO - conexão DB + dropdown sistemas + sistema de convite UUID + dddice */
-session_start();
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 // ============================================================
 // DDDICE — Credenciais (usadas pelo escudo do mestre)
@@ -14,6 +14,17 @@ $pdo = Database::getConexao();
 $flPlanoMapas = 0;
 if (isset($_SESSION['usuario'])) {
     try {
+        // Garante que o administrador Kauan Bryan sempre tenha seus privilégios ativos ao entrar
+        if ($_SESSION['usuario']['nome'] === 'Kauan Bryan') {
+            $stmtGarante = $pdo->prepare("
+                UPDATE tb_usuario 
+                SET tp_cargo = 'admin', fl_plano_mapas = 1, fl_plano_sistemas = 1, fl_plano_completo = 1, dt_desistencia_mestre = NULL 
+                WHERE id_usuario = ?
+            ");
+            $stmtGarante->execute([$_SESSION['usuario']['id']]);
+            $_SESSION['usuario']['cargo'] = 'admin';
+        }
+
         $stmtPlan = $pdo->prepare("SELECT fl_plano_mapas, fl_plano_completo, tp_cargo FROM tb_usuario WHERE id_usuario = ? LIMIT 1");
         $stmtPlan->execute([$_SESSION['usuario']['id']]);
         $userPlan = $stmtPlan->fetch();
@@ -47,7 +58,7 @@ function guidv4(): string {
 }
 
 // ---- Endpoint AJAX: ?action=roll_escudo (POST) ----
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['action'] ?? '') === 'roll_escudo') {
+if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['action'] ?? '') === 'roll_escudo') {
     header('Content-Type: application/json');
     $body = json_decode(file_get_contents('php://input'), true);
     $dice = $body['dice'] ?? [];
@@ -203,7 +214,7 @@ if (!isset($_SESSION['usuario'])) {
 // ============================================================
 // ENDPOINTS AJAX (POST)
 // ============================================================
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     header('Content-Type: application/json');
     $usuario_id = (int) $_SESSION['usuario']['id'];
 
@@ -321,6 +332,8 @@ $PersonagemsCampanha = [];
 $combatesCampanha    = [];
 $atributosSistema    = [];
 $jogadoresCampanha   = [];
+$jogadoresAgrupados  = [];
+$isMaster            = false;
 
 $id_campanha = $_GET['id'] ?? null;
 if ($id_campanha) {
@@ -334,6 +347,9 @@ if ($id_campanha) {
     $campanhaDados = $stmt->fetch();
 
     if ($campanhaDados) {
+        if (isset($_SESSION['usuario']['id'])) {
+            $isMaster = ((int)$campanhaDados['id_usuario_mestre'] === (int)$_SESSION['usuario']['id']);
+        }
         $stmt = $pdo->prepare("
             SELECT DISTINCT p.*, s.nm_sistema, p.id_usuario as id_dono, cp.fl_publico
               FROM tb_campanha_personagem cp
@@ -499,10 +515,11 @@ if ($campanhaDados) {
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="shortcut icon" href="../img/logo_icone.png" type="image/x-icon">
     <link rel="stylesheet" href="../css/nav-footer.css">
-    <link rel="stylesheet" href="../css/criar-campanha.css?v=2.2">
+    <link rel="stylesheet" href="../css/criar-campanha.css?v=<?= time() ?>">
     <link rel="stylesheet" href="../css/table-modal.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <!-- SDK dddice para animação 3D no Escudo do Mestre -->
+    <script>var exports = {};</script>
     <script src="https://cdn.dddice.com/js/dddice-latest.js"></script>
     <script src="../js/table-modal.js"></script>
     <style>
@@ -577,43 +594,43 @@ if ($campanhaDados) {
             position: relative;
             background: linear-gradient(155deg, #0a0610 0%, #11091c 100%);
             border: 2px solid var(--premium-accent);
-            border-radius: 24px;
-            padding: 50px 64px 42px;
+            border-radius: 28px;
+            padding: 60px 85px 50px;
             text-align: center;
-            box-shadow: 0 0 60px rgba(139,92,246,0.22), 0 32px 80px rgba(0,0,0,0.85);
+            box-shadow: 0 0 90px rgba(139,92,246,0.35), 0 32px 100px rgba(0,0,0,0.9);
             transform: scale(0.82) translateY(18px);
             transition: transform 0.38s cubic-bezier(0.34,1.56,0.64,1);
-            min-width: 300px;
+            min-width: 550px;
             cursor: pointer;
         }
         
         @media (max-width: 768px) {
             #escudo-result-card {
-                padding: 30px 20px;
-                min-width: 260px;
+                padding: 40px 25px;
+                min-width: 90%;
             }
             #escudo-result-total {
-                font-size: 4.5rem !important;
+                font-size: 5.5rem !important;
             }
         }
         #escudo-result-popup.show #escudo-result-card { transform: scale(1) translateY(0); }
 
         #escudo-result-label {
-            font-size: 0.72rem;
-            letter-spacing: 4px;
+            font-size: 0.8rem;
+            letter-spacing: 5px;
             color: var(--premium-accent);
             text-transform: uppercase;
-            margin-bottom: 12px;
-            font-weight: 700;
+            margin-bottom: 15px;
+            font-weight: 800;
         }
 
         #escudo-result-total {
-            font-size: 6.5rem;
-            font-weight: 900;
-            line-height: 1;
+            font-size: 8.5rem;
+            font-weight: 950;
+            line-height: 0.95;
             color: #fff;
-            text-shadow: 0 0 35px rgba(139,92,246,0.7), 0 0 70px rgba(139,92,246,0.3);
-            margin-bottom: 14px;
+            text-shadow: 0 0 45px rgba(139,92,246,0.85), 0 0 90px rgba(139,92,246,0.5);
+            margin-bottom: 20px;
         }
 
         @keyframes escudo-pop-in {
@@ -624,20 +641,42 @@ if ($campanhaDados) {
         #escudo-result-total.pop { animation: escudo-pop-in 0.45s cubic-bezier(0.34,1.56,0.64,1) forwards; }
 
         #escudo-result-breakdown {
-            font-size: 0.85rem;
-            color: #555;
-            letter-spacing: 1px;
-            min-height: 20px;
-            margin-bottom: 6px;
+            font-size: 1.7rem;
+            color: #a78bfa;
+            letter-spacing: 1.5px;
+            margin-top: 25px;
+            margin-bottom: 25px;
+            min-height: 35px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 8px;
         }
-        #escudo-result-breakdown .val { color: #c4b5fd; font-weight: 700; }
-        #escudo-result-breakdown .op  { color: #2e2b1f; margin: 0 3px; }
+        #escudo-result-breakdown .val { 
+            color: #ffffff; 
+            font-weight: 800; 
+            background: rgba(255, 255, 255, 0.05); 
+            border: 1px solid rgba(255, 255, 255, 0.15); 
+            padding: 6px 14px; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            text-shadow: 0 0 10px rgba(255,255,255,0.4); 
+        }
+        #escudo-result-breakdown .op  { 
+            color: var(--premium-accent); 
+            font-weight: 900; 
+            font-size: 1.8rem;
+            margin: 0 4px;
+        }
         #escudo-result-dismiss {
-            margin-top: 22px;
-            font-size: 0.6rem;
-            color: #2e2b1f;
+            margin-top: 30px;
+            font-size: 0.65rem;
+            color: #666;
             letter-spacing: 2px;
             text-transform: uppercase;
+            font-family: 'Cinzel', serif;
         }
 
         /* ── BOLINHA CONTADORA na sessao-escudo ── */
@@ -850,8 +889,6 @@ if ($campanhaDados) {
         .card-ameaca-details span { font-size:.75rem; color:#ccc; font-weight:600; }
         .card-ameaca-details b { color:#ff4d4d; }
         .card-ameaca-actions { display:flex; gap:8px; }
-        .btn-card-ficha { background:none; border:1px solid #fff; color:#fff; padding:5px 12px; border-radius:4px; font-weight:700; font-size:.7rem; text-transform:uppercase; cursor:pointer; }
-        .btn-card-add   { background:#cd1d1d; border:none; color:#fff; padding:5px 12px; border-radius:4px; font-weight:700; font-size:.7rem; text-transform:uppercase; cursor:pointer; }
         .lista-ameacas-cards { display:flex; flex-direction:column; gap:5px; }
 
         /* Vitrine de Sistema Estilo Clean (Sem Blocos) */
@@ -1073,6 +1110,291 @@ if ($campanhaDados) {
             background: linear-gradient(to right, rgba(20, 5, 5, 0.95), rgba(255, 50, 50, 0.1)) !important;
             border-color: rgba(255, 50, 50, 0.2) !important;
         }
+
+        /* ── ABA DADOS DO JOGADOR — Layout fiel ao rolagem-de-dados.php ── */
+        .camp-dados-container {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 30px;
+            margin-top: 20px;
+        }
+        @media (max-width: 900px) {
+            .camp-dados-container { grid-template-columns: 1fr; }
+        }
+        .camp-dados-grid-box {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 40px;
+            backdrop-filter: blur(10px);
+        }
+        .camp-titulo-secao {
+            font-family: 'Cinzel', serif;
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+            text-align: center;
+            color: #fff;
+            text-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
+        }
+        .camp-tema-row {
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px;
+            padding: 12px 16px;
+        }
+        .camp-tema-row label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            white-space: nowrap;
+        }
+        #camp-theme-select {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.85rem;
+            outline: none;
+            cursor: pointer;
+        }
+        #camp-theme-select option { background: #0d091a; }
+        #camp-status-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: #e74c3c; flex-shrink: 0;
+            transition: background 0.3s, box-shadow 0.3s;
+        }
+        #camp-status-dot.ok      { background: #2ecc71; box-shadow: 0 0 7px #2ecc71; }
+        #camp-status-dot.loading { background: var(--premium-accent); animation: blink 0.9s infinite; }
+        #camp-status-dot.local   { background: #3498db; box-shadow: 0 0 7px #3498db; }
+        #camp-status-dot.error   { background: #e74c3c; box-shadow: 0 0 7px #e74c3c; }
+        .camp-grid-dados {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        .camp-item-dado {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            position: relative;
+        }
+        .camp-item-dado .dado-icon-container {
+            width: 70px;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+        }
+        .camp-item-dado:hover .dado-icon-container { transform: scale(1.15) rotate(5deg); }
+        .camp-item-dado.selecionado .dado-icon-container {
+            filter: drop-shadow(0 0 12px var(--premium-accent));
+        }
+        .camp-item-dado .label-dado {
+            font-weight: 800;
+            font-size: 0.9rem;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .camp-bolinha {
+            position: absolute;
+            top: -12px; right: -12px;
+            width: 36px; height: 36px;
+            background-color: var(--premium-accent);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: 900;
+            font-size: 0.85rem;
+            box-shadow: 0 2px 8px rgba(139,92,246,0.6);
+            opacity: 0;
+            transform: scale(0);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 5;
+            pointer-events: none;
+        }
+        .camp-bolinha.show { opacity: 1; transform: scale(1); }
+        .camp-sel-resumo {
+            background: rgba(139, 92, 246, 0.08);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 12px;
+            padding: 12px 18px;
+            font-size: 0.8rem;
+            color: #aaa;
+            margin-bottom: 20px;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .camp-sel-resumo .chip {
+            background: rgba(139,92,246,0.2);
+            border: 1px solid rgba(139,92,246,0.4);
+            border-radius: 20px;
+            padding: 3px 10px;
+            font-weight: 700;
+            color: #c4b5fd;
+            font-size: 0.8rem;
+        }
+        .camp-btn-limpar {
+            margin-left: auto;
+            background: none;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #666;
+            border-radius: 8px;
+            padding: 4px 10px;
+            font-size: 0.72rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .camp-btn-limpar:hover { border-color: #ff4d4d; color: #ff4d4d; }
+        .camp-btn-rolar {
+            width: 100%;
+            background: linear-gradient(135deg, #6d28d9, #8b5cf6);
+            color: #fff;
+            border: none;
+            padding: 18px;
+            border-radius: 15px;
+            font-weight: 800;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 10px 20px rgba(109, 40, 217, 0.3);
+        }
+        .camp-btn-rolar:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(109, 40, 217, 0.5);
+            filter: brightness(1.1);
+        }
+        .camp-btn-rolar:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+        .camp-historico-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            max-height: 600px;
+            box-sizing: border-box;
+        }
+        .camp-historico-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .camp-historico-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: #fff;
+        }
+        .camp-btn-limpar-log {
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: color 0.3s;
+        }
+        .camp-btn-limpar-log:hover { color: #ff4d4d; }
+        #camp-historico-lista {
+            overflow-y: auto;
+            flex: 1;
+            padding-right: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        #camp-historico-lista::-webkit-scrollbar { width: 5px; }
+        #camp-historico-lista::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+        #camp-historico-lista::-webkit-scrollbar-thumb { background: var(--premium-accent); border-radius: 10px; }
+        .camp-log-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 15px;
+            border-left: 3px solid var(--premium-accent);
+            animation: campSlideIn 0.3s ease-out;
+        }
+        @keyframes campSlideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+        .camp-log-resultado {
+            width: 45px; height: 45px;
+            background: #fff;
+            color: #000;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .camp-log-info p { margin: 0; font-size: 0.75rem; color: #888; }
+        .camp-log-info h4 { margin: 2px 0 0; font-size: 0.9rem; color: #fff; }
+        /* Tema Ordem Paranormal overrides */
+        body.tema-ordem-paranormal .camp-dados-grid-box {
+            border-color: rgba(255, 50, 50, 0.15) !important;
+            background: rgba(15, 5, 5, 0.6) !important;
+        }
+        body.tema-ordem-paranormal .camp-historico-box {
+            border-color: rgba(255, 50, 50, 0.15) !important;
+            background: rgba(10, 5, 5, 0.8) !important;
+        }
+        body.tema-ordem-paranormal .camp-log-item {
+            border-left-color: #ff3232 !important;
+        }
+        body.tema-ordem-paranormal .camp-btn-rolar {
+            background: linear-gradient(135deg, #660000 0%, #ff3232 100%) !important;
+        }
+        body.tema-ordem-paranormal #camp-status-dot.ok { background: #2ecc71; box-shadow: 0 0 7px #2ecc71; }
+        body.tema-ordem-paranormal #camp-status-dot.loading { background: #ff3232; }
+        .camp-item-dado .img-dado {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+        }
+        .dado-girando { animation: girarDado 0.6s ease-in-out; }
+        @keyframes girarDado {
+            0%   { transform: rotate(0deg) scale(1); }
+            25%  { transform: rotate(90deg) scale(1.3) translateY(-5px); }
+            50%  { transform: rotate(180deg) scale(1); }
+            75%  { transform: rotate(270deg) scale(1.3) translateY(-5px); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
+
     </style>
 </head>
 <?php
@@ -1123,7 +1445,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
             <div class="nav-mobile-footer">
                 <?php if (isset($_SESSION['usuario'])): ?>
                     <div class="usuario-logado-nav" onclick="window.location.href='perfil.php'">
-                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png' ?>"
+                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
                             alt="Avatar Navbar" class="avatar-nav">
                         <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
                     </div>
@@ -1141,7 +1463,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
         <?php if (isset($_SESSION['usuario'])): ?>
             <div class="usuario-logado-nav desktop-only" id="nav-logado" onclick="window.location.href='perfil.php'"
                 title="Ir para o Perfil">
-                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png' ?>"
+                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
                     alt="Avatar Navbar" class="avatar-nav">
                 <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
             </div>
@@ -1217,6 +1539,8 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
 
                     <button class="btn-acao" onclick="abrirModalPersonagens()"><i class="fas fa-user-plus"></i> Adicionar Personagem</button>
 
+                    <button class="btn-acao" onclick="switchDashboardTab('dados'); document.querySelector('.sub-nav-campanha').scrollIntoView({behavior:'smooth'});"><i class="fas fa-dice-d20"></i> Dados</button>
+
                     <?php if ($isMaster): ?>
                         <button class="btn-acao" onclick="abrirModalConvite()"><i class="fas fa-link"></i> Convidar Jogadores</button>
                     <?php endif; ?>
@@ -1236,6 +1560,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                     <a href="javascript:void(0)" class="link-sub-nav ativa" id="aba-personagens" onclick="switchDashboardTab('personagens')">Personagens</a>
                     <a href="javascript:void(0)" class="link-sub-nav" id="aba-combates" onclick="switchDashboardTab('combates')">Combates</a>
                     <a href="javascript:void(0)" class="link-sub-nav" id="aba-jogadores" onclick="switchDashboardTab('jogadores')">Jogadores</a>
+                    <a href="javascript:void(0)" class="link-sub-nav" id="aba-dados" onclick="switchDashboardTab('dados')">Dados</a>
                 </div>
 
                 <div class="lista-Personagems" id="lista-Personagems">
@@ -1243,14 +1568,14 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                         <p style="text-align:center;opacity:.5;margin-top:20px;">Nenhum personagem na campanha ainda.</p>
                     <?php endif; ?>
                     <?php foreach ($PersonagemsCampanha as $Personagem): 
-                        $isMaster = ((int)$campanhaDados['id_usuario_mestre'] === (int)$_SESSION['usuario']['id']);
+                        $isMaster = $campanhaDados ? ((int)$campanhaDados['id_usuario_mestre'] === (int)$_SESSION['usuario']['id']) : false;
                         $isOwner  = ((int)$Personagem['id_dono'] === (int)$_SESSION['usuario']['id']);
                         $flPublico = (int)($Personagem['fl_publico'] ?? 0);
                         $podeVerFicha = $isMaster || $isOwner || ($flPublico === 1);
                     ?>
                         <div class="card-Personagem">
                             <div class="avatar-Personagem">
-                                <img src="<?= !empty($Personagem['ds_foto']) ? $Personagem['ds_foto'] : '../img/uploads/perfil/avatar.png' ?>" alt="Avatar">
+                                <img src="<?= !empty($Personagem['ds_foto']) ? $Personagem['ds_foto'] : '../img/uploads/perfil/avatar1.png' ?>" alt="Avatar">
                             </div>
                             <div class="info-Personagem">
                                 <h3 style="display: flex; align-items: center; gap: 8px;">
@@ -1320,7 +1645,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                         <p style="text-align:center;opacity:.5;margin-top:20px;">Nenhum participante na campanha ainda.</p>
                     <?php endif; ?>
                     <?php foreach ($jogadoresAgrupados as $jog): 
-                        $fotoUsuario = !empty($jog['foto_usuario']) ? $jog['foto_usuario'] : '../img/uploads/perfil/avatar.png';
+                        $fotoUsuario = !empty($jog['foto_usuario']) ? $jog['foto_usuario'] : '../img/uploads/perfil/avatar1.png';
                         $nomeUsuario = htmlspecialchars(!empty($jog['nm_exibicao']) ? $jog['nm_exibicao'] : $jog['nm_usuario']);
                         $eMestre = $jog['papel_campanha'] === 'mestre';
                     ?>
@@ -1397,6 +1722,63 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                         </div>
                     <?php endforeach; ?>
                 </div>
+
+                <!-- ABA DADOS — Layout idêntico ao rolagem-de-dados.php -->
+                <div class="lista-Personagems escondido" id="lista-dados-jogador">
+                    <div class="camp-dados-container">
+
+                        <!-- Coluna esquerda: Painel de Rolagem -->
+                        <div class="camp-dados-grid-box">
+                            <h2 class="camp-titulo-secao">Rolagem de Dados</h2>
+
+                            <!-- Seletor de aparência dos dados -->
+                            <div class="camp-tema-row">
+                                <span id="camp-status-dot" class="loading" title="Conectando..."></span>
+                                <label>Aparência dos Dados:</label>
+                                <select id="camp-theme-select" disabled>
+                                    <option value="">Conectando...</option>
+                                </select>
+                            </div>
+
+                            <!-- Grade de dados -->
+                            <div class="camp-grid-dados">
+                                <?php foreach ([2,4,6,8,10,12,20,100] as $l): ?>
+                                    <div class="camp-item-dado" id="camp-dado-d<?= $l ?>" data-lados="<?= $l ?>">
+                                        <div class="dado-icon-container">
+                                            <img src="../img/dados/D<?= $l ?>.png" alt="D<?= $l ?>" class="img-dado">
+                                        </div>
+                                        <span class="label-dado">D<?= $l ?></span>
+                                        <div class="camp-bolinha" id="camp-bolinha-d<?= $l ?>">0</div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+
+                            <!-- Resumo da seleção -->
+                            <div class="camp-sel-resumo" id="camp-sel-resumo">
+                                <span style="color:#555;">Clique nos dados para selecionar quantidades...</span>
+                            </div>
+
+                            <!-- Botão Rolar -->
+                            <button class="camp-btn-rolar" id="camp-btn-rolar" disabled onclick="campExecutarRolagem()">
+                                <i class="fas fa-dice"></i> Rolar Dados
+                            </button>
+                        </div>
+
+                        <!-- Coluna direita: Histórico de Rolagens -->
+                        <div class="camp-historico-box">
+                            <div class="camp-historico-header">
+                                <h3>Histórico</h3>
+                                <button class="camp-btn-limpar-log" onclick="limparHistoricoJogador()">Limpar</button>
+                            </div>
+                            <div id="camp-historico-lista">
+                                <div style="text-align: center; padding: 40px; color: #555;" id="camp-msg-vazio">
+                                    Nenhuma rolagem feita ainda nesta sessão.
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
             </div>
 
             <!-- TELA 03: EDITAR -->
@@ -1462,7 +1844,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                         <div class="area-banners-combate">
                             <div class="banners-flex">
                                 <div class="banner-card banner-ordem ativo" onclick="selecionarOrigemCriatura('oficial', this)"><img src="../img/ordem-paranormal-icon.png" alt="Ordem Logo"></div>
-                                <div class="banner-card banner-table" onclick="selecionarOrigemCriatura('custom', this)"><img src="../img/logo_branco.png" alt="TABLE Logo"><span>TABLE</span></div>
+                                <div class="banner-card banner-table" onclick="selecionarOrigemCriatura('table', this)"><img src="../img/logo_branco.png" alt="TABLE Logo"><span>TABLE</span></div>
                                 <div class="banner-card banner-novas" onclick="redirecionarNovaCriatura()"><span>CRIAR NOVAS CRIATURAS!</span></div>
                             </div>
                             <p class="banner-subtexto">Conteúdo oficial da TABLE. Veja mais <a href="#">aqui</a> em breve!</p>
@@ -1480,6 +1862,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                                 <button class="btn-filtro"        onclick="filtrarPorElemento('Sangue',this)">Sangue</button>
                                 <button class="btn-filtro"        onclick="filtrarPorElemento('Medo',this)">Medo</button>
                                 <button class="btn-filtro"        onclick="filtrarPorElemento('Energia',this)">Energia</button>
+                                <button class="btn-filtro"        onclick="filtrarPorElemento('Mundano',this)">Mundano</button>
                             </div>
                         </div>
                         <div class="lista-ameacas-cards" id="catalogo-cards"></div>
@@ -1518,8 +1901,8 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                             <a class="escudo-link-nav"       onclick="switchEscudoTab('combates',this)">Combates</a>
                             <a class="escudo-link-nav"       onclick="switchEscudoTab('investigacoes',this)">Investigações</a>
                             <a class="escudo-link-nav"       onclick="switchEscudoTab('relatorios',this)">Relatórios</a>
-                            <a class="escudo-link-nav"       onclick="switchEscudoTab('dados',this)">Dados</a>
                             <a class="escudo-link-nav"       onclick="switchEscudoTab('anotacoes',this)">Anotações</a>
+                            <a class="escudo-link-nav"       onclick="switchEscudoTab('dados',this)">Dados</a>
                             <?php if ($flPlanoMapas): ?>
                                 <a href="criar-mapa.php?id=<?= $id_campanha ?>" target="_blank" class="escudo-link-nav link-mapa-especial">Mapas <i class="fas fa-external-link-alt"></i></a>
                             <?php else: ?>
@@ -1529,82 +1912,100 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
 
                         <!-- Personagens -->
                         <div id="escudo-tab-personagens" class="escudo-agentes-grid">
-                            <?php foreach ($PersonagemsCampanha as $Personagem): ?>
-                                <div class="card-agente-compacto recolhido" data-id-personagem="<?= $Personagem['id_personagem'] ?>">
-                                    <div class="card-compacto-header">
-                                        <i class="fas fa-chevron-down toggle-escudo-ficha" style="float: right; color: rgba(255,255,255,0.4); font-size: 0.8rem; margin-top: 10px; transition: transform 0.3s;"></i>
-                                        <h3><?= htmlspecialchars($Personagem['nm_personagem']) ?></h3>
-                                        <p><?= htmlspecialchars($Personagem['nm_classe'] ?: 'Mundano') ?> • <?= htmlspecialchars($Personagem['nm_origem'] ?? 'Acadêmico') ?></p>
-                                        <span>NEX: <?= $Personagem['qt_nivel'] ?>%</span>
-                                    </div>
-                                    <div class="atributos-agente-p1">
-                                        <?php foreach ($Personagem['atributos'] as $attr): ?>
-                                            <div class="attr-p1-box">
-                                                <span><?= htmlspecialchars($attr['ds_abreviacao']) ?></span>
-                                                <strong><?= $attr['qt_valor'] ?></strong>
-                                            </div>
-                                        <?php endforeach; ?>
-                                    </div>
-                                    <div class="status-bars-p1">
-                                        <?php foreach ([
-                                            ['VIDA','qt_vida','qt_vida_maxima','fill-vida-p1'],
-                                            ['SANIDADE','qt_sanidade','qt_sanidade_maxima','fill-sanidade-p1'],
-                                            ['ESFORÇO','qt_esforco','qt_esforco_maximo','fill-esforco-p1'],
-                                        ] as [$lbl,$cur,$max,$cls]): ?>
-                                            <div class="barra-p1-container">
-                                                <div class="barra-p1-label"><?= $lbl ?></div>
-                                                <div class="barra-p1-bg">
-                                                    <div class="barra-p1-fill <?= $cls ?>"
-                                                         style="width:<?= ($Personagem[$max]>0?round($Personagem[$cur]/$Personagem[$max]*100):0) ?>%"></div>
-                                                    <div class="barra-p1-text"><?= $Personagem[$cur] ?>/<?= $Personagem[$max] ?></div>
-                                                </div>
-                                            </div>
-                                        <?php endforeach; ?>
-                                    </div>
-                                    <div class="compacto-footer">
-                                        <div class="footer-stats-grid">
-                                            <div class="footer-stat-item"><span>PE/T</span><strong>1</strong></div>
-                                            <div class="footer-stat-item"><span>DESL</span><strong>9m</strong></div>
-                                            <div class="footer-stat-item"><span>DEF</span><strong><?= $Personagem['qt_defesa'] ?></strong></div>
-                                            <div class="footer-stat-item"><span>BLQ</span><strong>0</strong></div>
-                                            <div class="footer-stat-item"><span>ESQ</span><strong><?= $Personagem['qt_esquiva'] ?? $Personagem['qt_defesa'] ?></strong></div>
-                                        </div>
-                                        <a href="exibir-ficha.php?id=<?= $Personagem['id_personagem'] ?>" class="btn-ficha-compacto">Ver Ficha Completa</a>
-                                    </div>
+                            <?php if (empty($PersonagemsCampanha)): ?>
+                                <div class="escudo-estado-vazio">
+                                    <i class="fas fa-users-slash icone-vazio"></i>
+                                    <h3>Nenhum personagem vinculado</h3>
+                                    <p>Convide seus jogadores para criarem ou vincularem suas fichas de personagens a esta campanha.</p>
+                                    <button class="btn-escudo-vazio-action" onclick="irParaAbaDashboard('jogadores')">Convidar Jogadores</button>
                                 </div>
-                            <?php endforeach; ?>
+                            <?php else: ?>
+                                <?php foreach ($PersonagemsCampanha as $Personagem): ?>
+                                    <div class="card-agente-compacto recolhido" data-id-personagem="<?= $Personagem['id_personagem'] ?>">
+                                        <div class="card-compacto-header">
+                                            <i class="fas fa-chevron-down toggle-escudo-ficha" style="float: right; color: rgba(255,255,255,0.4); font-size: 0.8rem; margin-top: 10px; transition: transform 0.3s;"></i>
+                                            <h3><?= htmlspecialchars($Personagem['nm_personagem']) ?></h3>
+                                            <p><?= htmlspecialchars($Personagem['nm_classe'] ?: 'Mundano') ?> • <?= htmlspecialchars($Personagem['nm_origem'] ?? 'Acadêmico') ?></p>
+                                            <span>NEX: <?= $Personagem['qt_nivel'] ?>%</span>
+                                        </div>
+                                        <div class="atributos-agente-p1">
+                                            <?php foreach ($Personagem['atributos'] as $attr): ?>
+                                                <div class="attr-p1-box">
+                                                    <span><?= htmlspecialchars($attr['ds_abreviacao']) ?></span>
+                                                    <strong><?= $attr['qt_valor'] ?></strong>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                        <div class="status-bars-p1">
+                                            <?php foreach ([
+                                                ['VIDA','qt_vida','qt_vida_maxima','fill-vida-p1'],
+                                                ['SANIDADE','qt_sanidade','qt_sanidade_maxima','fill-sanidade-p1'],
+                                                ['ESFORÇO','qt_esforco','qt_esforco_maximo','fill-esforco-p1'],
+                                            ] as [$lbl,$cur,$max,$cls]): ?>
+                                                <div class="barra-p1-container">
+                                                    <div class="barra-p1-label"><?= $lbl ?></div>
+                                                    <div class="barra-p1-bg">
+                                                        <div class="barra-p1-fill <?= $cls ?>"
+                                                             style="width:<?= ($Personagem[$max]>0?round($Personagem[$cur]/$Personagem[$max]*100):0) ?>%"></div>
+                                                        <div class="barra-p1-text"><?= $Personagem[$cur] ?>/<?= $Personagem[$max] ?></div>
+                                                    </div>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                        <div class="compacto-footer">
+                                            <div class="footer-stats-grid">
+                                                <div class="footer-stat-item"><span>PE/T</span><strong>1</strong></div>
+                                                <div class="footer-stat-item"><span>DESL</span><strong>9m</strong></div>
+                                                <div class="footer-stat-item"><span>DEF</span><strong><?= $Personagem['qt_defesa'] ?></strong></div>
+                                                <div class="footer-stat-item"><span>BLQ</span><strong>0</strong></div>
+                                                <div class="footer-stat-item"><span>ESQ</span><strong><?= $Personagem['qt_esquiva'] ?? $Personagem['qt_defesa'] ?></strong></div>
+                                            </div>
+                                            <a href="exibir-ficha.php?id=<?= $Personagem['id_personagem'] ?>" class="btn-ficha-compacto">Ver Ficha Completa</a>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </div>
 
                         <!-- Combates -->
                         <div id="escudo-tab-combates" class="escondido">
-                            <div id="escudo-combates-lista" class="lista-combates">
-                                <?php foreach ($combatesCampanha as $combate): ?>
-                                    <div class="card-combate-escudo" style="background:var(--fundo-card-escudo);padding:30px;border-radius:15px;display:flex;justify-content:space-between;align-items:center;border:1px solid var(--cor-borda-escudo);">
-                                        <div>
-                                            <h3 style="font-size:1.5rem;margin-bottom:5px;"><?= htmlspecialchars($combate['nm_combate']) ?></h3>
-                                            <p style="color:#888;">VD: <?= $combate['vd_total'] ?: 0 ?></p>
-                                        </div>
-                                        <button class="btn-iniciar-combate"
-                                                onclick="iniciarCombateEscudo(<?= $combate['id_combate'] ?>,'<?= htmlspecialchars($combate['nm_combate']) ?>')"
-                                                style="background:#fff;color:#000;padding:10px 30px;border-radius:20px;font-weight:800;cursor:pointer;">Iniciar</button>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                            <div id="escudo-combate-ativo" class="escudo-combate-ativo escondido">
-                                <div class="coluna-iniciativa">
-                                    <div class="header-iniciativa">
-                                        <h2>Iniciativa</h2>
-                                        <div class="controles-turno">
-                                            <button class="btn-turno" onclick="voltarTurnoEscudo()">Voltar Turno</button>
-                                            <button class="btn-turno" onclick="proximoTurnoEscudo()">Próximo Turno</button>
-                                        </div>
-                                    </div>
-                                    <div id="lista-iniciativa-escudo"></div>
+                            <?php if (empty($combatesCampanha)): ?>
+                                <div class="escudo-estado-vazio">
+                                    <i class="fas fa-skull-crossbones icone-vazio"></i>
+                                    <h3>Nenhum combate criado</h3>
+                                    <p>Monte os combates e gerencie os turnos dos seus jogadores e criaturas no painel principal.</p>
+                                    <button class="btn-escudo-vazio-action" onclick="irParaAbaDashboard('combates')">Criar Combate</button>
                                 </div>
-                                <div class="ficha-detalhes-escudo" id="detalhe-participante-escudo">
-                                    <p style="text-align:center;color:#888;padding-top:50px;">Selecione um participante para ver detalhes.</p>
+                            <?php else: ?>
+                                <div id="escudo-combates-lista" class="lista-combates">
+                                    <?php foreach ($combatesCampanha as $combate): ?>
+                                        <div class="card-combate-escudo" style="background:var(--fundo-card-escudo);padding:30px;border-radius:15px;display:flex;justify-content:space-between;align-items:center;border:1px solid var(--cor-borda-escudo);">
+                                            <div>
+                                                <h3 style="font-size:1.5rem;margin-bottom:5px;"><?= htmlspecialchars($combate['nm_combate']) ?></h3>
+                                                <p style="color:#888;">VD: <?= $combate['vd_total'] ?: 0 ?></p>
+                                            </div>
+                                            <button class="btn-iniciar-combate"
+                                                    onclick="iniciarCombateEscudo(<?= $combate['id_combate'] ?>,'<?= htmlspecialchars($combate['nm_combate']) ?>')"
+                                                    style="background:#fff;color:#000;padding:10px 30px;border-radius:20px;font-weight:800;cursor:pointer;">Iniciar</button>
+                                        </div>
+                                    <?php endforeach; ?>
                                 </div>
-                            </div>
+                                <div id="escudo-combate-ativo" class="escudo-combate-ativo escondido">
+                                    <div class="coluna-iniciativa">
+                                        <div class="header-iniciativa">
+                                            <h2>Iniciativa</h2>
+                                            <div class="controles-turno">
+                                                <button class="btn-turno" onclick="voltarTurnoEscudo()">Voltar Turno</button>
+                                                <button class="btn-turno" onclick="proximoTurnoEscudo()">Próximo Turno</button>
+                                            </div>
+                                        </div>
+                                        <div id="lista-iniciativa-escudo"></div>
+                                    </div>
+                                    <div class="ficha-detalhes-escudo" id="detalhe-participante-escudo">
+                                        <p style="text-align:center;color:#888;padding-top:50px;">Selecione um participante para ver detalhes.</p>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
                         </div>
 
                         <!-- Investigações -->
@@ -1672,14 +2073,11 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
 
                         <!-- Dados -->
                         <div id="escudo-tab-dados" class="escondido" style="position:relative;">
-                            <div class="dados-header">
-                                <div class="titulo-dados">Rolar Dados <i class="fas fa-dice-d20"></i></div>
-                            </div>
 
-                            <!-- Seletor de tema dddice -->
+                            <!-- Seletor de aparência dos dados -->
                             <div class="escudo-tema-row">
                                 <span id="escudo-status-dot" class="loading" title="Conectando..."></span>
-                                <label>Tema dddice:</label>
+                                <label>Aparência dos Dados:</label>
                                 <select id="escudo-theme-select" disabled>
                                     <option value="">Conectando...</option>
                                 </select>
@@ -1703,9 +2101,9 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                                 <span style="color:#555;">Clique nos dados para selecionar...</span>
                             </div>
 
-                            <!-- Botão rolar com dddice -->
+                            <!-- Botão rolar com Dados 3D -->
                             <button class="btn-escudo-rolar" id="escudo-btn-rolar" disabled onclick="escudoExecutarRolagem()">
-                                <i class="fas fa-dice"></i> Rolar com dddice
+                                <i class="fas fa-dice"></i> Rolar Dados
                             </button>
                         </div>
 
@@ -1846,7 +2244,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                 <button onclick="fecharModal('modal-detalhes-jogador')" style="position: absolute; top: 20px; right: 20px; background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer; opacity: 0.7; transition: opacity 0.2s;"><i class="fas fa-times"></i></button>
                 <div style="display: flex; align-items: center; gap: 20px;">
                     <div style="width: 90px; height: 90px; border-radius: 50%; border: 3px solid var(--premium-accent); overflow: hidden; box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);">
-                        <img id="player-modal-foto" src="../img/uploads/perfil/avatar.png" alt="Foto do Jogador" style="width: 100%; height: 100%; object-fit: cover;">
+                        <img id="player-modal-foto" src="../img/uploads/perfil/avatar1.png" alt="Foto do Jogador" style="width: 100%; height: 100%; object-fit: cover;">
                     </div>
                     <div>
                         <h2 id="player-modal-nome" style="color: #fff; font-weight: 800; font-size: 1.6rem; margin: 0 0 5px 0;">Nome do Jogador</h2>
@@ -1886,12 +2284,21 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
     // ============================================================
     // DADOS PHP → JS
     // ============================================================
-    const campanhaInicial            = <?= json_encode($campanhaDados) ?>;
-    const campanhaInicialPersonagems = <?= json_encode($PersonagemsCampanha) ?>;
-    const combatesCampanha           = <?= json_encode($combatesCampanha) ?>;
+    const campanhaInicial            = <?= json_encode($campanhaDados ?: null) ?: 'null' ?>;
+    const campanhaInicialPersonagems = <?= json_encode($PersonagemsCampanha ?: []) ?: '[]' ?>;
+    const combatesCampanha           = <?= json_encode($combatesCampanha ?: []) ?: '[]' ?>;
     const idCampanha                 = <?= $id_campanha ? (int)$id_campanha : 'null' ?>;
-    const usuarioLogadoId            = <?= (int)$_SESSION['usuario']['id'] ?>;
+    const usuarioLogadoId            = <?= isset($_SESSION['usuario']['id']) ? (int)$_SESSION['usuario']['id'] : 'null' ?>;
     const isMasterLogado             = <?= $isMaster ? 'true' : 'false' ?>;
+
+    // Debugger visual de erros de JS para ambiente de desenvolvimento
+    window.onerror = function(message, source, lineno, colno, error) {
+        alert("🚨 DETECTADO ERRO DE JAVASCRIPT NO SEU NAVEGADOR:\n\n" + message + "\n\nArquivo: " + source + "\nLinha: " + lineno + "\n\nStack Trace:\n" + (error ? error.stack : "N/A"));
+        return false;
+    };
+    window.addEventListener('unhandledrejection', function(event) {
+        alert("🚨 ERRO DE PROMISE REJEITADA NO SEU NAVEGADOR:\n\n" + event.reason);
+    });
 
     // ============================================================
     // INICIALIZAÇÃO
@@ -2061,7 +2468,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
     function irParaEditar() {
         document.getElementById('nome-campanha-edit').value         = document.getElementById('display-nome-campanha').textContent;
         document.getElementById('descricao-campanha-edit').innerHTML = document.getElementById('display-descricao-campanha').innerHTML;
-        const idSis = <?= $campanhaDados['id_sistema'] ?? 'null' ?>;
+        const idSis = <?= ($campanhaDados && isset($campanhaDados['id_sistema'])) ? (int)$campanhaDados['id_sistema'] : 'null' ?>;
         if (idSis) {
             document.getElementById('selecao-sistema-edit').value = idSis;
             carregarDetalhesSistema(idSis, 'sistema-showcase-edit');
@@ -2121,7 +2528,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                         if (attrArea && p.atributos) {
                             attrArea.innerHTML = p.atributos.map(attr => `
                                 <div class="attr-p1-box">
-                                    <span>${attr.ds_abreviacao || attr.nm_atributo.substring(0,3).toUpperCase()}</span>
+                                    <span>${attr.ds_abreviacao || (attr.nm_atributo ? attr.nm_atributo.substring(0, 3).toUpperCase() : 'ATT')}</span>
                                     <strong>${attr.qt_valor}</strong>
                                 </div>
                             `).join('');
@@ -2305,11 +2712,12 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
     // PERSONAGENS
     // ============================================================
     function switchDashboardTab(tab) {
-        ['personagens','combates','jogadores'].forEach(t => {
+        ['personagens','combates','jogadores','dados'].forEach(t => {
             const aba   = document.getElementById('aba-'+t);
             let listId = 'lista-combates';
             if (t === 'personagens') listId = 'lista-Personagems';
             if (t === 'jogadores') listId = 'lista-jogadores';
+            if (t === 'dados') listId = 'lista-dados-jogador';
             
             const lista = document.getElementById(listId);
             if (t === tab) { 
@@ -2322,6 +2730,16 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
         });
     }
 
+    function irParaAbaDashboard(tab) {
+        fecharEscudo();
+        switchDashboardTab(tab);
+        const target = document.querySelector('.sub-nav-campanha') || document.querySelector('.sessao-detalhes');
+        if (target) {
+            target.scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+
+
     async function abrirModalPersonagens() {
         abrirModal('modal-adc-Personagems');
         const container = document.getElementById('modal-meus-personagens');
@@ -2332,7 +2750,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                 if (!data.personagens.length) { container.innerHTML='<p style="text-align:center;padding:20px;color:#888;">Você não tem personagens disponíveis.</p>'; return; }
                 container.innerHTML = data.personagens.map(p=>`
                     <div class="card-Personagem">
-                        <div class="avatar-Personagem"><img src="${p.ds_foto||'../img/uploads/perfil/avatar.png'}" alt="Avatar"></div>
+                        <div class="avatar-Personagem"><img src="${p.ds_foto||'../img/uploads/perfil/avatar1.png'}" alt="Avatar"></div>
                         <div class="info-Personagem"><h3>${p.nm_personagem}</h3><p>${p.nm_sistema} - ${p.nm_classe||'Sem Classe'}</p></div>
                         <button class="btn-ver-ficha" onclick="vincularPersonagem(${p.id_personagem})"><i class="fas fa-plus-circle"></i> Adicionar</button>
                     </div>`).join('');
@@ -2393,59 +2811,74 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
 
     async function renderCatalogo() {
         const container = document.getElementById('catalogo-cards');
-        const idSis = <?= $campanhaDados ? $campanhaDados['id_sistema'] : 'null' ?>;
+        const idSis = <?= ($campanhaDados && isset($campanhaDados['id_sistema'])) ? (int)$campanhaDados['id_sistema'] : 'null' ?>;
         
-        if (ameacasCatalogo.length === 0 && idSis) {
+        if (ameacasCatalogo.length === 0) {
             try {
-                // 1. Carrega criaturas oficiais do sistema 1 (Ordem Paranormal)
-                const resOficial = await fetch(`../app/ajax/get-monstros.php?id_sistema=1`);
-                const dataOficial = await resOficial.json();
-                let monstros = [];
-                if (dataOficial.success) {
-                    monstros = dataOficial.monstros;
+                // Carrega todos os monstros de todos os sistemas
+                const res = await fetch(`../app/ajax/get-monstros.php`);
+                const data = await res.json();
+                if (data.success) {
+                    ameacasCatalogo = data.monstros;
                 }
-                
-                // 2. Se o sistema da campanha for diferente de 1, carrega também as criaturas do sistema da campanha
-                if (idSis !== 1) {
-                    const resCamp = await fetch(`../app/ajax/get-monstros.php?id_sistema=${idSis}`);
-                    const dataCamp = await resCamp.json();
-                    if (dataCamp.success) {
-                        const idsExistentes = new Set(monstros.map(m => parseInt(m.id_monstro)));
-                        dataCamp.monstros.forEach(m => {
-                            if (!idsExistentes.has(parseInt(m.id_monstro))) {
-                                monstros.push(m);
-                            }
-                        });
-                    }
-                }
-                ameacasCatalogo = monstros;
             } catch(e) { console.error(e); }
         }
         
         const busca = document.getElementById('busca-ameaca').value.toLowerCase();
         
         const filtrados = ameacasCatalogo.filter(a => {
-            const bateBusca = a.nm_monstro.toLowerCase().includes(busca);
-            const bateFiltro = (filtroAtual === 'Todos' || a.tp_monstro === filtroAtual);
+            const buscaLimpa = (busca || '').trim();
+            const bateBusca = a.nm_monstro.toLowerCase().includes(buscaLimpa);
+            let bateFiltro = false;
+            
+            if (origemCriaturaFiltro === 'table') {
+                // Ao selecionar TABLE, os filtros de elemento não se aplicam
+                bateFiltro = true;
+            } else {
+                if (filtroAtual === 'Todos') {
+                    bateFiltro = true;
+                } else if (filtroAtual === 'Mundano') {
+                    const elM = (a.tp_monstro || '').toLowerCase().trim();
+                    bateFiltro = (elM === 'pessoa' || elM === 'animal' || elM === 'mundano');
+                } else {
+                    bateFiltro = (a.tp_monstro === filtroAtual);
+                }
+            }
             
             const idMonstroInt = parseInt(a.id_monstro);
             const idSistemaInt = parseInt(a.id_sistema);
             
             let bateOrigem = false;
             if (origemCriaturaFiltro === 'oficial') {
-                // Criaturas nativas/tradicionais (ID do sistema é 1 e ID do monstro é <= 68)
-                bateOrigem = (idSistemaInt === 1 && idMonstroInt <= 68);
+                // Criaturas do sistema Ordem Paranormal (id_sistema = 1)
+                bateOrigem = (idSistemaInt === 1);
+            } else if (origemCriaturaFiltro === 'table') {
+                // Criaturas do sistema TABLE (id_sistema = 2)
+                bateOrigem = (idSistemaInt === 2);
             } else {
-                // Criaturas criadas pelo mestre no exibir-sistema.php
-                // (Qualquer criatura com ID > 68 ou que pertença ao sistema da campanha se for diferente de 1)
-                bateOrigem = (idSistemaInt === idSis && idMonstroInt > 68) || (idSistemaInt === idSis && idSis !== 1);
+                // Criaturas customizadas (outro sistema da campanha)
+                bateOrigem = (idSistemaInt === idSis && idSistemaInt !== 1 && idSistemaInt !== 2);
             }
             
             return bateBusca && bateFiltro && bateOrigem;
         });
         
-        container.innerHTML = filtrados.map(a=>`
-            <div class="card-ameaca-premium">
+        container.innerHTML = filtrados.map(a=>{
+            let elClass = '';
+            if (parseInt(a.id_sistema) === 2) {
+                elClass = ' elemento-table';
+            } else {
+                let el = (a.tp_monstro || '').toLowerCase().trim();
+                if(el === 'sangue') elClass = ' elemento-sangue';
+                else if(el === 'morte') elClass = ' elemento-morte';
+                else if(el === 'conhecimento') elClass = ' elemento-conhecimento';
+                else if(el === 'energia') elClass = ' elemento-energia';
+                else if(el === 'medo') elClass = ' elemento-medo';
+                else if(el === 'pessoa' || el === 'animal' || el === 'mundano') elClass = ' elemento-mundano';
+            }
+
+            return `
+            <div class="card-ameaca-premium${elClass}">
                 <img src="${(a.ds_imagem && a.ds_imagem !== '../img/logo_icone.png') ? a.ds_imagem : '../img/logo_icone.png'}" class="card-ameaca-img">
                 <div class="card-ameaca-body">
                     <h4>${a.nm_monstro}</h4>
@@ -2458,18 +2891,29 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                     <button class="btn-card-ficha" onclick="verFichaMonstro(${a.id_monstro})">Ficha da Criatura</button>
                     <button class="btn-card-add"   onclick="adicionarAmeaca(${a.id_monstro})">Adicionar</button>
                 </div>
-            </div>`).join('');
+            </div>`;
+        }).join('');
     }
 
     function selecionarOrigemCriatura(origem, element) {
         origemCriaturaFiltro = origem;
         document.querySelectorAll('.banners-flex .banner-card').forEach(b => b.classList.remove('ativo'));
         element.classList.add('ativo');
+        
+        const filtrosAmeacas = document.getElementById('filtros-ameacas');
+        if (filtrosAmeacas) {
+            if (origem === 'table') {
+                filtrosAmeacas.style.display = 'none';
+            } else {
+                filtrosAmeacas.style.display = 'flex';
+            }
+        }
+        
         renderCatalogo();
     }
 
     function redirecionarNovaCriatura() {
-        const idSis = <?= $campanhaDados ? $campanhaDados['id_sistema'] : 'null' ?>;
+        const idSis = <?= ($campanhaDados && isset($campanhaDados['id_sistema'])) ? (int)$campanhaDados['id_sistema'] : 'null' ?>;
         if (idSis) {
             window.location.href = `exibir-sistema.php?id=${idSis}&action=criar_criatura`;
         }
@@ -2488,8 +2932,21 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
     function renderSelecionadas() {
         const c=document.getElementById('selecionadas-cards'); let vd=0;
         c.innerHTML = ameacasSelecionadas.map((a,i)=>{
+            let elClass = '';
+            if (parseInt(a.id_sistema) === 2) {
+                elClass = ' elemento-table';
+            } else {
+                let el = (a.tp_monstro || '').toLowerCase().trim();
+                if(el === 'sangue') elClass = ' elemento-sangue';
+                else if(el === 'morte') elClass = ' elemento-morte';
+                else if(el === 'conhecimento') elClass = ' elemento-conhecimento';
+                else if(el === 'energia') elClass = ' elemento-energia';
+                else if(el === 'medo') elClass = ' elemento-medo';
+                else if(el === 'pessoa' || el === 'animal' || el === 'mundano') elClass = ' elemento-mundano';
+            }
+
             vd+=parseInt(a.qt_vd||0);
-            return `<div class="card-ameaca-premium" style="background:rgba(255,255,255,.05);padding:8px;">
+            return `<div class="card-ameaca-premium${elClass}" style="background:rgba(255,255,255,.05);padding:8px;">
                 <div class="card-ameaca-body"><h4 style="font-size:.9rem;">${a.nm_monstro}</h4><span style="font-size:.7rem;color:#aaa;">VD: <b>${a.qt_vd||0}</b></span></div>
                 <button onclick="removerAmeaca(${i})" style="background:none;border:none;color:#888;cursor:pointer;"><i class="fas fa-trash"></i></button>
             </div>`;
@@ -2548,10 +3005,25 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
             const data = await res.json();
             if (data.success) {
                 const m=data.monstro, attrs=data.atributos;
+                
+                // Mapeamento dinâmico de cor de destaque baseado no elemento da criatura
+                let corDestaque = 'var(--premium-accent)';
+                if (parseInt(m.id_sistema) === 1) {
+                    const el = (m.tp_monstro || '').toLowerCase().trim();
+                    if (el === 'sangue') corDestaque = '#ff3232';
+                    else if (el === 'morte') corDestaque = '#cfd8dc'; // Cinza claro legível no escuro
+                    else if (el === 'conhecimento') corDestaque = '#f1c40f';
+                    else if (el === 'energia') corDestaque = '#1565c0'; // Azul escuro
+                    else if (el === 'medo') corDestaque = '#a855f7';
+                    else if (el === 'pessoa' || el === 'animal' || el === 'mundano') corDestaque = '#4caf50'; // Verde
+                } else if (parseInt(m.id_sistema) === 2) {
+                    corDestaque = '#7b4ff7'; // Roxo TABLE
+                }
+
                 c.innerHTML = `
-                    <div style="background:linear-gradient(135deg,#1e0b3a,#311c61);padding:25px;border-bottom:2px solid var(--premium-accent);">
+                    <div style="background:linear-gradient(135deg,#1e0b3a,#311c61);padding:25px;border-bottom:2px solid ${corDestaque};">
                         <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-                            <div><h1 style="color:#fff;font-weight:900;font-size:1.8rem;margin-bottom:5px;">${m.nm_monstro}</h1><span style="color:var(--premium-accent);font-weight:800;font-size:.9rem;text-transform:uppercase;">${m.tp_monstro||'Desconhecido'}</span></div>
+                            <div><h1 style="color:#fff;font-weight:900;font-size:1.8rem;margin-bottom:5px;">${m.nm_monstro}</h1><span style="color:${corDestaque};font-weight:800;font-size:.9rem;text-transform:uppercase;">${m.tp_monstro||'Desconhecido'}</span></div>
                             <i class="fas fa-times" onclick="fecharModal('modal-ficha-monstro')" style="color:#fff;cursor:pointer;font-size:1.2rem;"></i>
                         </div>
                     </div>
@@ -2562,10 +3034,10 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                             <div style="background:rgba(255,255,255,.05);padding:15px;border-radius:12px;text-align:center;border:1px solid rgba(255,255,255,.1);"><span style="display:block;color:#f1c40f;font-weight:900;font-size:.7rem;margin-bottom:5px;">XP</span><strong style="color:#fff;font-size:1.5rem;">${m.qt_xp_recompensa}</strong></div>
                         </div>
                         <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:25px;">
-                            ${attrs.map(a=>`<div style="text-align:center;"><span style="font-size:.7rem;display:block;color:var(--premium-accent);">${a.ds_abreviacao}</span><div style="width:45px;height:45px;font-size:1.1rem;border:2px solid ${a.qt_valor>0?'var(--premium-accent)':'#444'};border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;color:#fff;">${a.qt_valor}</div></div>`).join('')}
+                            ${attrs.map(a=>`<div style="text-align:center;"><span style="font-size:.7rem;display:block;color:${corDestaque};">${a.ds_abreviacao}</span><div style="width:45px;height:45px;font-size:1.1rem;border:2px solid ${a.qt_valor>0?corDestaque:'#444'};border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;color:#fff;">${a.qt_valor}</div></div>`).join('')}
                         </div>
                         <div style="background:rgba(0,0,0,.3);padding:20px;border-radius:15px;border:1px solid rgba(255,255,255,.05);">
-                            <h3 style="color:var(--premium-accent);font-size:.8rem;font-weight:900;margin-bottom:10px;text-transform:uppercase;">HABILIDADES / DETALHES</h3>
+                            <h3 style="color:${corDestaque};font-size:.8rem;font-weight:900;margin-bottom:10px;text-transform:uppercase;">HABILIDADES / DETALHES</h3>
                             <p style="color:#ccc;font-size:.9rem;line-height:1.6;">${m.ds_monstro||'Nenhuma habilidade descrita.'}</p>
                         </div>
                     </div>`;
@@ -2642,7 +3114,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
             qt_sanidade_maxima: parseInt(p.qt_sanidade_maxima) || 1,
             qt_esforco: parseInt(p.qt_esforco) || 0,
             qt_esforco_maximo: parseInt(p.qt_esforco_maximo) || 1,
-            ds_foto: p.ds_foto || '../img/uploads/perfil/avatar.png'
+            ds_foto: p.ds_foto || '../img/uploads/perfil/avatar1.png'
         }));
         
         // Monstros reais do combate
@@ -2668,7 +3140,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
         const c = document.getElementById('lista-iniciativa-escudo'); if (!c) return;
         c.innerHTML = iniciativaLista.map((p,i)=>`
             <div class="item-iniciativa ${i===indexTurno?'ativo':''}" onclick="selecionarParticipanteEscudo(${i})">
-                <img src="${p.ds_foto||'../img/uploads/perfil/avatar.png'}" class="img-iniciativa">
+                <img src="${p.ds_foto||'../img/uploads/perfil/avatar1.png'}" class="img-iniciativa">
                 <div class="info-iniciativa">
                     <h4 style="color:#fff;margin:0;font-size:.95rem;">${p.nm_personagem||p.nm_monstro}</h4>
                     <div style="display:flex;gap:10px;margin-top:4px;">
@@ -2891,7 +3363,13 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
 
     function obterInvestigacoesLocal() {
         const key = `campanha_${idCampanha}_investigacoes`;
-        return JSON.parse(localStorage.getItem(key)) || [];
+        try {
+            const data = localStorage.getItem(key);
+            return data ? JSON.parse(data) : [];
+        } catch(e) {
+            console.error(e);
+            return [];
+        }
     }
 
     function salvarInvestigacoesLocal(lista) {
@@ -2996,7 +3474,13 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
 
     function obterRelatoriosLocal() {
         const key = `campanha_${idCampanha}_relatorios`;
-        return JSON.parse(localStorage.getItem(key)) || [];
+        try {
+            const data = localStorage.getItem(key);
+            return data ? JSON.parse(data) : [];
+        } catch(e) {
+            console.error(e);
+            return [];
+        }
     }
 
     function salvarRelatoriosLocal(lista) {
@@ -3127,7 +3611,13 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
     // ============================================================
     function inicializarAnotacoes() {
         const key = `campanha_${idCampanha}_anotacoes`;
-        const salvas = JSON.parse(localStorage.getItem(key)) || { geral: '', futuras: '', anteriores: '' };
+        let salvas = { geral: '', futuras: '', anteriores: '' };
+        try {
+            const data = localStorage.getItem(key);
+            if (data) salvas = JSON.parse(data);
+        } catch(e) {
+            console.error(e);
+        }
         
         const inputGeral = document.getElementById('anot-geral-input');
         const inputFuturas = document.getElementById('anot-futuras-input');
@@ -3165,6 +3655,11 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
     let escudoThemeId   = '';
     let escudoRolling   = false;
 
+    // Variáveis da Rolagem do Jogador Comum
+    let jogadorSelecao  = {};
+    let jogadorThemeId  = '';
+    let jogadorRolling  = false;
+
     async function initEscudoSDK() {
         if (escudoDddiceSDK) return;
         setEscudoStatus('loading');
@@ -3182,10 +3677,20 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                 select.innerHTML = '<option value="local">Rolagem Local Premium</option>';
                 select.disabled = true;
             }
+            const btnJog = document.getElementById('jogador-btn-rolar');
+            if (btnJog) {
+                btnJog.innerHTML = '<i class="fas fa-dice"></i> Rolar Dados';
+                btnJog.disabled = false;
+            }
+            const selectJog = document.getElementById('jogador-theme-select');
+            if (selectJog) {
+                selectJog.innerHTML = '<option value="local">Rolagem Local Premium</option>';
+                selectJog.disabled = true;
+            }
             return;
         }
         
-        if (!window.ThreeDDice) { setEscudoStatus('error'); showEscudoToast('SDK dddice não carregou.'); return; }
+        if (!window.ThreeDDice) { setEscudoStatus('error'); showEscudoToast('Motor de dados 3D não carregou.'); return; }
         try {
             const canvas = document.getElementById('dddice-canvas-escudo');
             escudoDddiceSDK = new window.ThreeDDice(canvas, ESCUDO_API_KEY);
@@ -3193,10 +3698,34 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
             await escudoDddiceSDK.connect(ESCUDO_ROOM_SLUG);
             await carregarTemasEscudo();
             setEscudoStatus('ok');
+
+            // Ouvir rolagens externas na sala em tempo real!
+            escudoDddiceSDK.on('roll:finished', (roll) => {
+                // Se a rolagem foi feita por nós mesmos, não duplica no histórico local
+                if (escudoDddiceSDK && escudoDddiceSDK.user && roll.user.uuid === escudoDddiceSDK.user.uuid) return;
+
+                const total = roll.total_value;
+                const userWhoRolled = roll.user.username || 'Outro participante';
+
+                // Mapear os dados rolandos para criar a legenda
+                const diceSummary = {};
+                roll.values.forEach(v => {
+                    const cleanType = (v.type || 'd20').toLowerCase();
+                    diceSummary[cleanType] = (diceSummary[cleanType] || 0) + 1;
+                });
+                const equation = Object.entries(diceSummary).map(([type, qtd]) => `${qtd}${type.toUpperCase()}`).join(' + ');
+
+                let label = `${userWhoRolled} rolou ${equation}`;
+                
+                // Força o delay de 5 segundos para exibir no histórico local para rolagens recebidas de outros
+                setTimeout(() => {
+                    adicionarAoHistoricoCompartilhado(total, label, false, userWhoRolled);
+                }, 5000);
+            });
         } catch (err) { 
             console.error('initEscudoSDK:', err); 
             setEscudoStatus('error'); 
-            showEscudoToast('Erro ao conectar ao dddice. Modo Local Ativo.'); 
+            showEscudoToast('Erro ao inicializar dados 3D. Modo Local Ativo.'); 
             const btn = document.getElementById('escudo-btn-rolar');
             if (btn) btn.innerHTML = '<i class="fas fa-dice"></i> Rolar Dados';
             const select = document.getElementById('escudo-theme-select');
@@ -3204,22 +3733,49 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                 select.innerHTML = '<option value="local">Rolagem Local Premium (Offline)</option>';
                 select.disabled = true;
             }
+            const btnJog = document.getElementById('jogador-btn-rolar');
+            if (btnJog) btnJog.innerHTML = '<i class="fas fa-dice"></i> Rolar Dados';
+            const selectJog = document.getElementById('jogador-theme-select');
+            if (selectJog) {
+                selectJog.innerHTML = '<option value="local">Rolagem Local Premium (Offline)</option>';
+                selectJog.disabled = true;
+            }
         }
     }
 
     async function carregarTemasEscudo() {
         const select = document.getElementById('escudo-theme-select');
-        select.innerHTML = '<option value="">Carregando...</option>';
+        const playerSelect = document.getElementById('jogador-theme-select');
+        
+        const populateSelect = (sel, themes) => {
+            if (!sel) return;
+            sel.innerHTML = '';
+            themes.forEach(t => { const opt = document.createElement('option'); opt.value = t.id; opt.textContent = t.name || t.id; sel.appendChild(opt); });
+            sel.disabled = false;
+        };
+
+        if (select) select.innerHTML = '<option value="">Carregando...</option>';
+        if (playerSelect) playerSelect.innerHTML = '<option value="">Carregando...</option>';
+        
         const resp = await fetch('?action=themes_escudo');
         const data = await resp.json();
         if (data.error) throw new Error(data.error);
         const themes = data.themes ?? [];
-        select.innerHTML = '';
-        if (!themes.length) { select.innerHTML = '<option value="">Nenhum tema na Dice Box</option>'; showEscudoToast('Adicione um tema em dddice.com → Account → Dice Box'); return; }
-        themes.forEach(t => { const opt = document.createElement('option'); opt.value = t.id; opt.textContent = t.name || t.id; select.appendChild(opt); });
-        select.disabled = false;
-        escudoThemeId = select.value;
-        select.addEventListener('change', () => { escudoThemeId = select.value; atualizarBtnEscudo(); });
+        
+        if (!themes.length) { 
+            if (select) select.innerHTML = '<option value="">Nenhum tema encontrado</option>'; 
+            if (playerSelect) playerSelect.innerHTML = '<option value="">Nenhum tema encontrado</option>'; 
+            showEscudoToast('Nenhum tema de dados disponível. Usando dados clássicos.'); 
+            return; 
+        }
+        
+        populateSelect(select, themes);
+        populateSelect(playerSelect, themes);
+        
+        if (select) {
+            escudoThemeId = select.value;
+            select.addEventListener('change', () => { escudoThemeId = select.value; atualizarBtnEscudo(); });
+        }
         atualizarBtnEscudo();
     }
 
@@ -3293,6 +3849,19 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
 
         const label = entries.map(([l,q]) => `${q}D${l}`).join(' + ');
 
+        const finalizarComDelay = (total, values, lbl) => {
+            setTimeout(() => {
+                mostrarResultadoEscudo(total, values, lbl);
+                adicionarAoHistoricoEscudo(total, lbl);
+                adicionarAoHistoricoCompartilhado(total, lbl, true);
+                limparSelecaoEscudo();
+                
+                escudoRolling = false;
+                if (btn) btn.innerHTML = isLocal ? '<i class="fas fa-dice"></i> Rolar Dados' : '<i class="fas fa-dice"></i> Rolar com Dados 3D';
+                atualizarBtnEscudo();
+            }, 5000);
+        };
+
         try {
             let finalTotal = 0;
             let finalValues = [];
@@ -3305,9 +3874,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                         finalValues.push({ value: v, type: `d${lados}` });
                     }
                 });
-                mostrarResultadoEscudo(finalTotal, finalValues, label);
-                adicionarAoHistoricoEscudo(finalTotal, label);
-                limparSelecaoEscudo();
+                finalizarComDelay(finalTotal, finalValues, label);
             } else {
                 const dddiceEntries = entries.filter(([l]) => ESCUDO_DDDICE_MAP[parseInt(l)]);
                 const jsEntries     = entries.filter(([l]) => !ESCUDO_DDDICE_MAP[parseInt(l)]);
@@ -3321,19 +3888,34 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                 let jsValues = [];
                 jsEntries.forEach(([lados, qtd]) => { 
                     for (let i = 0; i < qtd; i++) { 
-                        const v = Math.floor(Math.random() * parseInt(lados)) + 1; 
-                        jsTotal += v; 
-                        jsValues.push({ value: v, type: `d${lados}` }); 
+                       const v = Math.floor(Math.random() * parseInt(lados)) + 1; 
+                       jsTotal += v; 
+                       jsValues.push({ value: v, type: `d${lados}` }); 
                     } 
                 });
                 
                 if (dddDice.length > 0) {
-                    const [, phpResult] = await Promise.all([
-                        escudoDddiceSDK.roll(dddDice).catch(e => console.warn('SDK:', e)),
-                        fetch('?action=roll_escudo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dice: dddDice }) }).then(r => r.json()),
-                    ]);
+                    let phpResult;
+                    try {
+                        if (escudoDddiceSDK) {
+                            const sdkRes = await escudoDddiceSDK.roll(dddDice);
+                            const resValues = sdkRes.data?.values || sdkRes.values || [];
+                            const resTotal = sdkRes.data?.total_value !== undefined ? sdkRes.data.total_value : (sdkRes.total_value || 0);
+                            
+                            phpResult = {
+                                ok: true,
+                                total: parseInt(resTotal),
+                                values: resValues.map(v => ({ value: parseInt(v.value), type: v.type }))
+                            };
+                        } else {
+                            phpResult = await fetch('?action=roll_escudo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dice: dddDice }) }).then(r => r.json());
+                        }
+                    } catch (e) {
+                        console.warn('SDK:', e);
+                        phpResult = { error: e.message };
+                    }
                     if (phpResult.error) { 
-                        showEscudoToast('Erro dddice. Rolando local.'); 
+                        showEscudoToast('Conexão 3D indisponível. Rolando local.'); 
                         entries.forEach(([lados, qtd]) => {
                             for (let i = 0; i < qtd; i++) {
                                 const v = Math.floor(Math.random() * parseInt(lados)) + 1;
@@ -3341,24 +3923,16 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                                 finalValues.push({ value: v, type: `d${lados}` });
                             }
                         });
-                        mostrarResultadoEscudo(finalTotal, finalValues, label);
-                        adicionarAoHistoricoEscudo(finalTotal, label);
-                        limparSelecaoEscudo();
+                        finalizarComDelay(finalTotal, finalValues, label);
                     } else {
                         finalTotal  = phpResult.total + jsTotal;
                         finalValues  = [...phpResult.values, ...jsValues];
-                        setTimeout(() => { 
-                            mostrarResultadoEscudo(finalTotal, finalValues, label); 
-                            adicionarAoHistoricoEscudo(finalTotal, label); 
-                            limparSelecaoEscudo(); 
-                        }, 1200);
+                        finalizarComDelay(finalTotal, finalValues, label);
                     }
                 } else {
                     finalTotal = jsTotal;
                     finalValues = jsValues;
-                    mostrarResultadoEscudo(finalTotal, finalValues, label);
-                    adicionarAoHistoricoEscudo(finalTotal, label);
-                    limparSelecaoEscudo();
+                    finalizarComDelay(finalTotal, finalValues, label);
                 }
             }
         } catch (err) { 
@@ -3373,14 +3947,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                     fallbackValues.push({ value: v, type: `d${lados}` });
                 }
             });
-            mostrarResultadoEscudo(fallbackTotal, fallbackValues, label);
-            adicionarAoHistoricoEscudo(fallbackTotal, label);
-            limparSelecaoEscudo();
-        }
-        finally { 
-            escudoRolling = false; 
-            if (btn) btn.innerHTML = isLocal ? '<i class="fas fa-dice"></i> Rolar Dados' : '<i class="fas fa-dice"></i> Rolar com dddice'; 
-            atualizarBtnEscudo(); 
+            finalizarComDelay(fallbackTotal, fallbackValues, label);
         }
     }
 
@@ -3388,32 +3955,443 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
         const totalEl     = document.getElementById('escudo-result-total');
         const breakdownEl = document.getElementById('escudo-result-breakdown');
         const labelEl     = document.getElementById('escudo-result-label');
-        labelEl.textContent = label;
-        totalEl.classList.remove('pop');
-        void totalEl.offsetWidth;
-        totalEl.textContent = total;
-        totalEl.classList.add('pop');
-        if (values.length > 1) {
-            breakdownEl.innerHTML = values.map(v => `<span class="val">${v.value}</span>`).join('<span class="op">+</span>') + `<span class="op">=</span><span class="val">${total}</span>`;
-        } else { breakdownEl.innerHTML = ''; }
-        document.getElementById('escudo-result-popup').classList.add('show');
+        if (labelEl) labelEl.textContent = label;
+        if (totalEl) {
+            totalEl.classList.remove('pop');
+            void totalEl.offsetWidth;
+            totalEl.textContent = total;
+            totalEl.classList.add('pop');
+        }
+        if (breakdownEl) {
+            if (values.length > 1) {
+                breakdownEl.innerHTML = values.map(v => `<span class="val">${v.value}</span>`).join('<span class="op">+</span>') + `<span class="op">=</span><span class="val">${total}</span>`;
+            } else { breakdownEl.innerHTML = ''; }
+        }
+        const popup = document.getElementById('escudo-result-popup');
+        if (popup) popup.classList.add('show');
     }
 
-    function fecharResultadoEscudo() { document.getElementById('escudo-result-popup').classList.remove('show'); }
+    function fecharResultadoEscudo() { 
+        const popup = document.getElementById('escudo-result-popup');
+        if (popup) popup.classList.remove('show'); 
+    }
 
     function adicionarAoHistoricoEscudo(resultado, descricao) {
         const logContainer = document.getElementById('sidebar-dados-lista'); if (!logContainer) return;
         const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const novoItem = document.createElement('div'); novoItem.className = 'item-dado real-roll';
-        novoItem.innerHTML = `<div class="hexa-dado" style="border-color:var(--premium-accent);color:#000;background:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;">${resultado}</div><div class="info-rolagem"><p>${time} • ${descricao}</p><h4 style="color:#fff;">Mestre <span style="font-size:0.6rem;color:var(--premium-accent);font-weight:700;background:rgba(139,92,246,0.15);padding:1px 5px;border-radius:4px;">dddice</span></h4></div>`;
+        novoItem.innerHTML = `<div class="hexa-dado" style="border-color:var(--premium-accent);color:#000;background:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;">${resultado}</div><div class="info-rolagem"><p>${time} • ${descricao}</p><h4 style="color:#fff;">Mestre <span style="font-size:0.6rem;color:var(--premium-accent);font-weight:700;background:rgba(139,92,246,0.15);padding:1px 5px;border-radius:4px;">3D</span></h4></div>`;
         if (logContainer.querySelectorAll('.real-roll').length === 0) { logContainer.querySelectorAll('.item-dado:not(.real-roll)').forEach(p => p.remove()); }
         logContainer.prepend(novoItem);
     }
 
-    function setEscudoStatus(state) {
-        const dot = document.getElementById('escudo-status-dot'); if (!dot) return;
+    // ============================================================
+    // DADOS — ABA CAMPANHA (layout fiel ao rolagem-de-dados.php)
+    // ============================================================
+    let campSelecao  = {};
+    let campThemeId  = '';
+    let campRolling  = false;
+
+    function inicializarEventosDadosCamp() {
+        document.querySelectorAll('.camp-item-dado').forEach(item => {
+            item.addEventListener('click', () => {
+                const lados = parseInt(item.dataset.lados);
+                const atual = campSelecao[lados] ?? 0;
+                const novo  = Math.min(10, atual + 1);
+                campSelecao[lados] = novo;
+
+                const bolinha = document.getElementById(`camp-bolinha-d${lados}`);
+                if (bolinha) { bolinha.textContent = novo; bolinha.classList.add('show'); }
+                item.classList.add('selecionado');
+
+                const container = item.querySelector('.dado-icon-container');
+                const img = item.querySelector('.img-dado');
+                if (container && img) {
+                    const src = img.src;
+                    container.classList.add('dado-girando');
+                    img.src = `../img/dados/D${lados} efeito.png`;
+                    setTimeout(() => { container.classList.remove('dado-girando'); img.src = src; }, 600);
+                }
+                atualizarResumoCamp();
+                atualizarBtnCamp();
+            });
+        });
+    }
+
+    function limparSelecaoCamp() {
+        campSelecao = {};
+        [2,4,6,8,10,12,20,100].forEach(d => {
+            const bolinha = document.getElementById(`camp-bolinha-d${d}`);
+            if (bolinha) { bolinha.textContent = '0'; bolinha.classList.remove('show'); }
+            const item = document.getElementById(`camp-dado-d${d}`);
+            if (item) item.classList.remove('selecionado');
+        });
+        atualizarResumoCamp();
+        atualizarBtnCamp();
+    }
+
+    function atualizarResumoCamp() {
+        const el = document.getElementById('camp-sel-resumo');
+        if (!el) return;
+        const parts = Object.entries(campSelecao).filter(([,q]) => q > 0);
+        if (!parts.length) {
+            el.innerHTML = '<span style="color:#555;">Clique nos dados para selecionar quantidades...</span>';
+            return;
+        }
+        let html = parts.map(([l,q]) => `<span class="chip">${q}D${l}</span>`).join('');
+        html += `<button class="camp-btn-limpar" onclick="limparSelecaoCamp()">✕ Limpar</button>`;
+        el.innerHTML = html;
+    }
+
+    function atualizarBtnCamp() {
+        const temDados = Object.values(campSelecao).some(q => q > 0);
+        const dot = document.getElementById('camp-status-dot');
+        const isLocal = dot && (dot.classList.contains('local') || dot.classList.contains('error'));
+        const sdkPronto = isLocal || (!!campThemeId && !campRolling);
+        const btn = document.getElementById('camp-btn-rolar');
+        if (btn) btn.disabled = !(temDados && sdkPronto);
+    }
+
+    function setCampStatus(state) {
+        const dot = document.getElementById('camp-status-dot');
+        if (!dot) return;
         dot.className = state;
-        dot.title = state === 'ok' ? 'Conectado ao dddice' : state === 'loading' ? 'Conectando...' : 'Erro';
+        dot.title = state === 'ok' ? 'Dados 3D ativos' : state === 'loading' ? 'Inicializando dados...' : 'Modo clássico ativo';
+    }
+
+    async function initCampThemes() {
+        const select = document.getElementById('camp-theme-select');
+        if (!select) return;
+
+        const escudoDot = document.getElementById('escudo-status-dot');
+        const escudoIsLocal = escudoDot && (escudoDot.classList.contains('local') || escudoDot.classList.contains('error'));
+
+        if (escudoIsLocal || !escudoDddiceSDK) {
+            setCampStatus('local');
+            select.innerHTML = '<option value="local">Rolagem Local Premium</option>';
+            select.disabled = true;
+            const btn = document.getElementById('camp-btn-rolar');
+            if (btn) btn.disabled = false;
+            return;
+        }
+
+        try {
+            setCampStatus('loading');
+            const resp = await fetch('?action=themes_escudo');
+            const data = await resp.json();
+            if (data.error) throw new Error(data.error);
+            const themes = data.themes ?? [];
+            select.innerHTML = '';
+            themes.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = t.name || t.id;
+                select.appendChild(opt);
+            });
+            select.disabled = false;
+            campThemeId = select.value;
+            select.addEventListener('change', () => { campThemeId = select.value; atualizarBtnCamp(); });
+            setCampStatus('ok');
+            atualizarBtnCamp();
+        } catch(e) {
+            console.error('initCampThemes:', e);
+            setCampStatus('local');
+            select.innerHTML = '<option value="local">Rolagem Local Premium (Offline)</option>';
+            select.disabled = true;
+            const btn = document.getElementById('camp-btn-rolar');
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    async function campExecutarRolagem() {
+        if (campRolling) return;
+        const entries = Object.entries(campSelecao).filter(([,q]) => q > 0);
+        if (!entries.length) return showEscudoToast('Selecione ao menos um dado!');
+
+        const dot = document.getElementById('camp-status-dot');
+        const isLocal = dot && (dot.classList.contains('local') || dot.classList.contains('error'));
+        if (!isLocal && !campThemeId) return showEscudoToast('Selecione um tema primeiro!');
+
+        campRolling = true;
+        const btn = document.getElementById('camp-btn-rolar');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Rolando...'; }
+
+        const label = entries.map(([l,q]) => `${q}D${l}`).join(' + ');
+
+        const finalizarComDelay = (total, values, lbl) => {
+            setTimeout(() => {
+                mostrarResultadoEscudo(total, values, lbl);
+                adicionarAoHistoricoCamp(total, lbl);
+                adicionarAoHistoricoCompartilhado(total, lbl, true);
+                limparSelecaoCamp();
+                campRolling = false;
+                if (btn) btn.innerHTML = '<i class="fas fa-dice"></i> Rolar Dados';
+                atualizarBtnCamp();
+            }, 5000);
+        };
+
+        try {
+            let finalTotal = 0, finalValues = [];
+
+            if (isLocal || !escudoDddiceSDK) {
+                entries.forEach(([lados, qtd]) => {
+                    for (let i = 0; i < qtd; i++) {
+                        const v = Math.floor(Math.random() * parseInt(lados)) + 1;
+                        finalTotal += v;
+                        finalValues.push({ value: v, type: `d${lados}` });
+                    }
+                });
+                finalizarComDelay(finalTotal, finalValues, label);
+            } else {
+                const dddiceEntries = entries.filter(([l]) => ESCUDO_DDDICE_MAP[parseInt(l)]);
+                const jsEntries     = entries.filter(([l]) => !ESCUDO_DDDICE_MAP[parseInt(l)]);
+                const dddDice = [];
+                dddiceEntries.forEach(([lados, qtd]) => {
+                    const tipo = ESCUDO_DDDICE_MAP[parseInt(lados)];
+                    for (let i = 0; i < qtd; i++) dddDice.push({ type: tipo, theme: campThemeId });
+                });
+                let jsTotal = 0, jsValues = [];
+                jsEntries.forEach(([lados, qtd]) => {
+                    for (let i = 0; i < qtd; i++) {
+                        const v = Math.floor(Math.random() * parseInt(lados)) + 1;
+                        jsTotal += v;
+                        jsValues.push({ value: v, type: `d${lados}` });
+                    }
+                });
+
+                if (dddDice.length > 0) {
+                    let phpResult;
+                    try {
+                        const sdkRes = await escudoDddiceSDK.roll(dddDice);
+                        const resValues = sdkRes.data?.values || sdkRes.values || [];
+                        const resTotal  = sdkRes.data?.total_value !== undefined ? sdkRes.data.total_value : (sdkRes.total_value || 0);
+                        phpResult = { ok: true, total: parseInt(resTotal), values: resValues.map(v => ({ value: parseInt(v.value), type: v.type })) };
+                    } catch(e) {
+                        phpResult = { error: e.message };
+                    }
+                    if (phpResult.error) {
+                        showEscudoToast('Conexão 3D indisponível. Rolando local.');
+                        entries.forEach(([lados, qtd]) => {
+                            for (let i = 0; i < qtd; i++) {
+                                const v = Math.floor(Math.random() * parseInt(lados)) + 1;
+                                finalTotal += v;
+                                finalValues.push({ value: v, type: `d${lados}` });
+                            }
+                        });
+                        finalizarComDelay(finalTotal, finalValues, label);
+                    } else {
+                        finalTotal  = phpResult.total + jsTotal;
+                        finalValues = [...phpResult.values, ...jsValues];
+                        finalizarComDelay(finalTotal, finalValues, label);
+                    }
+                } else {
+                    finalizarComDelay(jsTotal, jsValues, label);
+                }
+            }
+        } catch(err) {
+            console.error(err);
+            showEscudoToast('Erro na rolagem. Modo Local ativo.');
+            let fb = 0, fv = [];
+            entries.forEach(([lados, qtd]) => {
+                for (let i = 0; i < qtd; i++) {
+                    const v = Math.floor(Math.random() * parseInt(lados)) + 1;
+                    fb += v; fv.push({ value: v, type: `d${lados}` });
+                }
+            });
+            finalizarComDelay(fb, fv, label);
+        }
+    }
+
+    // Adicionar ao histórico da aba Dados da campanha
+    function adicionarAoHistoricoCamp(resultado, descricao) {
+        const logContainer = document.getElementById('camp-historico-lista');
+        if (!logContainer) return;
+        const msgVazio = document.getElementById('camp-msg-vazio');
+        if (msgVazio) msgVazio.remove();
+
+        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const navNome = document.querySelector('.usuario-logado-nav .nome-nav');
+        const nomeExibicao = navNome ? navNome.textContent.trim() : 'Você';
+
+        const novoItem = document.createElement('div');
+        novoItem.className = 'camp-log-item';
+        novoItem.innerHTML = `
+            <div class="camp-log-resultado">${resultado}</div>
+            <div class="camp-log-info">
+                <p>${time} • ${descricao}</p>
+                <h4>${nomeExibicao}</h4>
+            </div>
+        `;
+        logContainer.prepend(novoItem);
+
+        const key = `table_historico_camp_dados_${idCampanha}`;
+        let hist = [];
+        try { hist = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) {}
+        hist.unshift({ resultado, descricao, time, nomeExibicao });
+        if (hist.length > 50) hist.pop();
+        localStorage.setItem(key, JSON.stringify(hist));
+    }
+
+    // Carregar histórico persistido da aba Dados
+    function carregarHistoricoCamp() {
+        const key = `table_historico_camp_dados_${idCampanha}`;
+        try {
+            const hist = JSON.parse(localStorage.getItem(key) || '[]');
+            hist.forEach(log => {
+                const logContainer = document.getElementById('camp-historico-lista');
+                if (!logContainer) return;
+                const msgVazio = document.getElementById('camp-msg-vazio');
+                if (msgVazio) msgVazio.remove();
+                const novoItem = document.createElement('div');
+                novoItem.className = 'camp-log-item';
+                novoItem.innerHTML = `
+                    <div class="camp-log-resultado">${log.resultado}</div>
+                    <div class="camp-log-info">
+                        <p>${log.time} • ${log.descricao}</p>
+                        <h4>${log.nomeExibicao}</h4>
+                    </div>
+                `;
+                logContainer.appendChild(novoItem);
+            });
+        } catch(e) { console.error(e); }
+    }
+
+    function adicionarAoHistoricoCompartilhado(resultado, descricao, souEu = false, remetente = null) {
+        const logContainer = document.getElementById('jogador-dados-lista');
+        if (!logContainer) return;
+
+        // Remover a mensagem de vazio
+        const msgVazio = document.getElementById('jogador-msg-vazio');
+        if (msgVazio) msgVazio.remove();
+
+        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        let nomeExibicao = 'Você';
+        if (!souEu) {
+            nomeExibicao = remetente || 'Outro participante';
+        } else {
+            const navNome = document.querySelector('.usuario-logado-nav .nome-nav');
+            if (navNome) nomeExibicao = navNome.textContent;
+        }
+
+        // Criar elemento do item no histórico do jogador
+        const novoItem = document.createElement('div');
+        novoItem.className = 'log-item';
+        
+        novoItem.innerHTML = `
+            <div class="hexa-dado" style="min-width:36px; height:36px; border-radius:50%; border:2px solid var(--premium-accent); color:#fff; background:rgba(139,92,246,0.15); font-weight:800; display:flex; align-items:center; justify-content:center; margin-right:15px; font-size:0.9rem;">
+                ${resultado}
+            </div>
+            <div class="info-rolagem" style="flex:1;">
+                <p style="margin:0; font-size:0.75rem; color:#888;">${time} • ${descricao}</p>
+                <h4 style="margin:0; color:#fff; font-size:0.85rem; font-weight:700;">${nomeExibicao} <span style="font-size:0.6rem; color:var(--premium-accent); font-weight:700; background:rgba(139,92,246,0.15); padding:1px 5px; border-radius:4px;">3D</span></h4>
+            </div>
+        `;
+
+        logContainer.prepend(novoItem);
+
+        // Salvar no localStorage da campanha
+        const key = `table_historico_jogador_camp_${idCampanha}`;
+        let historico = [];
+        try {
+            const data = localStorage.getItem(key);
+            if (data) historico = JSON.parse(data);
+        } catch(e) { console.error(e); }
+        
+        historico.unshift({ resultado, descricao, time, nomeExibicao });
+        if (historico.length > 50) historico.pop();
+        localStorage.setItem(key, JSON.stringify(historico));
+
+        // Sincronizar também com o histórico do Escudo (se o mestre estiver na tela)
+        if (isMasterLogado) {
+            const sidebarLog = document.getElementById('sidebar-dados-lista');
+            if (sidebarLog) {
+                const itemEscudo = document.createElement('div');
+                itemEscudo.className = 'item-dado real-roll';
+                itemEscudo.innerHTML = `
+                    <div class="hexa-dado" style="border-color:var(--premium-accent);color:#000;background:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;">${resultado}</div>
+                    <div class="info-rolagem">
+                        <p>${time} • ${descricao}</p>
+                        <h4 style="color:#fff;">${nomeExibicao} <span style="font-size:0.6rem;color:var(--premium-accent);font-weight:700;background:rgba(139,92,246,0.15);padding:1px 5px;border-radius:4px;">3D</span></h4>
+                    </div>
+                `;
+                if (sidebarLog.querySelectorAll('.real-roll').length === 0) {
+                    sidebarLog.querySelectorAll('.item-dado:not(.real-roll)').forEach(p => p.remove());
+                }
+                sidebarLog.prepend(itemEscudo);
+            }
+        }
+    }
+
+    function carregarHistoricoJogadorLocal() {
+        const logContainer = document.getElementById('jogador-dados-lista');
+        if (!logContainer) return;
+        
+        const key = `table_historico_jogador_camp_${idCampanha}`;
+        let historico = [];
+        try {
+            const data = localStorage.getItem(key);
+            if (data) historico = JSON.parse(data);
+        } catch(e) { console.error(e); }
+
+        if (historico.length > 0) {
+            const msgVazio = document.getElementById('jogador-msg-vazio');
+            if (msgVazio) msgVazio.remove();
+            
+            logContainer.innerHTML = '';
+            historico.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'log-item';
+                div.innerHTML = `
+                    <div class="hexa-dado" style="min-width:36px; height:36px; border-radius:50%; border:2px solid var(--premium-accent); color:#fff; background:rgba(139,92,246,0.15); font-weight:800; display:flex; align-items:center; justify-content:center; margin-right:15px; font-size:0.9rem;">
+                        ${item.resultado}
+                    </div>
+                    <div class="info-rolagem" style="flex:1;">
+                        <p style="margin:0; font-size:0.75rem; color:#888;">${item.time} • ${item.descricao}</p>
+                        <h4 style="margin:0; color:#fff; font-size:0.85rem; font-weight:700;">${item.nomeExibicao} <span style="font-size:0.6rem; color:var(--premium-accent); font-weight:700; background:rgba(139,92,246,0.15); padding:1px 5px; border-radius:4px;">3D</span></h4>
+                    </div>
+                `;
+                logContainer.appendChild(div);
+            });
+        }
+    }
+
+    function limparHistoricoJogador() {
+        if (!confirm('Deseja limpar o histórico de rolagens desta sessão?')) return;
+        // Limpar aba Dados da campanha
+        const listaCamp = document.getElementById('camp-historico-lista');
+        if (listaCamp) listaCamp.innerHTML = '<div style="text-align:center;padding:40px;color:#555;" id="camp-msg-vazio">Nenhuma rolagem feita ainda nesta sessão.</div>';
+        try { localStorage.removeItem(`table_historico_camp_dados_${idCampanha}`); } catch(e) {}
+        // Limpar histórico compartilhado legado
+        const listaJog = document.getElementById('jogador-dados-lista');
+        if (listaJog) listaJog.innerHTML = '<div style="text-align:center;padding:40px;color:#555;" id="jogador-msg-vazio">Nenhuma rolagem feita ainda nesta sessão.</div>';
+        try { localStorage.removeItem(`table_historico_jogador_camp_${idCampanha}`); } catch(e) {}
+    }
+
+    function setEscudoStatus(state) {
+        const dot = document.getElementById('escudo-status-dot');
+        if (dot) {
+            dot.className = state;
+            dot.title = state === 'ok' ? 'Dados 3D ativos' : state === 'loading' ? 'Inicializando dados...' : 'Erro';
+        }
+        
+        const dotJogador = document.getElementById('jogador-status-dot');
+        if (dotJogador) {
+            dotJogador.className = state;
+            dotJogador.title = state === 'ok' ? 'Dados 3D ativos' : state === 'loading' ? 'Inicializando dados...' : 'Erro';
+            
+            // Alterar background do dot jogador dinamicamente para maior clareza visual
+            if (state === 'ok') {
+                dotJogador.style.backgroundColor = '#2ecc71';
+                dotJogador.style.boxShadow = '0 0 10px #2ecc71';
+            } else if (state === 'loading') {
+                dotJogador.style.backgroundColor = '#f1c40f';
+                dotJogador.style.boxShadow = '0 0 10px #f1c40f';
+            } else {
+                dotJogador.style.backgroundColor = '#e74c3c';
+                dotJogador.style.boxShadow = '0 0 10px #e74c3c';
+            }
+        }
     }
 
     function showEscudoToast(msg) {
@@ -3526,6 +4504,26 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                 let titulo = this.value.trim();
                 document.title = 'TABLE | ' + (titulo ? titulo : 'Nova Campanha');
             });
+        }
+
+        // Inicialização da aba Dados e SDK 3D no dashboard da campanha
+        if (typeof campanhaInicial !== 'undefined' && campanhaInicial) {
+            initEscudoSDK().then(() => {
+                // Inicializar aba Dados após SDK estar pronto
+                inicializarEventosDadosCamp();
+                carregarHistoricoCamp();
+                // Inicializar temas da aba camp (usa SDK do escudo compartilhado)
+                setTimeout(initCampThemes, 1500);
+            }).catch(() => {
+                inicializarEventosDadosCamp();
+                carregarHistoricoCamp();
+                setCampStatus('local');
+                const btn = document.getElementById('camp-btn-rolar');
+                if (btn) btn.disabled = false;
+                const select = document.getElementById('camp-theme-select');
+                if (select) { select.innerHTML = '<option value="local">Rolagem Local Premium</option>'; select.disabled = true; }
+            });
+            carregarHistoricoJogadorLocal();
         }
     });
     </script>

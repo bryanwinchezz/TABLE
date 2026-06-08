@@ -5,12 +5,12 @@
  *  SE o usuário estiver logado irá mostrar a foto e o nome do usuário
  *  SE NÃO irá mostrar os botões para navegar até a página de login ou cadastro
  */
-session_start();
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 // RESTAURADOR SEGURO E AUTOMÁTICO DO AVATAR PADRÃO (SAFETY FIRST)
 try {
-    $avatarPath = __DIR__ . '/../img/uploads/perfil/avatar.png';
-    $sourcePath = __DIR__ . '/../img/avatar.png';
+    $avatarPath = __DIR__ . '/../img/uploads/perfil/avatar1.png';
+    $sourcePath = __DIR__ . '/../img/avatar1.png';
     if (!file_exists($avatarPath)) {
         @mkdir(dirname($avatarPath), 0777, true);
         if (file_exists($sourcePath)) {
@@ -56,7 +56,7 @@ try {
                 <li><a href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a>
                 </li>
                 <li><a href="<?= isset($_SESSION['usuario']['cargo']) && in_array(strtolower($_SESSION['usuario']['cargo']), ['mestre','admin']) ? 'criar-mapa.php' : 'editar-perfil.php?abrir_mestre=1'; ?>">Mundos</a></li>
-                <li><a href="rolador-de-dados.php">Dados</a></li>
+                <li><a href="rolagem-de-dados.php">Dados</a></li>
                 <li><a href="sobre-nos.php">Sobre Nós</a></li>
             </ul>
 
@@ -64,7 +64,7 @@ try {
             <div class="nav-mobile-footer">
                 <?php if (isset($_SESSION['usuario'])): ?>
                     <div class="usuario-logado-nav" onclick="window.location.href='perfil.php'">
-                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png' ?>"
+                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
                             alt="Avatar Navbar" class="avatar-nav">
                         <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
                     </div>
@@ -82,7 +82,7 @@ try {
         <?php if (isset($_SESSION['usuario'])): ?>
             <div class="usuario-logado-nav desktop-only" id="nav-logado" onclick="window.location.href='perfil.php'"
                 title="Ir para o Perfil">
-                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png' ?>"
+                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
                     alt="Avatar Navbar" class="avatar-nav">
                 <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
             </div>
@@ -246,7 +246,7 @@ try {
                             href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a>
                     </li>
                     <li><a href="<?= isset($_SESSION['usuario']['cargo']) && in_array(strtolower($_SESSION['usuario']['cargo']), ['mestre','admin']) ? 'criar-mapa.php' : 'editar-perfil.php?abrir_mestre=1'; ?>">Mundos</a></li>
-                    <li><a href="rolador-de-dados.php">Dados</a></li>
+                    <li><a href="rolagem-de-dados.php">Dados</a></li>
                     <li><a href="sobre-nos.php">Sobre Nós</a></li>
                 </ul>
             </div>

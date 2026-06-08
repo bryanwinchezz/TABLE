@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../app/config/database.php';
-session_start();
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 if (!isset($_SESSION['usuario'])) {
     header('Location: login.php');
@@ -541,13 +541,25 @@ try {
         }
 
         body.tema-ordem-paranormal .attr-abbr {
-            background: #ff3232 !important;
-            color: #fff !important;
+            background: #fff !important;
+            color: #ff3232 !important;
         }
 
         body.tema-ordem-paranormal .attr-circle {
             border-color: #ff3232 !important;
-            background: rgba(255, 50, 50, 0.05) !important;
+            background: #ff3232 !important;
+            color: #fff !important;
+        }
+
+        body.tema-ordem-paranormal .premium-attr-box {
+            box-shadow: 0 4px 15px rgba(255, 50, 50, 0.5) !important;
+        }
+
+        body.tema-ordem-paranormal .extra-stat-box span {
+            background: #ffffff !important;
+            color: #000000 !important;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.6) !important;
+            text-shadow: none !important;
         }
 
         body.tema-ordem-paranormal .premium-info-item label,
@@ -655,7 +667,7 @@ try {
             <div class="nav-mobile-footer">
                 <?php if (isset($_SESSION['usuario'])): ?>
                     <div class="usuario-logado-nav" onclick="window.location.href='perfil.php'">
-                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png' ?>"
+                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
                             alt="Avatar Navbar" class="avatar-nav">
                         <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
                     </div>
@@ -673,7 +685,7 @@ try {
         <?php if (isset($_SESSION['usuario'])): ?>
             <div class="usuario-logado-nav desktop-only" id="nav-logado" onclick="window.location.href='perfil.php'"
                 title="Ir para o Perfil">
-                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png' ?>"
+                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
                     alt="Avatar Navbar" class="avatar-nav">
                 <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
             </div>
@@ -696,7 +708,7 @@ try {
             <div class="premium-header">
                 <div class="premium-avatar" onclick="document.getElementById('input-avatar').click()"
                     title="Clique para mudar a foto">
-                    <img src="<?= !empty($personagem['ds_foto']) ? $personagem['ds_foto'] : '../img/uploads/perfil/avatar.png' ?>"
+                    <img src="<?= !empty($personagem['ds_foto']) ? $personagem['ds_foto'] : '../img/uploads/perfil/avatar1.png' ?>"
                         alt="Avatar" id="img-personagem">
                     <div class="avatar-overlay">
                         <i class="fas fa-camera"></i>

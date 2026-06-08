@@ -1,5 +1,5 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 require_once __DIR__ . '/../app/config/database.php';
 
 // Buscar status dos planos do usuário ativo
@@ -7,19 +7,79 @@ $possuiMapas = false;
 $possuiSistemas = false;
 $possuiCompleto = false;
 $jaMestre = false;
+$isAdmin  = false;
 
 if (isset($_SESSION['usuario'])) {
     try {
         $pdo = Database::getConexao();
-        $stmtUsr = $pdo->prepare("SELECT fl_plano_mapas, fl_plano_sistemas, fl_plano_completo, tp_cargo FROM tb_usuario WHERE id_usuario = ? LIMIT 1");
+
+        // Migração silenciosa individual para as colunas de planos e desistência caso não existam
+        $colunasAdd = [
+            'fl_plano_mapas' => "ALTER TABLE tb_usuario ADD COLUMN fl_plano_mapas TINYINT(1) NOT NULL DEFAULT 0",
+            'fl_plano_sistemas' => "ALTER TABLE tb_usuario ADD COLUMN fl_plano_sistemas TINYINT(1) NOT NULL DEFAULT 0",
+            'fl_plano_completo' => "ALTER TABLE tb_usuario ADD COLUMN fl_plano_completo TINYINT(1) NOT NULL DEFAULT 0",
+            'dt_desistencia_mestre' => "ALTER TABLE tb_usuario ADD COLUMN dt_desistencia_mestre DATETIME DEFAULT NULL"
+        ];
+
+        foreach ($colunasAdd as $col => $sql) {
+            try {
+                $stmtCheck = $pdo->query("SHOW COLUMNS FROM tb_usuario LIKE '$col'");
+                if ($stmtCheck->rowCount() === 0) {
+                    $pdo->exec($sql);
+                }
+            } catch (Exception $e) {
+                // Silencioso por coluna
+            }
+        }
+
+        // Garante que o administrador Kauan Bryan sempre tenha seus privilégios ativos ao entrar
+        if ($_SESSION['usuario']['nome'] === 'Kauan Bryan') {
+            $stmtGarante = $pdo->prepare("
+                UPDATE tb_usuario 
+                SET tp_cargo = 'admin', fl_plano_mapas = 1, fl_plano_sistemas = 1, fl_plano_completo = 1, dt_desistencia_mestre = NULL 
+                WHERE id_usuario = ?
+            ");
+            $stmtGarante->execute([$_SESSION['usuario']['id']]);
+            $_SESSION['usuario']['cargo'] = 'admin';
+        }
+
+        // Busca nm_usuario e dt_desistencia_mestre para controle de privilégios de Kauan Bryan
+        $stmtUsr = $pdo->prepare("SELECT nm_usuario, fl_plano_mapas, fl_plano_sistemas, fl_plano_completo, tp_cargo, dt_desistencia_mestre FROM tb_usuario WHERE id_usuario = ? LIMIT 1");
         $stmtUsr->execute([$_SESSION['usuario']['id']]);
         $dadosUsr = $stmtUsr->fetch();
         if ($dadosUsr) {
-            $possuiMapas = ((int)$dadosUsr['fl_plano_mapas'] === 1 || $dadosUsr['tp_cargo'] === 'admin');
-            $possuiSistemas = ((int)$dadosUsr['fl_plano_sistemas'] === 1 || $dadosUsr['tp_cargo'] === 'admin');
-            $possuiCompleto = ((int)$dadosUsr['fl_plano_completo'] === 1 || $dadosUsr['tp_cargo'] === 'admin');
             $cargoLower = strtolower($dadosUsr['tp_cargo'] ?? 'jogador');
-            $jaMestre = ($cargoLower === 'mestre' || $cargoLower === 'admin');
+            $nmUsuario  = $dadosUsr['nm_usuario'] ?? '';
+            $dtDesistencia = $dadosUsr['dt_desistencia_mestre'] ?? null;
+
+            // Verificar expiração do período de carência (1 mês) para o Kauan Bryan
+            if ($nmUsuario === 'Kauan Bryan' && !empty($dtDesistencia)) {
+                $timeDesistencia = strtotime($dtDesistencia);
+                $timeExpiracao = strtotime('+1 month', $timeDesistencia);
+                if (time() > $timeExpiracao) {
+                    // Limpa os privilégios temporários no banco de dados
+                    $stmtLimpar = $pdo->prepare("
+                        UPDATE tb_usuario 
+                        SET fl_plano_mapas = 0, fl_plano_sistemas = 0, fl_plano_completo = 0, dt_desistencia_mestre = NULL 
+                        WHERE id_usuario = ?
+                    ");
+                    $stmtLimpar->execute([$_SESSION['usuario']['id']]);
+                    
+                    $dadosUsr['fl_plano_mapas'] = 0;
+                    $dadosUsr['fl_plano_sistemas'] = 0;
+                    $dadosUsr['fl_plano_completo'] = 0;
+                    $dtDesistencia = null;
+                }
+            }
+
+            // O privilégio de "tudo adquirido" sem assinatura é exclusivo do Kauan Bryan como admin
+            $isAdminPrivilegio = ($cargoLower === 'admin' && $nmUsuario === 'Kauan Bryan');
+            $isAdmin = $isAdminPrivilegio;
+
+            $possuiMapas    = ((int)$dadosUsr['fl_plano_mapas']    === 1 || $isAdminPrivilegio);
+            $possuiSistemas = ((int)$dadosUsr['fl_plano_sistemas'] === 1 || $isAdminPrivilegio);
+            $possuiCompleto = ((int)$dadosUsr['fl_plano_completo'] === 1 || $isAdminPrivilegio);
+            $jaMestre       = ($cargoLower === 'mestre' || $isAdminPrivilegio);
         }
     } catch (Exception $e) {}
 }
@@ -41,7 +101,7 @@ define('MP_PLANO_COMPLETO_ID', 'e7df00cba75c44d6bb2c43d97ba6b408'); // ← ex: '
 // ============================================================
 
 // Patch dinâmico para a navbar com verificação física absoluta
-$fotoNavbar = (!empty($_SESSION['usuario']['foto']) && file_exists(dirname(__DIR__) . '/' . ltrim(str_replace('../', '', $_SESSION['usuario']['foto']), '/'))) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png';
+$fotoNavbar = (!empty($_SESSION['usuario']['foto']) && file_exists(dirname(__DIR__) . '/' . ltrim(str_replace('../', '', $_SESSION['usuario']['foto']), '/'))) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png';
 
 // ============================================================
 // RETORNO DO MERCADO PAGO (back_url após pagamento)
@@ -1013,7 +1073,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['criar_preferencia_mp'
                 <li><a href="cm-jogar.php">Como Jogar</a></li>
                 <li><a href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a></li>
                 <li><a href="criar-mapa.php">Mundos</a></li>
-                <li><a href="rolador-de-dados.php">Dados</a></li>
+                <li><a href="rolagem-de-dados.php">Dados</a></li>
                 <li><a href="sobre-nos.php">Sobre Nós</a></li>
             </ul>
         </nav>
@@ -1282,7 +1342,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['criar_preferencia_mp'
                     <li><a href="cm-jogar.php">Como Jogar</a></li>
                     <li><a href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a></li>
                     <li><a href="criar-mapa.php">Mundos</a></li>
-                    <li><a href="rolador-de-dados.php">Dados</a></li>
+                    <li><a href="rolagem-de-dados.php">Dados</a></li>
                     <li><a href="sobre-nos.php">Sobre Nós</a></li>
                 </ul>
             </div>
@@ -1312,7 +1372,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['criar_preferencia_mp'
                 <i class="fas fa-crown"></i>
             </div>
             <h2>Agora você é um Mestre!</h2>
-            <p>Parabéns! Sua conta foi atualizada com sucesso. Agora você tem acesso ilimitado à criação de campanhas, sistemas de regras personalizados e mundos incríveis na TABLE!</p>
+            <p>Parabéns! Sua conta foi atualizada com sucesso. </p>
+            <p>Agora você tem acesso ilimitado à criação de campanhas, sistemas de regras personalizados e mundos incríveis na TABLE!</p>
             <button type="button" class="btn-modal-mestre" id="btn-confirmar-mestre">
                 <i class="fas fa-user-shield"></i> Ir para o Perfil
             </button>

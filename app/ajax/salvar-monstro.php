@@ -1,5 +1,5 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 require_once __DIR__ . '/../config/database.php';
 
 if (!isset($_SESSION['usuario'])) {
@@ -27,6 +27,18 @@ if (!$id_sistema || !$nome) {
 
 try {
     $pdo = Database::getConexao();
+    
+    // Validar se o usuário logado é o criador do sistema ou administrador
+    $stmtCheck = $pdo->prepare("SELECT id_usuario_criador FROM tb_sistema WHERE id_sistema = ?");
+    $stmtCheck->execute([$id_sistema]);
+    $sistema = $stmtCheck->fetch();
+
+    $isAdmin = isset($_SESSION['usuario']['cargo']) && strtolower($_SESSION['usuario']['cargo']) === 'admin';
+    if (!$sistema || ($sistema['id_usuario_criador'] != $_SESSION['usuario']['id'] && !$isAdmin)) {
+        echo json_encode(['success' => false, 'error' => 'Permissão negada para modificar este sistema']);
+        exit;
+    }
+
     $pdo->beginTransaction();
 
     // 1. Lidar com Upload de Imagem

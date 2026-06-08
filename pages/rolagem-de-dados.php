@@ -1,5 +1,5 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 // ============================================================
 //  DDDICE — Configurações (mesmas do dddice-hybrid.php)
@@ -410,7 +410,7 @@ if (($_GET['action'] ?? '') === 'themes') {
             border-left: 3px solid transparent;
         }
 
-        .log-item.dddice-roll { border-left-color: var(--premium-accent); }
+        .log-item.dados-3d-roll { border-left-color: var(--premium-accent); }
 
         @keyframes slideIn {
             from { opacity: 0; transform: translateX(20px); }
@@ -434,7 +434,7 @@ if (($_GET['action'] ?? '') === 'themes') {
 
         .log-info p { margin: 0; font-size: 0.75rem; color: #888; }
         .log-info h4 { margin: 2px 0 0; font-size: 0.9rem; color: #fff; }
-        .log-info .badge-dddice {
+        .log-info .badge-3d {
             display: inline-block;
             background: rgba(139,92,246,0.2);
             color: var(--premium-accent);
@@ -445,7 +445,7 @@ if (($_GET['action'] ?? '') === 'themes') {
             margin-left: 4px;
         }
 
-        /* -- CANVAS DDDICE — fullscreen overlay -- */
+        /* -- CANVAS 3D — fullscreen overlay -- */
         #dddice-canvas {
             position: fixed;
             inset: 0;
@@ -484,38 +484,47 @@ if (($_GET['action'] ?? '') === 'themes') {
             position: relative;
             background: linear-gradient(155deg, #0d0e18 0%, #130f1c 100%);
             border: 2px solid var(--premium-accent);
-            border-radius: 24px;
-            padding: 48px 60px 40px;
+            border-radius: 28px;
+            padding: 60px 85px 50px;
             text-align: center;
             box-shadow:
                 0 0 0 1px rgba(139,92,246,0.08),
-                0 0 60px rgba(139,92,246,0.2),
-                0 32px 80px rgba(0,0,0,0.8);
+                0 0 90px rgba(139,92,246,0.35),
+                0 32px 100px rgba(0,0,0,0.9);
             transform: scale(0.82) translateY(18px);
             transition: transform 0.38s cubic-bezier(0.34,1.56,0.64,1);
-            min-width: 300px;
+            min-width: 550px;
             cursor: pointer;
+        }
+        @media (max-width: 768px) {
+            #result-card {
+                padding: 40px 25px;
+                min-width: 90%;
+            }
+            #result-total {
+                font-size: 5.5rem !important;
+            }
         }
         #result-popup.show #result-card { transform: scale(1) translateY(0); }
 
         #result-label {
             font-family: 'Cinzel', serif;
-            font-size: 0.72rem;
-            letter-spacing: 4px;
+            font-size: 0.8rem;
+            letter-spacing: 5px;
             color: var(--premium-accent);
             text-transform: uppercase;
-            margin-bottom: 12px;
-            opacity: 0.85;
+            margin-bottom: 15px;
+            font-weight: 800;
         }
 
         #result-total {
             font-family: 'Cinzel', serif;
-            font-size: 6rem;
-            font-weight: 900;
-            line-height: 1;
+            font-size: 8.5rem;
+            font-weight: 950;
+            line-height: 0.95;
             color: #fff;
-            text-shadow: 0 0 30px rgba(139,92,246,0.6), 0 0 60px rgba(139,92,246,0.3);
-            margin-bottom: 12px;
+            text-shadow: 0 0 45px rgba(139,92,246,0.85), 0 0 90px rgba(139,92,246,0.5);
+            margin-bottom: 20px;
         }
 
         @keyframes pop-in {
@@ -526,21 +535,42 @@ if (($_GET['action'] ?? '') === 'themes') {
         #result-total.pop { animation: pop-in 0.45s cubic-bezier(0.34,1.56,0.64,1) forwards; }
 
         #result-breakdown {
-            font-size: 0.85rem;
-            color: #666;
-            letter-spacing: 1px;
-            margin-bottom: 6px;
-            min-height: 20px;
+            font-size: 1.7rem;
+            color: #a78bfa;
+            letter-spacing: 1.5px;
+            margin-top: 25px;
+            margin-bottom: 25px;
+            min-height: 35px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 8px;
         }
-        #result-breakdown .val { color: #c4b5fd; font-weight: 700; }
-        #result-breakdown .op  { color: #3a3528; margin: 0 3px; }
+        #result-breakdown .val { 
+            color: #ffffff; 
+            font-weight: 800; 
+            background: rgba(255, 255, 255, 0.05); 
+            border: 1px solid rgba(255, 255, 255, 0.15); 
+            padding: 6px 14px; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            text-shadow: 0 0 10px rgba(255,255,255,0.4); 
+        }
+        #result-breakdown .op  { 
+            color: var(--premium-accent); 
+            font-weight: 900; 
+            font-size: 1.8rem;
+            margin: 0 4px;
+        }
 
-        #result-dice-info { font-size: 0.75rem; color: #444; margin-top: 4px; font-style: italic; }
+        #result-dice-info { font-size: 0.75rem; color: #666; margin-top: 8px; font-style: italic; }
 
         #result-dismiss {
-            margin-top: 22px;
-            font-size: 0.62rem;
-            color: #333;
+            margin-top: 30px;
+            font-size: 0.65rem;
+            color: #666;
             letter-spacing: 2px;
             text-transform: uppercase;
             font-family: 'Cinzel', serif;
@@ -598,7 +628,7 @@ if (($_GET['action'] ?? '') === 'themes') {
             <div class="nav-mobile-footer">
                 <?php if (isset($_SESSION['usuario'])): ?>
                     <div class="usuario-logado-nav" onclick="window.location.href='perfil.php'">
-                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png' ?>"
+                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
                             alt="Avatar Navbar" class="avatar-nav">
                         <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
                     </div>
@@ -616,7 +646,7 @@ if (($_GET['action'] ?? '') === 'themes') {
         <?php if (isset($_SESSION['usuario'])): ?>
             <div class="usuario-logado-nav desktop-only" id="nav-logado" onclick="window.location.href='perfil.php'"
                 title="Ir para o Perfil">
-                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png' ?>"
+                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
                     alt="Avatar Navbar" class="avatar-nav">
                 <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
             </div>
@@ -638,10 +668,10 @@ if (($_GET['action'] ?? '') === 'themes') {
                 <div class="dados-grid-box">
                     <h2 class="titulo-secao">Rolagem de Dados</h2>
 
-                    <!-- Seletor de tema dddice -->
+                    <!-- Seletor de aparência dos dados -->
                     <div class="tema-selector-wrap">
                         <span id="status-dot" class="loading" title="Conectando..."></span>
-                        <label>Tema dddice:</label>
+                        <label>Aparência dos Dados:</label>
                         <select id="theme-select" disabled>
                             <option value="">Conectando...</option>
                         </select>
@@ -847,17 +877,40 @@ if (($_GET['action'] ?? '') === 'themes') {
 
     function atualizarBtnRolar() {
         const temDados  = Object.values(selecao).some(q => q > 0);
-        const sdkPronto = !!themeId && !rolling;
+        const dot = document.getElementById('status-dot');
+        const isLocal = dot && (dot.classList.contains('local') || dot.classList.contains('error'));
+        const sdkPronto = isLocal || (!!themeId && !rolling);
         document.getElementById('btn-rolar').disabled = !(temDados && sdkPronto);
     }
 
-    // -- SDK dddice --------------------------------------------
+    // -- SDK 3D ------------------------------------------------
     async function initSDK() {
         setStatus('loading');
+        
+        const isApiKeyPlaceholder = API_KEY.includes('Insira sua');
+        if (isApiKeyPlaceholder || !API_KEY) {
+            setStatus('local');
+            const btn = document.getElementById('btn-rolar');
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-dice"></i> Rolar Dados';
+                btn.disabled = false;
+            }
+            const select = document.getElementById('theme-select');
+            if (select) {
+                select.innerHTML = '<option value="local">Rolagem Local Premium</option>';
+                select.disabled = true;
+            }
+            return;
+        }
 
         if (!window.ThreeDDice) {
-            setStatus('error');
-            showToast('SDK dddice não carregou. Verifique sua conexão.');
+            setStatus('local');
+            const select = document.getElementById('theme-select');
+            if (select) {
+                select.innerHTML = '<option value="local">Rolagem Local Premium (Offline)</option>';
+                select.disabled = true;
+            }
+            showToast('Motor de dados 3D não carregou. Modo Local Ativo.');
             return;
         }
 
@@ -870,8 +923,13 @@ if (($_GET['action'] ?? '') === 'themes') {
             setStatus('ok');
         } catch (err) {
             console.error('initSDK:', err);
-            setStatus('error');
-            showToast('Erro ao conectar ao dddice: ' + err.message);
+            setStatus('local');
+            const select = document.getElementById('theme-select');
+            if (select) {
+                select.innerHTML = '<option value="local">Rolagem Local Premium (Offline)</option>';
+                select.disabled = true;
+            }
+            showToast('Erro ao inicializar dados 3D. Modo Local Ativo.');
         }
     }
 
@@ -888,8 +946,8 @@ if (($_GET['action'] ?? '') === 'themes') {
         select.innerHTML = '';
 
         if (!themes.length) {
-            select.innerHTML = '<option value="">Nenhum tema na Dice Box</option>';
-            showToast('Adicione um tema em dddice.com ? Account ? Dice Box');
+            select.innerHTML = '<option value="">Nenhum tema de dados encontrado</option>';
+            showToast('Nenhum tema de dados disponível. Usando dados clássicos.');
             return;
         }
 
@@ -906,88 +964,122 @@ if (($_GET['action'] ?? '') === 'themes') {
         atualizarBtnRolar();
     }
 
-    // -- ROLAR DADOS (híbrido: SDK animação + PHP resultado) ---
+    // -- ROLAR DADOS (híbrido: SDK animação + PHP resultado ou local offline) ---
     async function executarRolagem() {
         if (rolling) return;
 
         const entries = Object.entries(selecao).filter(([,q]) => q > 0);
         if (!entries.length) return showToast('Selecione ao menos um dado!');
-        if (!themeId)        return showToast('Selecione um tema primeiro!');
+
+        const dot = document.getElementById('status-dot');
+        const isLocal = dot && (dot.classList.contains('local') || dot.classList.contains('error'));
+
+        if (!isLocal && !themeId) return showToast('Selecione um tema primeiro!');
 
         rolling = true;
         const btn = document.getElementById('btn-rolar');
         btn.disabled   = true;
         btn.innerHTML  = '<i class="fas fa-spinner fa-spin"></i> Rolando...';
 
-        // Separar dados com/sem suporte dddice
-        const dddiceEntries = entries.filter(([l]) => DDDICE_TYPE_MAP[parseInt(l)]);
-        const jsEntries     = entries.filter(([l]) => !DDDICE_TYPE_MAP[parseInt(l)]);
+        const label = entries.map(([l,q]) => `${q}D${l}`).join(' + ');
 
-        // Monta array para a API
-        const dddDice = [];
-        dddiceEntries.forEach(([lados, qtd]) => {
-            const tipo = DDDICE_TYPE_MAP[parseInt(lados)];
-            for (let i = 0; i < qtd; i++) dddDice.push({ type: tipo, theme: themeId });
-        });
-
-        // Resultado JS para dados sem suporte (d2, d100)
-        let jsTotal  = 0;
-        let jsValues = [];
-        jsEntries.forEach(([lados, qtd]) => {
-            for (let i = 0; i < qtd; i++) {
-                const v = Math.floor(Math.random() * parseInt(lados)) + 1;
-                jsTotal += v;
-                jsValues.push({ value: v, type: `d${lados}` });
-            }
-        });
+        const finalizarComDelay = (total, values, lbl, via3D) => {
+            setTimeout(() => {
+                mostrarResultado(total, values, lbl, via3D);
+                adicionarAoHistorico(total, lbl, via3D);
+                limparSelecao();
+                
+                rolling = false;
+                btn.innerHTML = '<i class="fas fa-dice"></i> Rolar Dados';
+                atualizarBtnRolar();
+            }, 5000);
+        };
 
         try {
-            let finalTotal  = jsTotal;
-            let finalValues = [...jsValues];
-            let finalLabel  = entries.map(([l,q]) => `${q}D${l}`).join(' + ');
+            let finalTotal  = 0;
+            let finalValues = [];
 
-            if (dddDice.length > 0) {
-                // Dispara SDK (animação 3D) + PHP REST (resultado) em paralelo
-                const [, phpResult] = await Promise.all([
-                    dddiceSDK
-                        ? dddiceSDK.roll(dddDice).catch(e => console.warn('SDK roll:', e))
-                        : Promise.resolve(),
-                    fetch('?action=roll', {
-                        method:  'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body:    JSON.stringify({ dice: dddDice }),
-                    }).then(r => r.json()),
-                ]);
-
-                if (phpResult.error) {
-                    showToast('Erro da API dddice: ' + phpResult.error);
-                    rolling = false;
-                    btn.innerHTML = '<i class="fas fa-dice"></i> Rolar Dados';
-                    atualizarBtnRolar();
-                    return;
-                }
-
-                finalTotal  += phpResult.total;
-                finalValues  = [...phpResult.values, ...jsValues];
-
-                // Aguarda animação terminar (~1.2s) para exibir popup
-                setTimeout(() => {
-                    mostrarResultado(finalTotal, finalValues, finalLabel, true);
-                    adicionarAoHistorico(finalTotal, finalLabel, true);
-                    limparSelecao();
-                }, 1200);
-
+            if (isLocal || !dddiceSDK) {
+                entries.forEach(([lados, qtd]) => {
+                    for (let i = 0; i < qtd; i++) {
+                        const v = Math.floor(Math.random() * parseInt(lados)) + 1;
+                        finalTotal += v;
+                        finalValues.push({ value: v, type: `d${lados}` });
+                    }
+                });
+                finalizarComDelay(finalTotal, finalValues, label, false);
             } else {
-                // Só dados JS (d2 / d100)
-                mostrarResultado(finalTotal, finalValues, finalLabel, false);
-                adicionarAoHistorico(finalTotal, finalLabel, false);
-                limparSelecao();
-            }
+                // Separar dados com/sem suporte 3D
+                const dddiceEntries = entries.filter(([l]) => DDDICE_TYPE_MAP[parseInt(l)]);
+                const jsEntries     = entries.filter(([l]) => !DDDICE_TYPE_MAP[parseInt(l)]);
 
+                // Monta array para a API
+                const dddDice = [];
+                dddiceEntries.forEach(([lados, qtd]) => {
+                    const tipo = DDDICE_TYPE_MAP[parseInt(lados)];
+                    for (let i = 0; i < qtd; i++) dddDice.push({ type: tipo, theme: themeId });
+                });
+
+                // Resultado JS para dados sem suporte (d2, d100)
+                let jsTotal  = 0;
+                let jsValues = [];
+                jsEntries.forEach(([lados, qtd]) => {
+                    for (let i = 0; i < qtd; i++) {
+                        const v = Math.floor(Math.random() * parseInt(lados)) + 1;
+                        jsTotal += v;
+                        jsValues.push({ value: v, type: `d${lados}` });
+                    }
+                });
+
+                if (dddDice.length > 0) {
+                    let phpResult;
+                    try {
+                        if (dddiceSDK) {
+                            const sdkRes = await dddiceSDK.roll(dddDice);
+                            const resValues = sdkRes.data?.values || sdkRes.values || [];
+                            const resTotal = sdkRes.data?.total_value !== undefined ? sdkRes.data.total_value : (sdkRes.total_value || 0);
+                            
+                            phpResult = {
+                                ok: true,
+                                total: parseInt(resTotal),
+                                values: resValues.map(v => ({ value: parseInt(v.value), type: v.type }))
+                            };
+                        } else {
+                            phpResult = await fetch('?action=roll', {
+                                method:  'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body:    JSON.stringify({ dice: dddDice }),
+                            }).then(r => r.json());
+                        }
+                    } catch (e) {
+                        console.warn('SDK roll:', e);
+                        phpResult = { error: e.message };
+                    }
+
+                    if (phpResult.error) {
+                        showToast('Erro na conexão 3D. Rolando localmente.');
+                        let fallbackTotal = 0;
+                        let fallbackValues = [];
+                        entries.forEach(([lados, qtd]) => {
+                            for (let i = 0; i < qtd; i++) {
+                                const v = Math.floor(Math.random() * parseInt(lados)) + 1;
+                                fallbackTotal += v;
+                                fallbackValues.push({ value: v, type: `d${lados}` });
+                            }
+                        });
+                        finalizarComDelay(fallbackTotal, fallbackValues, label, false);
+                    } else {
+                        finalTotal = phpResult.total + jsTotal;
+                        finalValues = [...phpResult.values, ...jsValues];
+                        finalizarComDelay(finalTotal, finalValues, label, true);
+                    }
+                } else {
+                    finalizarComDelay(jsTotal, jsValues, label, false);
+                }
+            }
         } catch (err) {
             console.error(err);
             showToast('Erro na rolagem: ' + err.message);
-        } finally {
             rolling = false;
             btn.innerHTML = '<i class="fas fa-dice"></i> Rolar Dados';
             atualizarBtnRolar();
@@ -995,7 +1087,7 @@ if (($_GET['action'] ?? '') === 'themes') {
     }
 
     // -- POP-UP RESULTADO --------------------------------------
-    function mostrarResultado(total, values, label, viaDddice) {
+    function mostrarResultado(total, values, label, via3D) {
         const totalEl     = document.getElementById('result-total');
         const breakdownEl = document.getElementById('result-breakdown');
         const infoEl      = document.getElementById('result-dice-info');
@@ -1017,7 +1109,7 @@ if (($_GET['action'] ?? '') === 'themes') {
             breakdownEl.innerHTML = '';
         }
 
-        infoEl.textContent = viaDddice ? '?? Animado via dddice' : '?? Rolagem local';
+        infoEl.textContent = via3D ? '🎲 Rolagem 3D' : '⚙️ Rolagem Simples';
 
         document.getElementById('result-popup').classList.add('show');
     }
@@ -1029,28 +1121,28 @@ if (($_GET['action'] ?? '') === 'themes') {
     document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharResultado(); });
 
     // -- HISTÓRICO ---------------------------------------------
-    function adicionarAoHistorico(resultado, descricao, viaDddice) {
+    function adicionarAoHistorico(resultado, descricao, via3D) {
         const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        renderizarItemHistorico(resultado, descricao, time, viaDddice);
+        renderizarItemHistorico(resultado, descricao, time, via3D);
 
         // Persiste no localStorage
         const logs = JSON.parse(localStorage.getItem('table_historico_dados') || '[]');
-        logs.push({ resultado, descricao, time, viaDddice });
+        logs.push({ resultado, descricao, time, via3D });
         if (logs.length > 50) logs.shift();
         localStorage.setItem('table_historico_dados', JSON.stringify(logs));
     }
 
-    function renderizarItemHistorico(resultado, descricao, time, viaDddice) {
+    function renderizarItemHistorico(resultado, descricao, time, via3D) {
         const logContainer = document.getElementById('historico-lista');
         const msgVazio     = document.getElementById('msg-vazio');
         if (msgVazio) msgVazio.remove();
 
         const novoItem = document.createElement('div');
-        novoItem.className = 'log-item' + (viaDddice ? ' dddice-roll' : '');
+        novoItem.className = 'log-item' + (via3D ? ' dados-3d-roll' : '');
         novoItem.innerHTML = `
             <div class="log-resultado">${resultado}</div>
             <div class="log-info">
-                <p>${time} • ${descricao}${viaDddice ? '<span class="badge-dddice">dddice</span>' : ''}</p>
+                <p>${time} • ${descricao}${via3D ? '<span class="badge-3d">3D</span>' : ''}</p>
                 <h4>Resultado</h4>
             </div>
         `;
@@ -1059,7 +1151,7 @@ if (($_GET['action'] ?? '') === 'themes') {
 
     function carregarHistoricoLocal() {
         const logs = JSON.parse(localStorage.getItem('table_historico_dados') || '[]');
-        logs.forEach(log => renderizarItemHistorico(log.resultado, log.descricao, log.time, log.viaDddice));
+        logs.forEach(log => renderizarItemHistorico(log.resultado, log.descricao, log.time, log.via3D));
     }
 
     function limparHistorico() {
@@ -1076,7 +1168,7 @@ if (($_GET['action'] ?? '') === 'themes') {
     function setStatus(state) {
         const dot  = document.getElementById('status-dot');
         dot.className = state;
-        dot.title = state === 'ok' ? 'Conectado ao dddice' : state === 'loading' ? 'Conectando...' : 'Erro de conexão';
+        dot.title = state === 'ok' ? 'Dados 3D ativos' : state === 'loading' ? 'Inicializando dados...' : 'Modo clássico ativo';
     }
 
     function showToast(msg) {

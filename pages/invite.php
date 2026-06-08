@@ -13,7 +13,7 @@
  *                    e tb_campanha_usuario (se ainda não estiver)
  *                    Marca o convite como 'aceito'
  */
-session_start();
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 require_once __DIR__ . '/../app/config/database.php'; // expõe $pdo
 $pdo = Database::getConexao();
 
@@ -498,7 +498,7 @@ function exibirErro(string $titulo, string $detalhe): never {
                     class="sel-personagem" required>
                 <option value="" disabled selected>-- Selecione --</option>
                 <?php foreach ($personagens_disponiveis as $p): 
-                    $fotoUrl = !empty($p['ds_foto']) ? $p['ds_foto'] : '../img/uploads/perfil/avatar.png';
+                    $fotoUrl = !empty($p['ds_foto']) ? $p['ds_foto'] : '../img/uploads/perfil/avatar1.png';
                 ?>
                     <option value="<?= (int) $p['id_personagem'] ?>" 
                             data-foto="<?= htmlspecialchars($fotoUrl) ?>"

@@ -320,7 +320,7 @@
         }
 
         .btn-card-add {
-            background: #cd1d1d;
+            background: #7b4ff7;
             border: none;
             color: #fff;
             padding: 5px 12px;
@@ -329,6 +329,11 @@
             font-size: 0.7rem;
             text-transform: uppercase;
             cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        body.tema-ordem-paranormal .btn-card-add {
+            background: #cd1d1d;
         }
 
         /* REAJUSTE DE GRID NO COMBATE */
@@ -1084,8 +1089,8 @@ button {
 .banner-table { background-color: #2a2438; }
 .banner-table.ativo {
     opacity: 1;
-    border-color: var(--premium-accent, #9d7aff);
-    box-shadow: 0 0 20px rgba(157, 122, 255, 0.4);
+    border-color: #ffffff;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
     filter: brightness(1.15);
 }
 
@@ -1096,9 +1101,9 @@ button {
 
 .banner-card.banner-novas:hover {
     background-color: #3b1e6b;
-    border-color: var(--cor-destaque-claro);
+    border-color: #ffffff;
     transform: translateY(-2px);
-    box-shadow: 0 0 15px rgba(157, 122, 255, 0.3);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
     opacity: 1;
 }.lista-ameacas-header {
     margin-bottom: 25px;
@@ -1179,7 +1184,7 @@ button {
     background: var(--cor-primaria);
     border-color: var(--cor-primaria);
     font-weight: 700;
-    box-shadow: 0 0 10px rgba(91, 43, 224, 0.4);
+    box-shadow: none;
 }
 
 /* CARDS DE AMEAÃ‡A (HIGH-FIDELITY) */
@@ -2536,4 +2541,104 @@ button {
         border-left: 4px solid #7b4ff7;
         padding: 20px;
     }
+}
+/* Cores baseadas no Elemento - Compatível com todos os Sistemas */
+.card-ameaca-premium.elemento-sangue { background: linear-gradient(90deg, rgba(30,0,0,0.9), rgba(60,20,20,0.6)); border-color: rgba(255,50,50,0.4); }
+.card-ameaca-premium.elemento-sangue::before { background: #ff3232; box-shadow: 0 0 10px #ff3232; }
+.card-ameaca-premium.elemento-morte { background: linear-gradient(90deg, rgba(10,10,10,0.9), rgba(20,20,20,0.6)); border-color: rgba(100,100,100,0.4); }
+.card-ameaca-premium.elemento-morte::before { background: #1a1a1a; box-shadow: 0 0 10px #666; }
+.card-ameaca-premium.elemento-conhecimento { background: linear-gradient(90deg, rgba(30,25,0,0.9), rgba(50,40,0,0.6)); border-color: rgba(241,196,15,0.4); }
+.card-ameaca-premium.elemento-conhecimento::before { background: #f1c40f; box-shadow: 0 0 10px #f1c40f; }
+.card-ameaca-premium.elemento-energia { background: linear-gradient(90deg, rgba(5,20,60,0.9), rgba(15,40,120,0.6)); border-color: rgba(21,101,192,0.4); }
+.card-ameaca-premium.elemento-energia::before { background: #1565c0; box-shadow: 0 0 10px #1565c0; }
+.card-ameaca-premium.elemento-medo { background: linear-gradient(90deg, rgba(20,0,30,0.9), rgba(40,0,50,0.6)); border-color: rgba(168,85,247,0.4); }
+.card-ameaca-premium.elemento-medo::before { background: #a855f7; box-shadow: 0 0 10px #a855f7; }
+.card-ameaca-premium.elemento-mundano { background: linear-gradient(90deg, rgba(15,40,20,0.9), rgba(30,80,40,0.6)); border-color: rgba(76,175,80,0.4); }
+.card-ameaca-premium.elemento-mundano::before { background: #4caf50; box-shadow: 0 0 10px #4caf50; }
+.card-ameaca-premium.elemento-table { background: linear-gradient(90deg, rgba(35,10,75,0.9), rgba(70,25,145,0.6)); border-color: rgba(123,79,247,0.4); }
+.card-ameaca-premium.elemento-table::before { background: #7b4ff7; box-shadow: 0 0 10px #7b4ff7; }
+
+/* Botões de Filtro - Sem blurs ou glows de fundo */
+.btn-filtro.ativo { box-shadow: none !important; text-shadow: none !important; backdrop-filter: none !important; filter: none !important; }
+.btn-filtro.ativo[onclick*="'Sangue'"] { background: #ff3232 !important; color: #fff !important; box-shadow: none !important; }
+.btn-filtro.ativo[onclick*="'Morte'"] { background: #1a1a1a !important; color: #fff !important; border: 1px solid #444 !important; box-shadow: none !important; }
+.btn-filtro.ativo[onclick*="'Conhecimento'"] { background: #f1c40f !important; color: #000 !important; box-shadow: none !important; }
+.btn-filtro.ativo[onclick*="'Energia'"] { background: #1565c0 !important; color: #fff !important; box-shadow: none !important; }
+.btn-filtro.ativo[onclick*="'Medo'"] { background: #a855f7 !important; color: #fff !important; box-shadow: none !important; }
+.btn-filtro.ativo[onclick*="'Mundano'"] { background: #4caf50 !important; color: #fff !important; box-shadow: none !important; }
+
+/* Estados Vazios no Escudo do Mestre - Premium e Moderno */
+.escudo-estado-vazio {
+    grid-column: 1 / -1;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 60px 40px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    transition: all 0.3s ease;
+    max-width: 600px;
+    margin: 30px auto;
+}
+
+.escudo-estado-vazio:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(123, 79, 247, 0.3);
+}
+
+.escudo-estado-vazio .icone-vazio {
+    font-size: 3rem;
+    color: rgba(255, 255, 255, 0.2);
+    margin-bottom: 5px;
+    transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.escudo-estado-vazio:hover .icone-vazio {
+    color: #7b4ff7;
+    transform: scale(1.1) rotate(-5deg);
+}
+
+.escudo-estado-vazio h3 {
+    color: #fff;
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: -0.02em;
+}
+
+.escudo-estado-vazio p {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin: 0 0 10px 0;
+    max-width: 440px;
+}
+
+.btn-escudo-vazio-action {
+    background: #7b4ff7;
+    color: #fff;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 15px rgba(123, 79, 247, 0.2);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.btn-escudo-vazio-action:hover {
+    background: #8a62f8;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(123, 79, 247, 0.35);
+}
+
+.btn-escudo-vazio-action:active {
+    transform: translateY(0);
 }

@@ -5,7 +5,7 @@
  *  SE o usuário estiver logado irá mostrar a foto e o nome do usuário
  *  SE NÃO irá mostrar os botões para navegar até a página de login ou cadastro
  */
-session_start();
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 ?>
 
 <!DOCTYPE html>
@@ -50,7 +50,7 @@ session_start();
             <div class="nav-mobile-footer">
                 <?php if (isset($_SESSION['usuario'])): ?>
                     <div class="usuario-logado-nav" onclick="window.location.href='perfil.php'">
-                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png' ?>"
+                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
                             alt="Avatar Navbar" class="avatar-nav">
                         <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
                     </div>
@@ -68,7 +68,7 @@ session_start();
         <?php if (isset($_SESSION['usuario'])): ?>
             <div class="usuario-logado-nav desktop-only" id="nav-logado" onclick="window.location.href='perfil.php'"
                 title="Ir para o Perfil">
-                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png' ?>"
+                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
                     alt="Avatar Navbar" class="avatar-nav">
                 <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
             </div>
@@ -269,20 +269,20 @@ session_start();
                 <h4>Navegação</h4>
                 <ul>
                     <li><a href="index.php">Início</a></li>
-                    <li><a href="#">Como Jogar</a></li>
-                    <li><a href="#">Personagens</a></li>
-                    <li><a href="#">Mundos</a></li>
-                    <li><a href="#">Dados</a></li>
-                    <li><a href="#">Sobre nós</a></li>
+                    <li><a href="cm-jogar.php" class="ativo">Como Jogar</a></li>
+                    <li><a href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a></li>
+                    <li><a href="<?= isset($_SESSION['usuario']['cargo']) && in_array(strtolower($_SESSION['usuario']['cargo']), ['mestre','admin']) ? 'criar-mapa.php' : 'editar-perfil.php?abrir_mestre=1'; ?>">Mundos</a></li>
+                    <li><a href="rolagem-de-dados.php">Dados</a></li>
+                    <li><a href="sobre-nos.php">Sobre Nós</a></li>
                 </ul>
             </div>
             <div class="rodape-links">
                 <h4>Jogar</h4>
                 <ul>
-                    <li><a href="#">Campanhas</a></li>
-                    <li><a href="#">Como Player</a></li>
-                    <li><a href="#">Como Mestre</a></li>
-                    <li><a href="#">Outros</a></li>
+                    <li><a href="cm-jogador.php">Como Player</a></li>
+                    <li><a href="cm-mestre.php">Como Mestre</a></li>
+                    <li><a href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Campanhas</a></li>
+                    <li><a href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Meu Perfil</a></li>
                 </ul>
             </div>
         </div>

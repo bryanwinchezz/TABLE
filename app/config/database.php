@@ -9,10 +9,10 @@
  */
 
 if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 }
 if (isset($_SESSION['usuario']['foto'])) {
-    $_SESSION['usuario']['foto'] = str_replace('avatar1.png', 'avatar.png', $_SESSION['usuario']['foto']);
+    $_SESSION['usuario']['foto'] = str_replace('avatar1.png', 'avatar1.png', $_SESSION['usuario']['foto']);
 }
 
 class Database {
@@ -26,13 +26,34 @@ class Database {
      */
     public static function getConexao(): PDO {
         if (self::$instancia === null) {
-            $host = 'localhost';
-            $dbname = 'db_table';
-            $usuario = 'root';
-            $charset = 'utf8mb4';
-            
-            $ports = [3306, 3307, 3308];
-            $senhas = ['root', ''];
+            // Autodetecção inteligente de ambiente (XAMPP Local ou Produção na InfinityFree)
+            $isLocal = false;
+            if (isset($_SERVER['HTTP_HOST'])) {
+                $hostName = $_SERVER['HTTP_HOST'];
+                if (stripos($hostName, 'localhost') !== false || stripos($hostName, '127.0.0.1') !== false) {
+                    $isLocal = true;
+                }
+            } else {
+                $isLocal = true; // CLI ou Local sem cabeçalho host
+            }
+
+            if ($isLocal) {
+                $host = 'localhost';
+                $dbname = 'db_table';
+                $usuario = 'root';
+                $charset = 'utf8mb4';
+                $ports = [3306, 3307, 3308];
+                $senhas = ['root', ''];
+            } else {
+                $host = 'sql203.infinityfree.com';
+                $dbname = 'if0_41893314_db_table';
+                $usuario = 'if0_41893314';
+                $charset = 'utf8mb4';
+                $ports = [3306];
+                
+                // IMPORTANTE: Insira abaixo a senha do seu vPanel da InfinityFree para funcionar online!
+                $senhas = ['LvO0XrYktOmvZwJ'];
+            }
             
             $conexaoSucesso = false;
             $ultimoErro = null;
@@ -86,6 +107,12 @@ class Database {
                             if ($chkComp->rowCount() === 0) {
                                 self::$instancia->exec("ALTER TABLE tb_usuario ADD COLUMN fl_plano_completo TINYINT(1) DEFAULT 0 NOT NULL");
                             }
+                            
+                            // 3. Adicionar tp_papel na tabela tb_campanha_usuario
+                            $chkPapel = self::$instancia->query("SHOW COLUMNS FROM tb_campanha_usuario LIKE 'tp_papel'");
+                            if ($chkPapel->rowCount() === 0) {
+                                self::$instancia->exec("ALTER TABLE tb_campanha_usuario ADD COLUMN tp_papel ENUM('mestre','jogador') NOT NULL DEFAULT 'jogador'");
+                            }
                         } catch (Exception $migError) {
                             // Silencioso
                         }
@@ -135,4 +162,4 @@ class Database {
         exit;
     }
 }
-?>
+

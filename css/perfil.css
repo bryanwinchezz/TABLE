@@ -96,6 +96,7 @@ body.pagina-perfil {
     padding-bottom: 50px;
     /* Fallback para resoluções menores ou se nenhuma classe de cargo for aplicada */
     grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+    align-items: start; /* Impede o grid de esticar os painéis verticalmente */
 }
 
 
@@ -133,7 +134,9 @@ body.pagina-perfil {
     background-color: var(--bg-painel);
     border-radius: 20px;
     padding: 25px 15px 25px 25px;
-    min-height: 400px; /* Mudado de height para min-height para maior flexibilidade */
+    height: 340px !important;
+    max-height: 340px !important;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
@@ -464,7 +467,7 @@ body.pagina-perfil {
     }
 
     .painel-dark {
-        min-height: 350px;
+        height: 340px;
     }
 }
 

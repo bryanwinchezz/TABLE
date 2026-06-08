@@ -1,5 +1,5 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 // Se já estiver logado, redireciona direto pro perfil
 if (isset($_SESSION['usuario'])) {

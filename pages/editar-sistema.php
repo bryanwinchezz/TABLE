@@ -1,5 +1,5 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 require_once __DIR__ . '/../app/config/database.php';
 
 if (!isset($_SESSION['usuario'])) {
@@ -99,10 +99,19 @@ try {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="shortcut icon" href="../img/logo_icone.png" type="image/x-icon">
     <link rel="stylesheet" href="../css/nav-footer.css">
-    <link rel="stylesheet" href="../css/criar-sistema.css?v=1.3">
+    <link rel="stylesheet" href="../css/criar-sistema.css?v=<?= time() ?>">
 </head>
 
-<body class="pagina-criacao-sistema">
+<?php
+$classeBackground = '';
+if (isset($sistema['nm_sistema'])) {
+    $nomeSistemaLower = strtolower($sistema['nm_sistema']);
+    if (strpos($nomeSistemaLower, 'ordem paranormal') !== false) {
+        $classeBackground = 'tema-ordem-paranormal';
+    }
+}
+?>
+<body class="pagina-criacao-sistema <?= $classeBackground ?>">
 
     <header>
         <div class="logotipo">
@@ -122,7 +131,7 @@ try {
         <?php if (isset($_SESSION['usuario'])): ?>
             <div class="usuario-logado-nav" id="nav-logado" onclick="window.location.href='perfil.php'"
                 title="Ir para o Perfil">
-                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png' ?>"
+                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
                     alt="Avatar Navbar" class="avatar-nav">
                 <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
             </div>
@@ -471,9 +480,12 @@ try {
                     <textarea id="m-desc" class="input-premium-field" style="height: 120px; resize: none;" placeholder="Descreva as peculiaridades e poderes desta ameaça..."></textarea>
                 </div>
 
-                <button type="button" class="btn-premium-dragon" id="btn-save-monstro-local" style="width: 100%; padding: 20px; justify-content: center;" onclick="salvarMonstro()">
-                    <i class="fas fa-skull"></i> CONVOCAR AMEAÇA
-                </button>
+                <div class="acoes-form-painel" style="justify-content: flex-end; margin-top: 20px;">
+                    <button type="button" class="btn-cancelar-escuro" onclick="fecharModal('modal-criar-monstro')">Cancelar</button>
+                    <button type="button" class="btn-premium-dragon" id="btn-save-monstro-local" style="padding: 15px 30px;" onclick="salvarMonstro()">
+                        <i class="fas fa-skull"></i> ATUALIZAR AMEAÇA
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -536,6 +548,22 @@ try {
 
     <script src="../js/nav-global.js?v=1.2" defer></script>
     <script src="../js/editar-sistema.js?v=1.8" defer></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const inputNome = document.getElementById('input-nome-sistema');
+            if (inputNome) {
+                const checkTheme = () => {
+                    if (inputNome.value.toLowerCase().includes('ordem paranormal')) {
+                        document.body.classList.add('tema-ordem-paranormal');
+                    } else {
+                        document.body.classList.remove('tema-ordem-paranormal');
+                    }
+                };
+                inputNome.addEventListener('input', checkTheme);
+                checkTheme();
+            }
+        });
+    </script>
 </body>
 
 </html>

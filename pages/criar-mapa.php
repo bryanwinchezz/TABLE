@@ -8,7 +8,7 @@ header("Pragma: no-cache");
  *  SE o usuário estiver logado irá mostrar a foto e o nome do usuário
  *  SE NÃO irá mostrar os botões para navegar até a página de login ou cadastro
  */
-session_start();
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 // Redireciona para login se não estiver logado
 if (!isset($_SESSION['usuario'])) {
@@ -20,6 +20,18 @@ if (!isset($_SESSION['usuario'])) {
 require_once __DIR__ . '/../app/config/database.php';
 try {
     $pdo = Database::getConexao();
+
+    // Garante que o administrador Kauan Bryan sempre tenha seus privilégios ativos ao entrar
+    if ($_SESSION['usuario']['nome'] === 'Kauan Bryan') {
+        $stmtGarante = $pdo->prepare("
+            UPDATE tb_usuario 
+            SET tp_cargo = 'admin', fl_plano_mapas = 1, fl_plano_sistemas = 1, fl_plano_completo = 1, dt_desistencia_mestre = NULL 
+            WHERE id_usuario = ?
+        ");
+        $stmtGarante->execute([$_SESSION['usuario']['id']]);
+        $_SESSION['usuario']['cargo'] = 'admin';
+    }
+
     $stmt = $pdo->prepare("SELECT fl_plano_mapas, fl_plano_completo, tp_cargo FROM tb_usuario WHERE id_usuario = ? LIMIT 1");
     $stmt->execute([$_SESSION['usuario']['id']]);
     $userPlan = $stmt->fetch();
@@ -2037,7 +2049,7 @@ try {
             <div class="nav-mobile-footer">
                 <?php if (isset($_SESSION['usuario'])): ?>
                     <div class="usuario-logado-nav" onclick="window.location.href='perfil.php'">
-                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png' ?>"
+                        <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
                             alt="Avatar Navbar" class="avatar-nav">
                         <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
                     </div>
@@ -2055,7 +2067,7 @@ try {
         <?php if (isset($_SESSION['usuario'])): ?>
             <div class="usuario-logado-nav desktop-only" id="nav-logado" onclick="window.location.href='perfil.php'"
                 title="Ir para o Perfil">
-                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png' ?>"
+                <img src="<?= !empty($_SESSION['usuario']['foto']) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png' ?>"
                     alt="Avatar Navbar" class="avatar-nav">
                 <span class="nome-nav"><?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
             </div>
@@ -3327,16 +3339,48 @@ try {
 
         function renderMap(ctxD, isExport = false) {
             if (!isExport) {
+                const transform = ctxD.getTransform();
+                const curScaleX = (transform && transform.a) ? transform.a : scale;
+                const curScaleY = (transform && transform.d) ? transform.d : scale;
+                const curPanX = (transform && transform.e) ? transform.e : panX;
+                const curPanY = (transform && transform.f) ? transform.f : panY;
+                const canvasW = ctxD.canvas.width;
+                const canvasH = ctxD.canvas.height;
+
+                const sx = Math.floor(-curPanX / curScaleX / CELL) * CELL;
+                const sy = Math.floor(-curPanY / curScaleY / CELL) * CELL;
+
                 if (showGridLines) {
-                    ctxD.strokeStyle = 'rgba(139,92,246,0.25)'; ctxD.lineWidth = 0.5;
-                    const sx = Math.floor(-panX / scale / CELL) * CELL, sy = Math.floor(-panY / scale / CELL) * CELL;
-                    for (let x = sx; x < sx + (width / scale) + CELL; x += CELL) { ctxD.beginPath(); ctxD.moveTo(x, -50000); ctxD.lineTo(x, 50000); ctxD.stroke(); }
-                    for (let y = sy; y < sy + (height / scale) + CELL; y += CELL) { ctxD.beginPath(); ctxD.moveTo(-50000, y); ctxD.lineTo(50000, y); ctxD.stroke(); }
+                    // Desenha apenas as linhas da grade (escuras e bem visíveis)
+                    ctxD.strokeStyle = 'rgba(0, 0, 0, 0.5)'; 
+                    ctxD.lineWidth = 1 / curScaleX;
+                    const endX = sx + (canvasW / curScaleX) + CELL;
+                    const endY = sy + (canvasH / curScaleY) + CELL;
+                    for (let x = sx; x < endX; x += CELL) { 
+                        ctxD.beginPath(); 
+                        ctxD.moveTo(x, -50000); 
+                        ctxD.lineTo(x, 50000); 
+                        ctxD.stroke(); 
+                    }
+                    for (let y = sy; y < endY; y += CELL) { 
+                        ctxD.beginPath(); 
+                        ctxD.moveTo(-50000, y); 
+                        ctxD.lineTo(50000, y); 
+                        ctxD.stroke(); 
+                    }
                 } else {
-                    ctxD.fillStyle = 'rgba(139,92,246,0.3)';
-                    const sx = Math.floor(-panX / scale / CELL) * CELL, sy = Math.floor(-panY / scale / CELL) * CELL;
-                    for (let x = sx; x < sx + (width / scale) + CELL; x += CELL)
-                        for (let y = sy; y < sy + (height / scale) + CELL; y += CELL) { ctxD.beginPath(); ctxD.arc(x, y, 1.5, 0, Math.PI * 2); ctxD.fill(); }
+                    // Desenha apenas os pontos da grade nas interseções
+                    ctxD.fillStyle = 'rgba(0,0,0,0.22)';
+                    const r = 1.8 / curScaleX;
+                    const endX = sx + (canvasW / curScaleX) + CELL;
+                    const endY = sy + (canvasH / curScaleY) + CELL;
+                    for (let x = sx; x < endX; x += CELL) {
+                        for (let y = sy; y < endY; y += CELL) {
+                            ctxD.beginPath(); 
+                            ctxD.arc(x, y, r, 0, Math.PI * 2); 
+                            ctxD.fill();
+                        }
+                    }
                 }
             }
 
@@ -4187,14 +4231,7 @@ try {
             lc.translate(newPanX, newPanY);
             lc.scale(lupZoom, lupZoom);
 
-            // Grade de pontos
-            lc.fillStyle = 'rgba(139,92,246,0.12)';
-            const gsx = Math.floor((0 - newPanX) / lupZoom / CELL) * CELL;
-            const gsy = Math.floor((0 - newPanY) / lupZoom / CELL) * CELL;
-            for (let gx = gsx; gx < gsx + (lW / lupZoom) + CELL; gx += CELL)
-                for (let gy = gsy; gy < gsy + (lH / lupZoom) + CELL; gy += CELL) {
-                    lc.beginPath(); lc.arc(gx, gy, 1.2, 0, Math.PI * 2); lc.fill();
-                }
+
 
             // Renderizar o mapa nesse contexto
             renderMap(lc, false);
@@ -4565,7 +4602,7 @@ try {
             const restored = AutoSave.load();
             if (!restored) {
                 panX = width / 2 - 200; panY = height / 2 - 150;
-                State.rooms.push({ x: 100, y: 80, w: 200, h: 160, style: 'solid', fillColor: '#374151', wallColor: '#1a1520', wallWidth: 4, floorColor: '#15101f', opacity: 1, id: 1005, label: 'Masmorra Inicial' });
+                State.rooms.push({ x: 120, y: 80, w: 200, h: 160, style: 'solid', fillColor: '#374151', wallColor: '#1a1520', wallWidth: 4, floorColor: '#15101f', opacity: 1, id: 1005, label: 'Masmorra Inicial' });
                 AutoSave.scheduleSave();
             }
             setTool('select'); buildLayersPanel(); initEmojiPicker();

@@ -1,5 +1,5 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 require_once __DIR__ . '/../config/database.php';
 
 header('Content-Type: application/json');
@@ -29,7 +29,8 @@ try {
     $stmtCheck->execute([$id]);
     $sistema = $stmtCheck->fetch();
 
-    if (!$sistema || $sistema['id_usuario_criador'] != $_SESSION['usuario']['id']) {
+    $isAdmin = isset($_SESSION['usuario']['cargo']) && strtolower($_SESSION['usuario']['cargo']) === 'admin';
+    if (!$sistema || ($sistema['id_usuario_criador'] != $_SESSION['usuario']['id'] && !$isAdmin)) {
         echo json_encode(['success' => false, 'error' => 'Permissão negada']);
         exit;
     }

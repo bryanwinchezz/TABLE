@@ -4,7 +4,7 @@
  *  Na navbar temos um if e else para cado o usuario esteja conectado ou não, mudando sendo que: 
  *  SE o usuário estiver logado irá mostrar a foto e o nome do usuário
  */
-session_start();
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 // Redireciona para login se não estiver logado
 if (!isset($_SESSION['usuario'])) {
@@ -14,7 +14,7 @@ if (!isset($_SESSION['usuario'])) {
 require_once __DIR__ . '/../app/config/database.php';
 $pdo = Database::getConexao();
 
-$fotoNavbar = (!empty($_SESSION['usuario']['foto']) && file_exists(dirname(__DIR__) . '/' . ltrim(str_replace('../', '', $_SESSION['usuario']['foto']), '/'))) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar.png';
+$fotoNavbar = (!empty($_SESSION['usuario']['foto']) && file_exists(dirname(__DIR__) . '/' . ltrim(str_replace('../', '', $_SESSION['usuario']['foto']), '/'))) ? $_SESSION['usuario']['foto'] : '../img/uploads/perfil/avatar1.png';
 
 // Buscar todos os sistemas disponíveis (Oficiais, Criados pelo usuário e Vinculados)
 $stmt = $pdo->prepare("

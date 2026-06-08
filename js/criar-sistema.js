@@ -1009,7 +1009,7 @@ function abrirModalEdicaoMonstro(comp) {
     }
 
     document.querySelector('#modal-criar-monstro h2').textContent = 'Editar Ameaça';
-    document.getElementById('btn-save-monstro-local').textContent = 'ATUALIZAR';
+    document.getElementById('btn-save-monstro-local').innerHTML = '<i class="fas fa-skull"></i> ATUALIZAR AMEAÇA';
     document.getElementById('modal-criar-monstro').classList.add('ativo');
 }
 
