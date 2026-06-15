@@ -596,7 +596,7 @@ window.executarCanalizacaoPersonagem = async function() {
         const res = await response.json();
         clearInterval(intervalFrases);
 
-        if (res.success && res.data) {
+        if (res.success && res.data && !res.mock) {
             const data = res.data;
 
             // 1. Nome
@@ -696,7 +696,9 @@ window.executarCanalizacaoPersonagem = async function() {
         } else {
             const modalIa = document.getElementById('modal-ia-personagem');
             if (modalIa) modalIa.style.display = 'none';
-            if (res.error === 'API_KEY_MISSING') {
+            if (res.mock && res.aviso) {
+                await TableModal.alert(res.aviso, "CassIA Indisponível", "warning");
+            } else if (res.error === 'API_KEY_MISSING') {
                 await TableModal.alert("Sua chave de API da CassIA não foi encontrada no banco. Redirecionando para cadastrar...", "Erro de Configuração", "error");
                 window.location.href = "editar-perfil.php?foco=gemini-key";
             } else {
