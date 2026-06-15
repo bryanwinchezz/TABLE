@@ -371,35 +371,98 @@ PROMPT;
     // Garante que o script PHP tenha tempo suficiente de execução (150 segundos)
     @set_time_limit(150);
 
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST           => true,
-        CURLOPT_POSTFIELDS     => json_encode($payload),
-        CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
-        CURLOPT_TIMEOUT        => 120,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_SSL_VERIFYHOST => false
-    ]);
+    // 5a. Retry automático com backoff exponencial para erros temporários (503, 429)
+    $maxTentativas   = 3;           // número máximo de tentativas
+    $backoffInicial  = 2;           // segundos de espera na 1ª retentativa
+    $tentativa       = 0;
+    $response        = '';
+    $httpCode        = 0;
+    $curlError       = '';
 
-    $response  = curl_exec($ch);
-    $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $curlError = curl_error($ch);
-    curl_close($ch);
+    while ($tentativa < $maxTentativas) {
+        $tentativa++;
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => json_encode($payload),
+            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+            CURLOPT_TIMEOUT        => 120,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => false
+        ]);
+
+        $response  = curl_exec($ch);
+        $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        // Sucesso: sai do loop
+        if ($httpCode === 200) {
+            break;
+        }
+
+        // Erros recuperáveis com retry: 503 (servidor sobrecarregado) e 429 sem cota diária esgotada
+        $isServicoBloqueado  = ($httpCode === 503 || strpos($response, 'UNAVAILABLE') !== false);
+        $isRateLimitMomento  = ($httpCode === 429 && strpos($response, 'GenerateRequestsPerDayPerProjectPerModel') === false);
+
+        if (($isServicoBloqueado || $isRateLimitMomento) && $tentativa < $maxTentativas) {
+            // Backoff exponencial: 2s, 4s, 8s...
+            $espera = $backoffInicial * pow(2, $tentativa - 1);
+            sleep($espera);
+            continue; // próxima tentativa
+        }
+
+        // Erro não recuperável ou tentativas esgotadas: sai do loop
+        break;
+    }
 
     // 6. Tratamento de Erros da API
     if ($httpCode !== 200) {
-        $isKeyInvalid = false;
+        $isKeyInvalid      = false;
+        $isQuotaExceeded   = false;
+        $isServicoBloqueado = ($httpCode === 503 || strpos($response, 'UNAVAILABLE') !== false);
+        $retryDelay        = 60; // segundos padrão
+
+        // API Key inválida
         if (strpos($response, 'API key not valid') !== false || strpos($response, 'API_KEY_INVALID') !== false || $httpCode === 400) {
             $isKeyInvalid = true;
         }
 
-        if ($isKeyInvalid) {
+        // Cota diária esgotada (plano gratuito ou limite diário)
+        if ($httpCode === 429 || strpos($response, 'RESOURCE_EXHAUSTED') !== false || strpos($response, 'quota') !== false) {
+            $isQuotaExceeded = true;
+
+            // Tenta extrair o retryDelay da resposta da API
+            $responseData = json_decode($response, true);
+            if (!empty($responseData['error']['details'])) {
+                foreach ($responseData['error']['details'] as $detail) {
+                    if (isset($detail['retryDelay'])) {
+                        $retryDelay = (int) filter_var($detail['retryDelay'], FILTER_SANITIZE_NUMBER_INT);
+                    }
+                }
+            }
+        }
+
+        // Mock para API inválida, cota esgotada OU servidor indisponível após retentativas
+        if ($isKeyInvalid || $isQuotaExceeded || $isServicoBloqueado) {
             $respostaMock = gerarRespostaMockParaEngine($tipo, $conceito, $id_sistema, $atributos_sistema);
+
+            if ($isQuotaExceeded) {
+                $mensagem = "Cota diária da API Gemini atingida (plano gratuito: 20 req/dia). Exibindo resultado de demonstração. Tente novamente em aproximadamente {$retryDelay} segundos, ou faça upgrade do seu plano em ai.google.dev.";
+            } elseif ($isServicoBloqueado) {
+                $mensagem = "Os servidores da API Gemini estão temporariamente sobrecarregados. Foram realizadas {$tentativa} tentativa(s) automática(s). Exibindo resultado de demonstração — tente novamente em alguns instantes.";
+            } else {
+                $mensagem = "API Key inválida. Exibindo resultado de demonstração.";
+            }
+
             echo json_encode([
-                'success' => true,
-                'data'    => $respostaMock,
-                'mock'    => true
+                'success'   => true,
+                'data'      => $respostaMock,
+                'mock'      => true,
+                'aviso'     => $mensagem,
+                'retry_em'  => $isQuotaExceeded ? $retryDelay : null
             ]);
             exit;
         }
