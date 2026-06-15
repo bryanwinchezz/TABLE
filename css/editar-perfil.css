@@ -1,0 +1,324 @@
+/* ==========================================================
+   TELA DE EDITAR PERFIL (CARTÃO BRANCO)
+========================================================== */
+
+/* Fundo roxo e layout para comportar Header e Footer */
+body.pagina-edicao {
+    background-color: #492499; /* Fundo roxo sólido da imagem */
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column; 
+    margin: 0;
+    font-family: "Montserrat", sans-serif;
+}
+
+/* Container que empurra o Footer para o fundo e evita o Header fixo */
+.container-principal-edicao {
+    flex: 1; 
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 120px 20px 60px 20px; 
+}
+
+/* O Cartão Principal Branco */
+.cartao-edicao {
+    background-color: #ffffff;
+    width: 100%;
+    max-width: 800px;
+    border-radius: 12px;
+    padding: 40px;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+    color: #333;
+}
+
+/* Botão de Voltar */
+.link-voltar {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #5b2be0;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin-bottom: 30px;
+    transition: color 0.2s;
+}
+
+.link-voltar:hover {
+    color: #311c81;
+}
+
+/* Cabeçalho do Perfil (Foto e Info) */
+.cabecalho-edicao {
+    display: flex;
+    align-items: center;
+    gap: 25px;
+    margin-bottom: 30px;
+}
+
+.foto-container {
+    position: relative;
+    width: 110px;
+    height: 110px;
+}
+
+.foto-perfil {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #7b4ff7; 
+    padding: 3px;
+}
+
+.icone-camera {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    background-color: #7b4ff7;
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.9rem;
+    border: 3px solid #ffffff;
+    cursor: pointer;
+}
+
+.info-usuario h2 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    margin: 0 0 5px 0;
+    color: #000;
+}
+
+.info-usuario p {
+    margin: 2px 0;
+    font-size: 0.95rem;
+    color: #555;
+}
+
+.membro-desde {
+    color: #888 !important;
+    font-size: 0.85rem !important;
+}
+
+/* Linha Divisória */
+.divisor {
+    border: none;
+    border-top: 1px solid #e0e0e0;
+    margin: 30px 0;
+}
+
+/* Seções de Conteúdo */
+.titulo-roxo {
+    color: #7b4ff7; 
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+/* Formulário de Dados */
+.formulario-edicao {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.campo-edicao label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.campo-edicao input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    font-size: 1rem;
+    color: #333;
+    font-family: inherit;
+    transition: border-color 0.3s;
+}
+
+.campo-edicao input:focus, 
+.campo-edicao textarea:focus {
+    outline: none !important;
+    border-color: #7b4ff7 !important;
+    background-color: #fff !important;
+    box-shadow: 0 0 0 3px rgba(123, 79, 247, 0.1) !important;
+}
+
+.campo-edicao textarea {
+    width: 100% !important;
+    padding: 12px 15px !important;
+    border: 1px solid #ccc !important;
+    border-radius: 8px !important;
+    background-color: #f8f9fa !important;
+    font-size: 1rem !important;
+    color: #333 !important;
+    font-family: inherit !important;
+    transition: all 0.3s ease !important;
+    resize: vertical !important;
+    min-height: 100px !important;
+    line-height: 1.5 !important;
+    box-sizing: border-box !important;
+    display: block !important;
+}
+
+.campo-edicao input:disabled {
+    background-color: #e9ecef;
+    color: #666;
+    cursor: not-allowed;
+}
+
+/* Centralizar botões */
+.area-botao-centro {
+    display: flex;
+    justify-content: center;
+    margin-top: 15px;
+}
+
+.area-botoes-centro{
+    display: flex;
+    justify-content: space-evenly;
+    margin-top: 15px;
+}
+
+/* Estilos de Botões */
+.botao-roxo {
+    background-color: #4a2a85; 
+    color: #ffffff;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.botao-roxo:hover {
+    background-color: #311c61;
+}
+
+.texto-descricao {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #444;
+    margin-bottom: 25px;
+}
+
+/* Rodapé de Ações da Conta */
+.acoes-conta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+}
+
+.botao-cinza {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.2s;
+}
+
+.botao-cinza:hover { background-color: #5a6268; }
+
+.botao-vermelho {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.2s;
+}
+
+.botao-vermelho:hover { background-color: #c82333; }
+
+/* RESPONSIVIDADE EDITAR PERFIL - PREMIUM MOBILE FIRST */
+@media (max-width: 768px) {
+    .container-principal-edicao {
+        padding: 100px 12px 40px 12px !important;
+    }
+
+    .cartao-edicao {
+        padding: 24px 16px !important;
+        border-radius: 8px;
+    }
+
+    .cabecalho-edicao {
+        flex-direction: column !important;
+        text-align: center !important;
+        gap: 15px !important;
+    }
+
+    .foto-container {
+        width: 120px !important;
+        height: 120px !important;
+        flex-shrink: 0 !important;
+        margin: 0 auto;
+    }
+
+    .foto-perfil {
+        width: 120px !important;
+        height: 120px !important;
+        object-fit: cover !important;
+        border-radius: 50% !important;
+    }
+
+    .info-usuario h2 {
+        font-size: 1.4rem !important;
+    }
+
+    .classificacao-indicativa-box {
+        padding: 12px !important;
+        margin-top: 15px !important;
+    }
+
+    .classificacao-indicativa-box div {
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center !important;
+        gap: 10px !important;
+    }
+
+    .acoes-conta {
+        flex-direction: column !important;
+        gap: 12px !important;
+        width: 100% !important;
+        align-items: stretch !important;
+    }
+
+    .acoes-conta a, 
+    .acoes-conta button {
+        width: 100% !important;
+        justify-content: center !important;
+        box-sizing: border-box !important;
+    }
+}
