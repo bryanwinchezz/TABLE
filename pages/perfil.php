@@ -39,14 +39,24 @@
     $stmt->execute([$_SESSION['usuario']['id']]);
     $userCompleto = $stmt->fetch();
 
+    if (!$userCompleto) {
+        session_destroy();
+        header('Location: login.php?erro=sessao_invalida');
+        exit;
+    }
+
     $idadeUsuario = 0;
-    if (!empty($userCompleto['dt_nascimento'])) {
+    if ($userCompleto && !empty($userCompleto['dt_nascimento'])) {
         $hoje = new DateTime();
         $nasc = new DateTime($userCompleto['dt_nascimento']);
         $idadeUsuario = $hoje->diff($nasc)->y;
     }
 
-    $possuiPlanoSistemas = (isset($userCompleto['fl_plano_sistemas']) && (int)$userCompleto['fl_plano_sistemas'] === 1) || (isset($userCompleto['fl_plano_completo']) && (int)$userCompleto['fl_plano_completo'] === 1) || ($userCompleto['tp_cargo'] === 'admin');
+    $possuiPlanoSistemas = $userCompleto && (
+        (isset($userCompleto['fl_plano_sistemas']) && (int)$userCompleto['fl_plano_sistemas'] === 1) || 
+        (isset($userCompleto['fl_plano_completo']) && (int)$userCompleto['fl_plano_completo'] === 1) || 
+        (isset($userCompleto['tp_cargo']) && $userCompleto['tp_cargo'] === 'admin')
+    );
 
     function canAccess($classificacao, $idade) {
         if ($classificacao == 'L') return true;
@@ -67,7 +77,7 @@
     }
     $usuarioAtivo = $_SESSION['usuario'];
     $cargoUsuario = strtolower($usuarioAtivo['cargo'] ?? 'jogador');
-    $isMestreOuAdmin = ($cargoUsuario === 'mestre' || $cargoUsuario === 'admin' || strtolower($userCompleto['tp_cargo'] ?? '') === 'admin' || strtolower($userCompleto['tp_cargo'] ?? '') === 'mestre');
+    $isMestreOuAdmin = ($cargoUsuario === 'mestre' || $cargoUsuario === 'admin' || ($userCompleto && strtolower($userCompleto['tp_cargo'] ?? '') === 'admin') || ($userCompleto && strtolower($userCompleto['tp_cargo'] ?? '') === 'mestre'));
     $classeLayout = ($isMestreOuAdmin) ? 'grid-mestre' : 'grid-jogador';
     $fotoUsuario = (!empty($usuarioAtivo['foto']) && realpath(__DIR__ . '/' . $usuarioAtivo['foto']) !== false) ? $usuarioAtivo['foto'] : '../img/uploads/perfil/avatar1.png';
     $fotoNavbar = $fotoUsuario;

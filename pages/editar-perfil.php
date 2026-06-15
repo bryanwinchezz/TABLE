@@ -226,7 +226,8 @@ try {
     $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$usuario) {
-        header('Location: perfil.php');
+        session_destroy();
+        header('Location: login.php?erro=sessao_invalida');
         exit;
     }
 
@@ -454,7 +455,7 @@ $permissao = obterClassificacao($idade);
                         </button>
                     <?php else: ?>
                         <button type="button" onclick="window.location.href='planos.php'" class="botao-roxo">
-                            <i class="fas fa-book"></i> <span>Seja mestre</span>
+                            <i class="fas fa-book"></i> <span>Seja Mestre</span>
                         </button>
                     <?php endif; ?>
 
