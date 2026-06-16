@@ -107,6 +107,15 @@ document.addEventListener('DOMContentLoaded', () => {
             btnIdade.classList.add('ativo');
         }
 
+        const botoesIdade = document.querySelectorAll('.btn-idade');
+        botoesIdade.forEach(botao => {
+            botao.addEventListener('click', () => {
+                botoesIdade.forEach(b => b.classList.remove('ativo'));
+                botao.classList.add('ativo');
+                document.getElementById('input-classificacao').value = botao.getAttribute('data-idade');
+            });
+        });
+
         if (SYSTEM_DB.ds_descricao) {
             const blocos = SYSTEM_DB.ds_descricao.split('\n\n');
 
@@ -607,7 +616,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('lista-atributos').addEventListener('click', (e) => {
         const id = e.target.dataset.id;
         if (e.target.classList.contains('btn-deletar-attr')) {
-            window.atributosObj = window.atributosObj.filter(a => a.id !== id);
+            window.atributosObj = window.atributosObj.filter(a => a.id != id);
             renderAtributos();
         } else if (e.target.classList.contains('btn-editar-attr')) {
             const a = window.atributosObj.find(x => x.id == id);
@@ -775,6 +784,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 `);
             });
+            const btnExcluirMonstro = document.getElementById('btn-excluir-monstro');
+            if (btnExcluirMonstro) btnExcluirMonstro.style.display = 'none';
             document.getElementById('modal-criar-monstro').classList.add('ativo');
         } else {
             window.compEditandoID = null;
@@ -853,7 +864,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('btn-excluir-modal').addEventListener('click', () => {
         if (confirm("Tem certeza que deseja excluir?")) {
-            window.componentesDb[catAtiva].items = window.componentesDb[catAtiva].items.filter(c => c.id !== window.compEditandoID);
+            window.componentesDb[catAtiva].items = window.componentesDb[catAtiva].items.filter(c => c.id != window.compEditandoID);
             document.getElementById('modal-comp').classList.remove('ativo');
             atualizarUIComponentes();
         }
@@ -903,6 +914,18 @@ function abrirModalEdicaoMonstro(comp) {
         document.getElementById('preview-monstro-container').innerHTML = `<img src="${comp.foto_base64}" style="width:100%; height:100%; object-fit:cover;">`;
     } else {
         document.getElementById('preview-monstro-container').innerHTML = '<i class="fas fa-cloud-upload-alt" style="font-size: 2rem; color: var(--premium-accent); opacity: 0.5;"></i>';
+    }
+
+    const btnExcluirMonstro = document.getElementById('btn-excluir-monstro');
+    if (btnExcluirMonstro) {
+        btnExcluirMonstro.style.display = 'block';
+        btnExcluirMonstro.onclick = () => {
+            if (confirm("Tem certeza que deseja excluir esta ameaça?")) {
+                window.componentesDb['AMEAÇAS'].items = window.componentesDb['AMEAÇAS'].items.filter(c => c.id != comp.id);
+                fecharModal('modal-criar-monstro');
+                atualizarUIComponentes();
+            }
+        };
     }
 
     document.querySelector('#modal-criar-monstro h2').textContent = 'Editar Ameaça';
