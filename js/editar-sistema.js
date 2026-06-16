@@ -108,22 +108,46 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (SYSTEM_DB.ds_descricao) {
-            const descricoes = SYSTEM_DB.ds_descricao.split('\n\n');
-            const firstTextArea = document.querySelector('#desc-fixa-1 textarea');
-            if (firstTextArea) firstTextArea.value = descricoes[0];
+            const blocos = SYSTEM_DB.ds_descricao.split('\n\n');
 
-            for (let i = 1; i < descricoes.length; i++) {
+            // Função que extrai o título da primeira linha de um bloco
+            const extrairTituloEConteudo = (bloco) => {
+                const linhas = bloco.split('\n');
+                // Considera a 1ª linha como título se tiver no máximo 100 caracteres
+                if (linhas.length > 1 && linhas[0].length <= 100) {
+                    return { titulo: linhas[0].trim(), conteudo: linhas.slice(1).join('\n').trim() };
+                }
+                return { titulo: '', conteudo: bloco.trim() };
+            };
+
+            // Primeiro bloco (fixo)
+            const primeiroBloco = extrairTituloEConteudo(blocos[0]);
+            const firstTextArea = document.querySelector('#desc-fixa-1 textarea');
+            const firstTituloInput = document.querySelector('#desc-fixa-1 .input-titulo-desc');
+            if (firstTextArea) firstTextArea.value = primeiroBloco.conteudo || blocos[0].trim();
+            if (firstTituloInput && primeiroBloco.titulo) firstTituloInput.value = primeiroBloco.titulo;
+
+            // Blocos adicionais
+            for (let i = 1; i < blocos.length; i++) {
+                const blocoAtual = extrairTituloEConteudo(blocos[i]);
                 const idUnico = Date.now() + i;
+                const tituloValor = blocoAtual.titulo || `Descrição ${i+1}`;
                 const html = `
                     <div class="item-descricao" id="desc-${idUnico}">
                         <div class="cabecalho-descricao" style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                            <input type="text" class="input-titulo-desc" value="Descrição ${i+1}:" style="width: 50%;">
+                            <input type="text" class="input-titulo-desc" value="${tituloValor.replace(/"/g, '&quot;')}" style="width: 50%;">
                             <button type="button" class="btn-texto btn-excluir-desc-inline" data-id="desc-${idUnico}">Excluir <i class="fas fa-times"></i></button>
                         </div>
-                        <textarea class="input-escuro textarea-escuro" required placeholder="Digite os detalhes aqui...">${descricoes[i]}</textarea>
+                        <textarea class="input-escuro textarea-escuro" required placeholder="Digite os detalhes aqui..."></textarea>
                     </div>
                 `;
                 document.getElementById('container-descricoes').insertAdjacentHTML('beforeend', html);
+                // Atribui o conteúdo via .value para evitar problemas de encoding
+                const novoItem = document.getElementById(`desc-${idUnico}`);
+                if (novoItem) {
+                    const ta = novoItem.querySelector('textarea');
+                    if (ta) ta.value = blocoAtual.conteudo || blocos[i].trim();
+                }
             }
         }
 
@@ -188,8 +212,14 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
         
         let descTotal = '';
-        document.querySelectorAll('.item-descricao textarea').forEach((t, index) => {
-             if(t.value.trim() !== '') descTotal += (index > 0 ? '\n\n' : '') + t.value.trim();
+        const descItemsEdit = document.querySelectorAll('.item-descricao');
+        descItemsEdit.forEach((item, index) => {
+            const tituloInput = item.querySelector('.input-titulo-desc');
+            const textareaEl = item.querySelector('textarea');
+            if (!textareaEl || textareaEl.value.trim() === '') return;
+            const titulo = (tituloInput ? tituloInput.value.trim().replace(/:$/, '') : `Descrição ${index + 1}`);
+            const bloco = titulo + '\n' + textareaEl.value.trim();
+            descTotal += (descTotal ? '\n\n' : '') + bloco;
         });
 
         const payload = {

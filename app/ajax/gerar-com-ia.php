@@ -77,109 +77,97 @@ try {
     // 4. Definição de Prompts Estruturados de Engenharia de Prompt
     if ($tipo === 'sistema') {
         $prompt = <<<PROMPT
-Você é o game designer mais criativo, ousado e imersivo que já existiu. Crie um sistema de RPG de mesa completo, rico em atmosfera e mecanicamente coerente com o conceito a seguir.
+Você é o game designer mais criativo e imersivo que já existiu. Sua missão é criar um sistema de RPG de mesa completo, rico em atmosfera e mecanicamente coerente a partir do conceito abaixo.
 
-════════════════════════════════════════
 CONCEITO DO SISTEMA: "{$conceito}"
-════════════════════════════════════════
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-REGRA 1 — NOME DO SISTEMA
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-O campo "nome" do JSON DEVE conter o nome da obra, universo ou tema solicitado de forma reconhecível.
-- Se o usuário pediu "RPG de Dragon Ball", o nome deve ser algo como "Dragon Ball RPG", "Dragon Ball — O Caminho do Ki", "Dragon Ball — O Torneio dos Deuses", etc.
-- Se o usuário pediu "RPG de Programadores", o nome pode ser "CodeBattle RPG", "Dev Wars — A Mesa dos Bugs", etc.
-- NUNCA crie um nome genérico desconexo do conceito pedido.
+════════ REGRA FUNDAMENTAL — EXPANSÃO CRIATIVA ════════
+Não importa o tamanho ou vagueza do conceito informado — você DEVE criar um sistema de RPG de mesa completo, coerente e rico a partir dele.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-REGRA 2 — TÍTULOS DOS TÓPICOS DE DESCRIÇÃO
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Cada tópico de descrição deve ter um título no formato CATEGORIA: Subtítulo Temático.
-Use uma das categorias abaixo conforme o assunto do tópico:
-- Historia: [Subtítulo imersivo sobre a origem do mundo ou lore]
-- Regras: [Subtítulo imersivo sobre como funcionam as mecânicas de jogo]
-- Jogabilidade: [Subtítulo imersivo sobre o estilo de jogo e o que os jogadores fazem]
-- Poderes: [Subtítulo imersivo sobre os sistemas de poder do universo]
-- Faccoes: [Subtítulo imersivo sobre grupos, organizações e alianças]
-- Mundo: [Subtítulo imersivo sobre locais, geografias e cenários]
-- Conflito: [Subtítulo imersivo sobre guerras, ameaças e antagonistas]
-Exemplos de títulos corretos:
-- "Historia: A Saga Antes do Torneio do Poder"
-- "Regras: Como o Ki Flui na Mesa de Jogo"
-- "Jogabilidade: Lutar, Evoluir e Transcender"
-- "Faccoes: Os Guerreiros Z e seus Rivais"
-Gere de 3 a 5 tópicos de descrição, cada um com categoria diferente.
+- Se o conceito for uma única palavra (ex: "gay", "cozinha", "verde", "a", "amor"), use essa palavra como inspiração central e construa um universo RPG completo ao redor dela. Por exemplo:
+  → "gay" pode se tornar um RPG sobre identidade, revolução social, drag queens, ativismo, subculturas, romance e resistência.
+  → "cozinha" pode se tornar um RPG culinário épico com classes de chefs, ingredientes mágicos e batalhas gastronômicas.
+  → "amor" pode ser um RPG sobre jornadas emocionais, deuses do amor, corações partidos e rituais de vínculo.
+- Se o conceito mencionar um universo de ficção real (Dragon Ball, Naruto, Harry Potter, Star Wars, Marvel, Demon Slayer, etc.), crie o sistema com fidelidade total a esse universo: personagens canônicos, poderes, locais, fações e eventos reais.
+- Se o conceito for um gênero (medieval, cyberpunk, horror, etc.), crie o sistema dentro desse gênero com profundidade e riqueza.
+- Se o conceito tiver detalhes específicos ("inventário com Espada Flamejante", "itens do filme X", "chakra de Naruto"), inclua esses elementos com os nomes exatos pedidos.
+═══════════════════════════════════════════════════════
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-REGRA 3 — PROIBIÇÃO DE ASPAS SIMPLES NOS TEXTOS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Nos campos de texto narrativo (titulo, conteudo, descricao, habilidade, requisito, custo, propriedades), NUNCA use aspas simples (') para citar nomes ou exemplos. Use apenas aspas duplas ou reescreva a frase sem aspas. Use travessão (—) quando precisar destacar algo.
-ERRADO: "como o 'Kamehameha' de Goku"
-CORRETO: "como o Kamehameha de Goku" ou "como o Kamehameha — técnica icônica de Goku"
+━━━ NOME DO SISTEMA ━━━
+O campo "nome" deve ser CURTO, direto e referenciar o conceito pedido. NUNCA use travessão (—), parênteses ou subtítulos no nome.
+- "dragon ball" → "Dragon Ball RPG" (NUNCA "Dragon Ball RPG — A Era dos Guerreiros Z")
+- "gay" → "Pridefall RPG" (NUNCA "Pridefall — O RPG da Revolução e do Amor")
+- "cozinha" → "Mesa Épica RPG" (NUNCA "Mesa Épica — O RPG Culinário")
+NUNCA crie um nome genérico desconexo do conceito.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-REGRA 4 — DETECÇÃO DE UNIVERSO CONHECIDO (FILMES / SÉRIES / ANIMES / JOGOS)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Se o conceito mencionar um universo conhecido (Dragon Ball, Naruto, Harry Potter, Star Wars, The Witcher, Demon Slayer, Attack on Titan, One Piece, Game of Thrones, Marvel, DC, Fullmetal Alchemist, etc.), você DEVE:
-- Nomear personagens icônicos como exemplos em classes, origens e poderes.
-- Usar eventos canônicos reais como contexto histórico do mundo.
-- Criar locais e fações fiéis ao cânone (ex: Organização Akatsuki, Vila da Folha, Kamar-Taj, Hogwarts, Dothraki).
-- Criar mecânicas que simulam sistemas de poder do universo (ex: Chakra, Reiatsu, Nen, A Força, Haki, Ki).
-- Os atributos devem refletir os sistemas de poder do IP (ex: Dragon Ball — POD, KI, AGI, RES; Naruto — CHA, NIN, TAI, GEN).
+━━━ TÍTULOS DOS TÓPICOS DE DESCRIÇÃO ━━━
+Cada tópico de descrição deve ter um título curto e temático no formato: Categoria: Subtítulo.
+Use uma destas categorias: Historia, Regras, Jogabilidade, Poderes, Faccoes, Mundo, Conflito.
+Exemplos:
+- "Historia: A Revolução que Acendeu a Chama"
+- "Regras: Como o Ki Flui na Mesa"
+- "Jogabilidade: Lutar, Crescer e Transcender"
+Gere de 3 a 5 tópicos com categorias variadas. Os títulos devem ser curtos e impactantes.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-REGRA 5 — CRIATIVIDADE MÁXIMA COM TERMINOLOGIA DO TEMA
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Mergulhe FUNDO no tema. Se for RPG de Programadores, use: bugs, deploys, refatoração, stack overflow, commits, pull requests, APIs, logs de erro, terminais, frameworks, frontend, backend, DevOps, CI/CD, containers Docker, linting, merge conflicts, hotfixes, sprints, null pointers, segfaults, regex, injeção de dependência. Se for medieval, use: feudalismo, cavalaria, guilds, pergaminhos, alquimia, sigilografia, heráldica, trebuchet.
+━━━ PROIBIÇÃO DE ASPAS SIMPLES ━━━
+Nos campos de texto (titulo, conteudo, descricao, habilidade, requisito, custo, propriedades), NUNCA use aspas simples ('). Use aspas duplas ou travessão (—).
+ERRADO: "o 'Kamehameha' de Goku"
+CORRETO: "o Kamehameha de Goku" ou "o Kamehameha — técnica de Goku"
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-REGRA 6 — QUANTIDADE DE COMPONENTES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Gere a maior quantidade possível dentro dos limites abaixo:
-- classes: entre 6 e 10 (limite máximo: 15)
-- pericias: entre 10 e 15 (limite máximo: 30)
-- origens: entre 5 e 8 (limite máximo: 75)
-- equipamentos: entre 8 e 12 (limite máximo: 100)
-- habilidades passivas: entre 6 e 10 (limite máximo: 50)
-- poderes ativos: entre 6 e 10 (limite máximo: 50)
-- ameacas (monstros/inimigos): entre 3 e 5 (limite máximo: 50)
+━━━ DETECÇÃO DE UNIVERSO CONHECIDO ━━━
+Se o conceito mencionar universo conhecido (Dragon Ball, Naruto, Harry Potter, Star Wars, One Piece, The Witcher, Marvel, DC, Demon Slayer, Attack on Titan, Game of Thrones, etc.):
+- Use personagens canônicos como exemplos em classes, origens e poderes.
+- Use eventos reais do cânone como lore.
+- Crie locais e fações fiéis (ex: Akatsuki, Vila da Folha, Hogwarts, Dothraki).
+- Simule o sistema de poder do universo (ex: Chakra, Haki, Ki, A Força, Nen, Reiatsu).
+- Atributos devem refletir o IP (Dragon Ball → POD, KI, AGI, RES; Naruto → CHA, NIN, TAI, GEN).
+- Se o usuário pediu itens ou equipamentos específicos ("espada do Geralt", "cajado do Dumbledore"), adicione-os com os nomes reais.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-REGRA 7 — REQUISITOS POR EXTENSO (SEM ABREVIAÇÕES)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-O campo "requisito" das habilidades passivas deve ser escrito de forma descritiva e legível, nunca em abreviações:
-- ERRADO: "3 BFE", "Nv2 NET", "CAF >= 4"
-- CORRETO: "Possuir pelo menos 3 pontos no atributo Brutalidade de Ferro", "Ser da classe Netrunner de nível 2 ou superior"
+━━━ TERMINOLOGIA TEMÁTICA PROFUNDA ━━━
+Mergulhe no tema. Exemplos:
+- Programadores: bugs, deploy, refatoração, stack overflow, commits, APIs, Docker, CI/CD, hotfix, null pointer, regex.
+- Medieval: feudalismo, cavalaria, guilds, alquimia, heráldica, sigilografia, trebuchet.
+- Culinário: temperos, técnicas, mise en place, sabores, receitas, críticos, festivais.
+- LGBTQIA+: identidade, expressão de gênero, resistência, comunidade, Stonewall, drag, ativismo.
+Use vocabulário rico e específico do tema em TUDO: nomes de classes, habilidades, itens, ameaças.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-REGRA 8 — OUTRAS DIRETRIZES TÉCNICAS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-- CAMPO base DE STATUS E DEFESAS: apenas a sigla exata de 3 letras de um atributo gerado. NUNCA uma fórmula.
-- HABILIDADES (passivas): campo descricao = efeito mecânico com números. Campo requisito = condição por extenso. NUNCA escreva Requer dentro da descricao.
-- PODERES (ativos): campo descricao = efeito com duração e números. Campo custo = custo de ativação baseado nos status gerados.
-- EQUIPAMENTOS: campo tipo = exatamente "Arma", "Proteção" ou "Utilitário" (letra maiúscula).
-- Atributos: entre 5 e 8 atributos, siglas de 3 letras maiúsculas únicas do universo.
-- CLASSES E ORIGENS: Devem conter obrigatoriamente as chaves "nome", "descricao" e "habilidade". A chave "habilidade" DEVE descrever detalhadamente o bônus, item ou benefício inicial concedido pela classe/origem, com valores mecânicos e números exatos. NUNCA deixe a chave "habilidade" vazia ou omitida no JSON.
+━━━ ITENS NO INVENTÁRIO E EQUIPAMENTOS ESPECÍFICOS ━━━
+Se o usuário mencionou itens, armas, equipamentos específicos ("espada flamejante no inventário", "itens de Star Wars"), você DEVE criá-los com os nomes corretos, propriedades mecânicas e dados reais.
+Equipamentos de universos canônicos devem ter os nomes originais (ex: Sabre de Luz, Cajado Ancestral, Keyblade).
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-REGRA 9 — COMPONENTES COM NOMES COMPLETOS (SEM ABREVIAÇÕES VAZIAS)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Os nomes de Classes e Origens devem ser descritivos, completos e com significado claro.
-- NUNCA use siglas ou abreviações vazias de duas letras ou sem contexto (ex: "EX", "MIL", "DEV").
-- Em vez disso, use nomes completos por extenso e bem contextualizados (ex: "Ex-Militar", "Ex-Programador", "Desenvolvedor de Software", "Soldado Imperial").
+━━━ QUANTIDADE DE COMPONENTES ━━━
+Gere o máximo possível dentro dos limites:
+- classes: 6 a 10 (máx 15)
+- pericias: 10 a 15 (máx 30)
+- origens: 5 a 8 (máx 75)
+- equipamentos: 8 a 12 (máx 100)
+- habilidades passivas: 6 a 10 (máx 50)
+- poderes ativos: 6 a 10 (máx 50)
+- ameacas: 3 a 5 (máx 50)
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-REGRA 10 — NOMES DE STATUS, DEFESAS E CORES TEMÁTICAS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-- NUNCA use o termo "Pontos de..." nos nomes de Status ou Defesas. Use termos simples, diretos e temáticos (ex: usar "Vida" em vez de "Pontos de Vida", "Sanidade" em vez de "Pontos de Sanidade", "Mana" em vez de "Pontos de Mana").
-- As cores e os próprios nomes dos status e defesas devem estar 100% integrados e temáticos com o universo pedido!
-- Por exemplo: Se o tema for "Toy Story", as cores das barras de status devem refletir o universo (ex: verde e roxo como o Buzz Lightyear, ou amarelo e azul como o Woody) e os nomes devem ser temáticos (ex: "Bateria", "Imaginação"). Se o tema for "Programadores", as cores e nomes devem remeter a isso (ex: vermelho para "Bugs", verde para "Compilação", etc.).
-- Certifique-se de que os status/defesas combinem de forma muito visual e contextual com o tema!
+━━━ REQUISITOS POR EXTENSO ━━━
+O campo "requisito" das habilidades passivas deve ser descritivo e legível:
+- ERRADO: "3 BFE", "Nv2 NET"
+- CORRETO: "Possuir pelo menos 3 pontos em Brutalidade de Ferro" ou "Ser da classe Netrunner de nível 2 ou superior"
+
+━━━ DIRETRIZES TÉCNICAS ━━━
+- STATUS/DEFESAS: campo base = sigla EXATA de 3 letras de um atributo gerado. Nunca fórmula.
+- HABILIDADES (passivas): descricao = efeito com números. requisito = condição por extenso. NUNCA coloque "Requer" dentro da descricao.
+- PODERES (ativos): descricao = efeito com duração e valores. custo = custo baseado nos status criados.
+- EQUIPAMENTOS: tipo = exatamente "Arma", "Proteção" ou "Utilitário".
+- Atributos: 5 a 8 atributos, siglas de 3 letras maiúsculas únicas do universo.
+- CLASSES E ORIGENS: obrigatório ter "nome", "descricao" e "habilidade". A chave "habilidade" DEVE detalhar o bônus inicial com valores mecânicos. NUNCA deixe "habilidade" vazia.
+- Nomes de Classes/Origens: devem ser completos, representativos e inteligíveis. É TERMINANTEMENTE PROIBIDO gerar nomes inacabados como apenas "Ex" ou siglas vazias. Se a origem for do tipo ex-profissional, você DEVE especificar o que a pessoa era por completo (ex: "Ex-Militar", "Ex-Policial", "Ex-Acadêmico", "Ex-Atleta", etc.). NUNCA abrevie para apenas "Ex".
+
+━━━ STATUS, DEFESAS E CORES TEMÁTICAS ━━━
+- NUNCA use "Pontos de..." nos nomes. Use termos temáticos diretos ("Vida", "Sanidade", "Mana", "Calor", "Glória").
+- Cores e nomes dos status devem ser 100% temáticos com o universo.
+- Ex: tema LGBTQIA+ → cores do arco-íris, nomes como "Orgulho", "Resiliência". Tema culinário → cores de comida, nomes como "Sabor", "Energia".
 
 Responda EXCLUSIVAMENTE com JSON válido, sem markdown, sem blocos de código, sem texto extra:
 
 {
-  "nome": "Nome do sistema referenciando a obra ou tema pedido — ex: Dragon Ball RPG — A Era dos Guerreiros Z",
+  "nome": "Nome CURTO do sistema, sem travessão nem subtítulo — ex: Dragon Ball RPG, Pridefall RPG, Mesa Épica RPG",
   "classificacao": "L, 10, 12, 14, 16 ou 18",
   "descricao_topicos": [
     {
@@ -238,7 +226,7 @@ Responda EXCLUSIVAMENTE com JSON válido, sem markdown, sem blocos de código, s
   ],
   "origens": [
     {
-      "nome": "Nome da Origem Temática (apenas o nome direto da origem, sem subtítulos, travessões ou explicações adicionais — ex: Soldado, Acadêmico, etc.)",
+      "nome": "Nome da Origem Temática (apenas o nome direto da origem, sem subtítulos ou explicações adicionais. Exemplos válidos: Soldado, Acadêmico, Ex-Militar, Ex-Policial. NUNCA use apenas 'Ex' isolado, sempre descreva completo)",
       "descricao": "Histórico de vida e lore desta origem. Se houver universo canônico, contextualize com locais, fações ou eventos reais do IP. Use aspas duplas, nunca aspas simples. (2 parágrafos)",
       "habilidade": "Nome do Benefício/Poder: descrição do bônus ou vantagem inicial. Exemplo: Sobrevivente Nato: +2 em testes de Percepção."
     }
@@ -298,32 +286,39 @@ PROMPT;
         }
 
         $prompt = <<<PROMPT
-Aja como um Game Designer de RPG e escritor de fantasia veterano.
-Crie um personagem rico, carismático e mecanicamente coerente que habite o universo de RPG sugerido.
-Por favor, distribua exatamente 10 pontos adicionais além do valor base 0 para cada atributo fornecido no sistema, de forma condizente com o papel e conceito do herói.
+Você é um escritor de ficção e game designer veterano de RPG de mesa. Crie um personagem completo, rico e memorável para o sistema informado abaixo.
 
-Se o conceito solicitar ou fizer referência a um personagem conhecido de alguma obra (filme, série, anime, jogo, livro — ex: "faça o Goku", "crie o Harry Potter", "faça o Geralt de Rivia"), você DEVE criar EXATAMENTE esse personagem solicitado.
-- Nome: Deve ser exatamente o nome real do personagem na obra (ex: "Goku", "Geralt de Rivia", "Harry Potter"). NUNCA crie um nome diferente ou genérico se um personagem específico foi pedido.
-- História, Aparência, Personalidade e Objetivos: Devem ser totalmente fiéis e detalhar a jornada e os traços reais desse personagem na obra original.
-- Adaptação: Adapte as mecânicas dele (classe, origem e atributos) para as opções disponíveis do Sistema de RPG informado abaixo, escolhendo a classe e origem que melhor se assemelham ao conceito dele na obra original.
+CONCEITO DO PERSONAGEM: "{$conceito}"
 
-Se o conceito NÃO for de um personagem conhecido específico, crie um personagem original que se encaixe no tema sugerido.
+════════ REGRA FUNDAMENTAL — EXPANSÃO CRIATIVA ════════
+Não importa o tamanho ou aparente vagueza do conceito — você DEVE criar um personagem completo e profundo a partir dele.
 
-Aqui estão os dados exatos do Sistema de RPG selecionado no qual o personagem deve ser criado. Você DEVE escolher rigorosamente uma das classes e origens disponíveis abaixo e distribuir pontos nos atributos listados usando suas respectivas siglas exatas:
+- Se o conceito for uma palavra ou ideia curta (ex: "gay", "guerreiro", "a", "bruxa", "amor"), expanda criativamente dentro do universo do sistema informado. Por exemplo:
+  → "gay" em um RPG medieval pode ser um nobre que desafiou a ordem, um bardo andrógino, um alquimista que destilou sua identidade em poções.
+  → "a" pode ser a letra que inicia um nome épico — crie um personagem poderoso cujo nome começa com "A".
+  → "guerreiro" pode ser o guerreiro mais lendário do sistema, com uma história de traumas e glórias.
+- Se o conceito mencionar um personagem famoso de uma obra (anime, filme, série, jogo, livro — ex: "faça o Goku", "crie o Geralt", "Harry Potter"):
+  → Use o NOME EXATO do personagem.
+  → A história, aparência, personalidade e objetivos devem ser fiéis à obra original.
+  → Adapte classe e origem para as opções disponíveis do sistema.
+- Se o conceito pedir um personagem com itens ou equipamentos específicos (ex: "um guerreiro com espada flamejante e escudo rúnico"), inclua esses itens exatos na lista de equipamentos.
+═══════════════════════════════════════════════════════
+
+SISTEMA DE RPG SELECIONADO — use rigorosamente os dados abaixo:
 - ORIGENS DISPONÍVEIS: [ {$listaOrigensStr} ]
 - CLASSES DISPONÍVEIS: [ {$listaClassesStr} ]
 - ATRIBUTOS DO SISTEMA: [ {$listaAtributosStr} ]
 
-Nos textos narrativos, use aspas duplas quando necessário — NUNCA aspas simples.
+Distribua exatamente 10 pontos extras além de 0 nos atributos, coerente com o papel do personagem.
+Nos textos narrativos, use aspas duplas — NUNCA aspas simples.
 
-Conceito do Personagem solicitado pelo Usuário: "{$conceito}"
-
-Diretrizes Críticas:
-1. Imersão no Cenário: Toda a terminologia, equipamentos e histórico devem se encaixar organicamente na lore do universo informado.
-2. Nome Fiel ou Evocativo: Use exatamente o nome do personagem solicitado se for um personagem conhecido, ou escolha um nome marcante condizente com o universo.
-3. Coesão Mecânica: Os atributos devem refletir as forças e fraquezas descritas no conceito e na história do herói.
-4. História Cativante: Detalhe o passado do personagem com riqueza de detalhes, incluindo traumas, alianças passadas ou ambições (máximo 2 parágrafos).
-5. Características Extras: Preencha com requinte a aparência do personagem, seus traços de personalidade e seus objetivos de jornada.
+Diretrizes de qualidade:
+1. Imersão: Terminologia, equipamentos e histórico devem estar organicamente dentro da lore do universo do sistema.
+2. Nome impactante: Use o nome exato se for personagem conhecido, ou crie um nome marcante e temático.
+3. Coesão mecânica: Atributos devem refletir forças e fraquezas do personagem.
+4. História cativante: Passado rico com traumas, alianças e ambições (máximo 2 parágrafos).
+5. Aparência vívida: Descreva traços físicos, vestimentas e marcas únicas com detalhes memoráveis.
+6. Objetivos concretos: Metas imediatas e ambições de longo prazo claramente definidas.
 
 Você deve responder EXCLUSIVAMENTE com um objeto JSON válido no formato abaixo:
 
@@ -352,8 +347,8 @@ Nota: Use siglas de atributos coerentes com o sistema caso informado. Caso contr
 PROMPT;
     }
 
-    // 5. Configuração e Execução do cURL HTTP Request para a Gemini API v1
-    $url = "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=" . rawurlencode($apiKey);
+    // 5. Configuração e Execução do cURL HTTP Request para a Gemini API v1beta
+    $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" . rawurlencode($apiKey);
 
     $payload = [
         'contents' => [
@@ -364,7 +359,8 @@ PROMPT;
             ]
         ],
         'generationConfig' => [
-            'temperature' => 0.7
+            'temperature' => 0.7,
+            'responseMimeType' => 'application/json'
         ]
     ];
 
@@ -426,7 +422,7 @@ PROMPT;
         $retryDelay        = 60; // segundos padrão
 
         // API Key inválida
-        if (strpos($response, 'API key not valid') !== false || strpos($response, 'API_KEY_INVALID') !== false || $httpCode === 400) {
+        if (strpos($response, 'API key not valid') !== false || strpos($response, 'API_KEY_INVALID') !== false) {
             $isKeyInvalid = true;
         }
 
@@ -482,14 +478,84 @@ PROMPT;
         exit;
     }
 
-    // 7. Parsing e Sanitização do JSON
-    // Substitui aspas simples por aspas duplas dentro de strings para evitar quebra de JSON
-    $jsonResult = json_decode(trim($textResponse), true);
+    // 7. Parsing e Sanitização do JSON — cascata de estratégias robustas
+    if (!function_exists('normalizarEFormatacaoJson')) {
+        function normalizarEFormatacaoJson($jsonStr) {
+            // Escapar quebras de linha literais (novas linhas, retornos) e tabulações dentro de strings delimitadas por aspas duplas
+            $jsonStr = preg_replace_callback(
+                '/"([^"\\\\]*|\\\\.)*"/s',
+                function ($matches) {
+                    return str_replace(
+                        ["\n", "\r", "\t"],
+                        ["\\n", "\\r", "\\t"],
+                        $matches[0]
+                    );
+                },
+                $jsonStr
+            );
+            // Remover vírgulas flutuantes/órfãs que precedem o fechamento de colchetes ou chaves
+            $jsonStr = preg_replace('/,\s*([\]}])/m', '$1', $jsonStr);
+            return $jsonStr;
+        }
+    }
+
+    $textResponseNormalizado = normalizarEFormatacaoJson($textResponse);
+    $jsonResult = null;
+
+    // Estratégia 0: tentar direto (com normalização)
+    $jsonResult = json_decode(trim($textResponseNormalizado), true);
+
+    // Estratégia 1: remover blocos de markdown (```json ... ```)
     if ($jsonResult === null) {
-        // Fallback: limpar possíveis blocos de formatação markdown
-        $cleanedText = preg_replace('/^```json\s*/i', '', trim($textResponse));
-        $cleanedText = preg_replace('/```$/',          '', $cleanedText);
+        $cleanedText = preg_replace('/^```(?:json)?\s*/i', '', trim($textResponseNormalizado));
+        $cleanedText = preg_replace('/\s*```\s*$/s', '', $cleanedText);
         $jsonResult  = json_decode(trim($cleanedText), true);
+    }
+
+    // Estratégia 2: extrair o primeiro bloco JSON { ... } de nível raiz
+    if ($jsonResult === null) {
+        if (preg_match('/\{[\s\S]*\}/s', $textResponseNormalizado, $matches)) {
+            $jsonResult = json_decode($matches[0], true);
+        }
+    }
+
+    // Estratégia 3: normalizar aspas "curvas" tipográficas que a IA pode gerar
+    if ($jsonResult === null) {
+        $normalizado = str_replace(
+            ["\u{201C}", "\u{201D}", "\u{2018}", "\u{2019}", "\u{201A}", "\u{201B}"],
+            ['"',        '"',        "'",         "'",         "'",        "'"],
+            $textResponseNormalizado
+        );
+        $jsonResult = json_decode(trim($normalizado), true);
+        // Tentar também extrair bloco após normalização
+        if ($jsonResult === null && preg_match('/\{[\s\S]*\}/s', $normalizado, $matches)) {
+            $jsonResult = json_decode($matches[0], true);
+        }
+    }
+
+    // Estratégia 4: remover caracteres de controle invisíveis e BOM
+    if ($jsonResult === null) {
+        $semControle = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $textResponseNormalizado);
+        $semControle = ltrim($semControle, "\xEF\xBB\xBF"); // BOM UTF-8
+        $jsonResult  = json_decode(trim($semControle), true);
+        if ($jsonResult === null && preg_match('/\{[\s\S]*\}/s', $semControle, $matches)) {
+            $jsonResult = json_decode($matches[0], true);
+        }
+    }
+
+    // Fallback absoluto: tenta rodar nas strings originais não normalizadas
+    if ($jsonResult === null) {
+        $jsonResult = json_decode(trim($textResponse), true);
+        if ($jsonResult === null) {
+            $cleanedText = preg_replace('/^```(?:json)?\s*/i', '', trim($textResponse));
+            $cleanedText = preg_replace('/\s*```\s*$/s', '', $cleanedText);
+            $jsonResult  = json_decode(trim($cleanedText), true);
+        }
+        if ($jsonResult === null) {
+            if (preg_match('/\{[\s\S]*\}/s', $textResponse, $matches)) {
+                $jsonResult = json_decode($matches[0], true);
+            }
+        }
     }
 
     if ($jsonResult === null) {

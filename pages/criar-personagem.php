@@ -275,7 +275,23 @@ $sistemas = $stmt->fetchAll();
                             </div>
                             <div class="sistema-info">
                                 <h3><?= htmlspecialchars($sis['nm_sistema']) ?></h3>
-                                <p><?= htmlspecialchars($sis['ds_descricao'] ?: 'Sem descrição disponível.') ?></p>
+                                <?php
+                                $descExibir = 'Sem descrição disponível.';
+                                if (!empty($sis['ds_descricao'])) {
+                                    $blocos = preg_split('/(\r\n){2,}|\n{2,}/', $sis['ds_descricao']);
+                                    if (count($blocos) > 0) {
+                                        $primeiroBloco = trim($blocos[0]);
+                                        $linhas = preg_split('/(\r\n)+|\n+/', $primeiroBloco);
+                                        if (count($linhas) > 1) {
+                                            array_shift($linhas);
+                                            $descExibir = trim(implode("\n", $linhas));
+                                        } else {
+                                            $descExibir = $primeiroBloco;
+                                        }
+                                    }
+                                }
+                                ?>
+                                <p><?= htmlspecialchars($descExibir) ?></p>
                             </div>
                             <button type="button" class="btn-selecionar-sistema">Selecionar</button>
                         </div>

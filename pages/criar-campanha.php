@@ -998,7 +998,23 @@ $isOrdemParanormal = ($campanhaDados && strpos(strtolower($campanhaDados['nm_sis
             line-height: 1.6;
             margin: 0;
             max-width: 900px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding-right: 8px;
         }
+
+        .sistema-clean-descricao::-webkit-scrollbar {
+            width: 6px;
+        }
+        .sistema-clean-descricao::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+        .sistema-clean-descricao::-webkit-scrollbar-thumb {
+            background: var(--premium-accent, #8b5cf6);
+            border-radius: 4px;
+        }
+
 
         @media (max-width: 768px) {
             .sistema-clean-header {
@@ -2565,13 +2581,31 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
             const data = await res.json();
             if (data.success) {
                 const sis = data.sistema;
+                
+                // Extrai apenas o conteúdo do primeiro bloco (sem o título)
+                let descExibir = 'Sem descrição disponível.';
+                if (sis.ds_descricao) {
+                    const blocos = sis.ds_descricao.split(/[\r\n]{2,}/);
+                    if (blocos.length > 0) {
+                        const primeiroBloco = blocos[0].trim();
+                        const linhas = primeiroBloco.split(/[\r\n]+/);
+                        if (linhas.length > 1) {
+                            // Ignora a primeira linha se for um título e junta as demais
+                            descExibir = linhas.slice(1).join('\n').trim();
+                        } else {
+                            // Se tiver apenas uma linha
+                            descExibir = primeiroBloco;
+                        }
+                    }
+                }
+
                 showcase.innerHTML = `
                     <div class="sistema-showcase-clean">
                         <div class="sistema-clean-header">
                             <img src="${sis.ds_imagem||'../img/logo_icone.png'}" alt="${sis.nm_sistema}" class="cartaz-sistema-clean">
                             <h2>${sis.nm_sistema}</h2>
                         </div>
-                        <p class="sistema-clean-descricao">${sis.ds_descricao||'Sem descrição disponível.'}</p>
+                        <p class="sistema-clean-descricao">${descExibir}</p>
                     </div>`;
                 showcase.classList.remove('escondido');
 

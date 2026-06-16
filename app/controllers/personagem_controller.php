@@ -198,7 +198,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $nm_s = strtolower($statusRow['nm_status']);
             $tp_s = $statusRow['tp_status'];
             
-            $val = 100;
+            $val = 10;
             if ($tp_s === 'barra') {
                 if (strpos($nm_s, 'vida') !== false) {
                     $val = $inicialPV;

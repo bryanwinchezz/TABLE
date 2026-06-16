@@ -176,8 +176,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if(btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
         
         let descTotal = '';
-        document.querySelectorAll('.item-descricao textarea').forEach((t, index) => {
-             if(t.value.trim() !== '') descTotal += (index > 0 ? '\n\n' : '') + t.value.trim();
+        const descItems = document.querySelectorAll('.item-descricao');
+        descItems.forEach((item, index) => {
+            const tituloInput = item.querySelector('.input-titulo-desc');
+            const textareaEl = item.querySelector('textarea');
+            if (!textareaEl || textareaEl.value.trim() === '') return;
+            const titulo = (tituloInput ? tituloInput.value.trim().replace(/:$/, '') : `Descrição ${index + 1}`);
+            const bloco = titulo + '\n' + textareaEl.value.trim();
+            descTotal += (descTotal ? '\n\n' : '') + bloco;
         });
 
         const payload = {
@@ -319,7 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById(id).remove();
 
             contadorDescricao = 1;
-            const titulo1 = document.getElementById('titulo-desc-1');
+            const titulo1 = document.querySelector('#desc-fixa-1 .input-titulo-desc');
             if (titulo1 && titulo1.value.startsWith('Descrição')) {
                 titulo1.value = 'Descrição 1:';
             }
@@ -1064,9 +1070,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (res.success && res.data && !res.mock) {
                 const data = res.data;
 
-                // 1. Nome do Sistema
+                // 1. Nome do Sistema — limpa subtítulos (entre parênteses ou após espaços triplos)
                 if (data.nome) {
-                    document.getElementById('input-nome-sistema').value = data.nome;
+                    let nomeLimpo = String(data.nome)
+                        .replace(/\s{3,}.*$/, '')          // Remove tudo após 3+ espaços seguidos
+                        .replace(/\(.*?\)/g, '')            // Remove texto entre parênteses
+                        .replace(/\s*—.*$/, '')             // Remove subtítulo após travessão
+                        .replace(/\s*-{2,}.*$/, '')         // Remove subtítulo após -- duplo
+                        .trim();
+                    document.getElementById('input-nome-sistema').value = nomeLimpo;
                     const event = new Event('input', { bubbles: true });
                     document.getElementById('input-nome-sistema').dispatchEvent(event);
                 }
@@ -1084,28 +1096,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // 3. Descrição Tópicos (Aba 1)
                 if (data.descricao_topicos && data.descricao_topicos.length > 0) {
+                    // Limpa todos os blocos dinâmicos (exceto o fixo)
                     containerDescricoes.querySelectorAll('.item-descricao').forEach(item => {
                         if (item.id !== 'desc-fixa-1') item.remove();
                     });
                     contadorDescricao = 1;
-                    const tit1 = document.getElementById('titulo-desc-1');
-                    if (tit1) tit1.value = 'Descrição 1:';
 
+                    // Preenche o primeiro bloco (fixo)
+                    const tit1 = document.querySelector('#desc-fixa-1 .input-titulo-desc');
                     const text1 = document.querySelector('#desc-fixa-1 textarea');
+                    if (tit1) tit1.value = data.descricao_topicos[0].titulo || 'Descrição 1';
                     if (text1) text1.value = data.descricao_topicos[0].conteudo || '';
-                    if (tit1 && data.descricao_topicos[0].titulo) {
-                        tit1.value = data.descricao_topicos[0].titulo;
-                    }
-                    
+
+                    // Insere blocos adicionais com título da IA diretamente no HTML
                     for (let i = 1; i < data.descricao_topicos.length; i++) {
-                        adicionarDescricao();
-                        const items = containerDescricoes.querySelectorAll('.item-descricao');
-                        const lastItem = items[items.length - 1];
-                        if (lastItem) {
-                            const inp = lastItem.querySelector('.input-titulo-desc');
-                            const txt = lastItem.querySelector('textarea');
-                            if (inp && data.descricao_topicos[i].titulo) inp.value = data.descricao_topicos[i].titulo;
-                            if (txt && data.descricao_topicos[i].conteudo) txt.value = data.descricao_topicos[i].conteudo;
+                        contadorDescricao++;
+                        const topico = data.descricao_topicos[i];
+                        const idUnico = Date.now() + i;
+                        const tituloValor = (topico.titulo || `Descrição ${contadorDescricao}`).replace(/"/g, '&quot;');
+                        const conteudoValor = (topico.conteudo || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        const html = `
+                            <div class="item-descricao" id="desc-${idUnico}">
+                                <div class="cabecalho-descricao" style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                    <input type="text" class="input-titulo-desc" value="${tituloValor}" style="width: 50%;">
+                                    <button type="button" class="btn-texto btn-excluir-desc-inline" data-id="desc-${idUnico}">Excluir <i class="fas fa-times"></i></button>
+                                </div>
+                                <textarea class="input-escuro textarea-escuro" placeholder="Digite os detalhes aqui..."></textarea>
+                            </div>
+                        `;
+                        containerDescricoes.insertAdjacentHTML('beforeend', html);
+                        // Preenche a textarea via JS para evitar problemas de encoding HTML
+                        const novoItem = document.getElementById(`desc-${idUnico}`);
+                        if (novoItem) {
+                            const ta = novoItem.querySelector('textarea');
+                            if (ta) ta.value = topico.conteudo || '';
                         }
                     }
                 }

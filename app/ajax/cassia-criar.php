@@ -166,7 +166,8 @@ $payload = json_encode([
         ]
     ],
     'generation_config' => [
-        'temperature' => 0.7
+        'temperature' => 0.7,
+        'responseMimeType' => 'application/json'
     ]
 ]);
 
@@ -194,17 +195,91 @@ if ($httpCode !== 200) {
 $decodedResponse = json_decode($response, true);
 $rawText = $decodedResponse['candidates'][0]['content']['parts'][0]['text'] ?? '';
 
-$jsonData = json_decode(trim($rawText), true);
-
-if (!$jsonData) {
-    // Tentar limpar possíveis blocos de código markdown que a IA possa ter retornado mesmo pedindo apenas JSON
-    $cleanText = preg_replace('/```json\s*|```/i', '', $rawText);
-    $jsonData = json_decode(trim($cleanText), true);
-    
-    if (!$jsonData) {
-        echo json_encode(['success' => false, 'error' => 'A IA retornou um formato inválido.', 'raw' => $rawText]);
-        exit;
+if (!function_exists('normalizarEFormatacaoJson')) {
+    function normalizarEFormatacaoJson($jsonStr) {
+        // Escapar quebras de linha literais (novas linhas, retornos) e tabulações dentro de strings delimitadas por aspas duplas
+        $jsonStr = preg_replace_callback(
+            '/"([^"\\\\]*|\\\\.)*"/s',
+            function ($matches) {
+                return str_replace(
+                    ["\n", "\r", "\t"],
+                    ["\\n", "\\r", "\\t"],
+                    $matches[0]
+                );
+            },
+            $jsonStr
+        );
+        // Remover vírgulas flutuantes/órfãs que precedem o fechamento de colchetes ou chaves
+        $jsonStr = preg_replace('/,\s*([\]}])/m', '$1', $jsonStr);
+        return $jsonStr;
     }
+}
+
+$rawTextNormalizado = normalizarEFormatacaoJson($rawText);
+$jsonData = null;
+
+// Estratégia 0: tentar direto (com normalização)
+$jsonData = json_decode(trim($rawTextNormalizado), true);
+
+// Estratégia 1: remover blocos de markdown
+if ($jsonData === null) {
+    $cleanedText = preg_replace('/^```(?:json)?\s*/i', '', trim($rawTextNormalizado));
+    $cleanedText = preg_replace('/\s*```\s*$/s', '', $cleanedText);
+    $jsonData  = json_decode(trim($cleanedText), true);
+}
+
+// Estratégia 2: extrair o primeiro bloco JSON { ... } de nível raiz
+if ($jsonData === null) {
+    if (preg_match('/\{[\s\S]*\}/s', $rawTextNormalizado, $matches)) {
+        $jsonData = json_decode($matches[0], true);
+    }
+}
+
+// Estratégia 3: normalizar aspas curvas tipográficas
+if ($jsonData === null) {
+    $normalizado = str_replace(
+        ["\u{201C}", "\u{201D}", "\u{2018}", "\u{2019}", "\u{201A}", "\u{201B}"],
+        ['"',        '"',        "'",         "'",         "'",        "'"],
+        $rawTextNormalizado
+    );
+    $jsonData = json_decode(trim($normalizado), true);
+    if ($jsonData === null && preg_match('/\{[\s\S]*\}/s', $normalizado, $matches)) {
+        $jsonData = json_decode($matches[0], true);
+    }
+}
+
+// Estratégia 4: remover caracteres de controle invisíveis e BOM
+if ($jsonData === null) {
+    $semControle = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $rawTextNormalizado);
+    $semControle = ltrim($semControle, "\xEF\xBB\xBF");
+    $jsonData  = json_decode(trim($semControle), true);
+    if ($jsonData === null && preg_match('/\{[\s\S]*\}/s', $semControle, $matches)) {
+        $jsonData = json_decode($matches[0], true);
+    }
+}
+
+// Fallback absoluto: tenta rodar nas strings originais não normalizadas
+if ($jsonData === null) {
+    $jsonData = json_decode(trim($rawText), true);
+    if ($jsonData === null) {
+        $cleanedText = preg_replace('/^```(?:json)?\s*/i', '', trim($rawText));
+        $cleanedText = preg_replace('/\s*```\s*$/s', '', $cleanedText);
+        $jsonData  = json_decode(trim($cleanedText), true);
+    }
+    if ($jsonData === null) {
+        if (preg_match('/\{[\s\S]*\}/s', $rawText, $matches)) {
+            $jsonData = json_decode($matches[0], true);
+        }
+    }
+}
+
+if ($jsonData === null) {
+    echo json_encode([
+        'success' => false,
+        'error'   => 'A resposta gerada pela IA não pôde ser decodificada como JSON.',
+        'raw'     => $rawText
+    ]);
+    exit;
 }
 
 echo json_encode(['success' => true, 'data' => $jsonData]);

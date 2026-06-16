@@ -60,7 +60,7 @@ CREATE TABLE tb_sistema (
     id_sistema          INT          NOT NULL AUTO_INCREMENT,
     id_usuario_criador  INT          DEFAULT NULL,
     nm_sistema          VARCHAR(100) NOT NULL,
-    ds_descricao        VARCHAR(1000) DEFAULT NULL,
+    ds_descricao        TEXT DEFAULT NULL,
     ds_imagem           VARCHAR(300)  DEFAULT NULL,
     ds_background       VARCHAR(300)  DEFAULT NULL,
     tp_classificacao    VARCHAR(5)   DEFAULT 'L',

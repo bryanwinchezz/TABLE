@@ -483,6 +483,78 @@ try {
             border-radius: 3px;
         }
 
+        /* CONTAINER COM BARRA DE ROLAGEM INTERNA */
+        .descricao-scroll-container {
+            max-height: 420px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .descricao-scroll-container::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .descricao-scroll-container::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+
+        .descricao-scroll-container::-webkit-scrollbar-thumb {
+            background: var(--premium-accent);
+            border-radius: 10px;
+        }
+
+        .descricao-scroll-container::-webkit-scrollbar-thumb:hover {
+            background: #b39ddb;
+        }
+
+        /* BLOCOS DE DESCRIÇÃO */
+        .bloco-descricao {
+            background: rgba(255, 255, 255, 0.02);
+            border-left: 3px solid var(--premium-accent, #9b5de5);
+            padding: 14px 18px;
+            border-radius: 0 12px 12px 0;
+        }
+
+        .bloco-descricao:first-child {
+            border-left-color: var(--premium-accent, #9b5de5);
+        }
+
+        .bloco-descricao p {
+            margin: 0;
+            color: #ccc;
+            line-height: 1.8;
+            font-size: 1rem;
+        }
+
+        /* TÍTULOS EM ROXO */
+        .titulo-descricao-topico {
+            font-size: 0.8rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--premium-accent, #9b5de5);
+            margin: 0 0 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .titulo-descricao-topico::before {
+            content: '';
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            background: var(--premium-accent);
+            border-radius: 50%;
+            flex-shrink: 0;
+            box-shadow: 0 0 8px var(--premium-accent);
+        }
+
         /* Configuração DA GRID PRINCIPAL */
         .premium-main {
             display: grid;
@@ -1360,7 +1432,35 @@ try {
             <!-- DESCRIÇÃO COMPLETA -->
             <section class="secao-descricao-completa">
                 <h2>O que é este sistema?</h2>
-                <p><?= nl2br(htmlspecialchars($sistema['ds_descricao'] ?? 'Sem descrição disponível.')) ?></p>
+                <div class="descricao-scroll-container">
+                    <?php
+                    $descricaoRaw = $sistema['ds_descricao'] ?? '';
+                    if (!empty($descricaoRaw)) {
+                        $blocos = explode("\n\n", $descricaoRaw);
+                        foreach ($blocos as $bloco) {
+                            $bloco = trim($bloco);
+                            if (empty($bloco)) continue;
+                            $linhas = explode("\n", $bloco, 2);
+                            // Se a primeira linha for curta (até 100 chars) e tiver mais de uma linha, é um título
+                            if (count($linhas) === 2 && mb_strlen(trim($linhas[0])) <= 100) {
+                                $titulo = htmlspecialchars(trim($linhas[0]));
+                                $conteudo = htmlspecialchars(trim($linhas[1]));
+                                echo '<div class="bloco-descricao">';
+                                echo '<h3 class="titulo-descricao-topico">' . $titulo . '</h3>';
+                                echo '<p>' . nl2br($conteudo) . '</p>';
+                                echo '</div>';
+                            } else {
+                                // Sem título detectado, exibe como parágrafo simples
+                                echo '<div class="bloco-descricao">';
+                                echo '<p>' . nl2br(htmlspecialchars($bloco)) . '</p>';
+                                echo '</div>';
+                            }
+                        }
+                    } else {
+                        echo '<p style="opacity:0.5;">Sem descrição disponível.</p>';
+                    }
+                    ?>
+                </div>
             </section>
 
             <!-- DASHBOARD DE REGRAS (IDÊNTICO À FICHA) -->

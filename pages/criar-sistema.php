@@ -195,9 +195,7 @@ $fotoNavbar = (!empty($_SESSION['usuario']['foto']) && file_exists(dirname(__DIR
 
                 <section class="secao-descricao">
                     <div class="acoes-globais-desc"
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <input type="text" class="input-titulo-desc" id="titulo-desc-1" value="Descrição 1:"
-                            style="width: 50%; font-size: 1.2rem; font-weight: 800; margin: 0;">
+                        style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 10px;">
                         <div class="botoes-acao-desc" style="display: flex; gap: 15px;">
                             <button type="button" class="btn-texto" id="btn-excluir-desc-global">Excluir tópico <i
                                     class="far fa-minus-square"></i></button>
@@ -208,6 +206,9 @@ $fotoNavbar = (!empty($_SESSION['usuario']['foto']) && file_exists(dirname(__DIR
 
                     <div id="container-descricoes" class="lista-descricoes">
                         <div class="item-descricao" id="desc-fixa-1">
+                            <div class="cabecalho-descricao" style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                <input type="text" id="titulo-desc-1" class="input-titulo-desc" value="Descrição 1:" style="width: 50%;">
+                            </div>
                             <textarea class="input-escuro textarea-escuro"
                                 placeholder="Digite os detalhes da Descrição 1 aqui..."></textarea>
                         </div>

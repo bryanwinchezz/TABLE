@@ -119,6 +119,9 @@ class Database {
                             if ($chkGemini->rowCount() === 0) {
                                 self::$instancia->exec("ALTER TABLE tb_usuario ADD COLUMN ds_api_key_gemini VARCHAR(255) NULL");
                             }
+
+                            // 5. Garantir que ds_descricao de tb_sistema seja TEXT (para evitar truncamento da IA)
+                            self::$instancia->exec("ALTER TABLE tb_sistema MODIFY COLUMN ds_descricao TEXT NULL");
                         } catch (Exception $migError) {
                             // Silencioso
                         }

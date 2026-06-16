@@ -663,9 +663,25 @@
     line-height: 1.5;
     text-align: justify;
     margin-bottom: 25px;
-    min-height: 130px; /* Alinhamento horizontal garantido */
-    display: flex;
-    align-items: flex-start;
+    max-height: 180px;
+    overflow-y: auto;
+    padding-right: 8px;
+    display: block;
+    scrollbar-width: thin;
+    scrollbar-color: #C193FD rgba(0, 0, 0, 0.1);
+}
+
+.desc-classe::-webkit-scrollbar {
+    width: 5px;
+}
+
+.desc-classe::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.desc-classe::-webkit-scrollbar-thumb {
+    background: #C193FD;
+    border-radius: 10px;
 }
 
 .caract-class {
