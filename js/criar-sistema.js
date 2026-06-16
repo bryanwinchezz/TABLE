@@ -1153,7 +1153,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         id: gerarID(),
                         nome: st.nome,
                         cor: cores[idx % cores.length],
-                        base: String(st.base || 'null')
+                        base: 'null'
                     })).slice(0, 3);
                 }
 
@@ -1163,7 +1163,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         id: gerarID(),
                         nome: df.nome,
                         cor: coresDef[idx % coresDef.length],
-                        base: String(df.base || 'null')
+                        base: 'null'
                     })).slice(0, 3);
                 }
 
