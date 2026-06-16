@@ -43,9 +43,9 @@ try {
     $rawInput = file_get_contents('php://input');
     $data = json_decode($rawInput, true);
 
-    $tipo       = trim($data['tipo']       ?? '');
-    $conceito   = trim($data['conceito']   ?? '');
-    $id_sistema = isset($data['id_sistema']) ? (int)$data['id_sistema'] : null;
+    $tipo = trim($data['tipo'] ?? '');
+    $conceito = trim($data['conceito'] ?? '');
+    $id_sistema = isset($data['id_sistema']) ? (int) $data['id_sistema'] : null;
 
     if (!in_array($tipo, ['sistema', 'personagem']) || empty($conceito)) {
         http_response_code(400);
@@ -136,7 +136,9 @@ Se o usuário mencionou itens, armas, equipamentos específicos ("espada flameja
 Equipamentos de universos canônicos devem ter os nomes originais (ex: Sabre de Luz, Cajado Ancestral, Keyblade).
 
 ━━━ QUANTIDADE DE COMPONENTES ━━━
-Gere o máximo possível dentro dos limites:
+A quantidade de componentes gerada deve ser dinâmica, variada e sob medida para o conceito e necessidades específicas do sistema sugerido. 
+Por exemplo, se você perceber que o cenário exige muitas ameaças (como horror de sobrevivência), crie mais ameaças. Se precisar de mais ou menos classes para se adequar ao tema, adapte essa distribuição proporcionalmente. 
+Gere uma quantidade rica e balanceada, mantendo-se dentro destes limites gerais:
 - classes: 6 a 10 (máx 15)
 - pericias: 10 a 15 (máx 30)
 - origens: 5 a 8 (máx 75)
@@ -151,7 +153,7 @@ O campo "requisito" das habilidades passivas deve ser descritivo e legível:
 - CORRETO: "Possuir pelo menos 3 pontos em Brutalidade de Ferro" ou "Ser da classe Netrunner de nível 2 ou superior"
 
 ━━━ DIRETRIZES TÉCNICAS ━━━
-- STATUS/DEFESAS: campo base = sigla EXATA de 3 letras de um atributo gerado. Nunca fórmula.
+- STATUS/DEFESAS: campo base deve ser sempre a string "null" (sem atributo base associado).
 - HABILIDADES (passivas): descricao = efeito com números. requisito = condição por extenso. NUNCA coloque "Requer" dentro da descricao.
 - PODERES (ativos): descricao = efeito com duração e valores. custo = custo baseado nos status criados.
 - EQUIPAMENTOS: tipo = exatamente "Arma", "Proteção" ou "Utilitário".
@@ -195,7 +197,7 @@ Responda EXCLUSIVAMENTE com JSON válido, sem markdown, sem blocos de código, s
       "nome": "Nome Temático do Status (sem o prefixo 'Pontos de' — ex: 'Vida', 'Sanidade', 'Bateria', 'Esforço')",
       "sigla": "Sigla curta",
       "cor": "#hexadecimal da cor que representa o status tematicamente",
-      "base": "Sigla EXATA de 3 letras de um dos atributos gerados",
+      "base": "Sempre 'null'",
       "valor_inicial": "Fórmula: ex 10 + POD",
       "recuperacao": "Como recuperar: ex Restaura 1d6+KI por descanso curto"
     }
@@ -204,7 +206,7 @@ Responda EXCLUSIVAMENTE com JSON válido, sem markdown, sem blocos de código, s
     {
       "nome": "Nome Temático da Defesa (sem o prefixo 'Pontos de' — ex: 'Defesa', 'Bloqueio', 'Esquiva')",
       "cor": "#hexadecimal da cor que representa a defesa tematicamente",
-      "base": "Sigla EXATA de 3 letras de um dos atributos gerados",
+      "base": "Sempre 'null'",
       "formula": "Fórmula simples: ex 10 + RES",
       "descricao": "Que tipo de dano ou ameaça esta defesa neutraliza."
     }
@@ -273,8 +275,10 @@ Responda EXCLUSIVAMENTE com JSON válido, sem markdown, sem blocos de código, s
 }
 PROMPT;
     } else if ($tipo === 'personagem') {
-        $listaOrigensStr = !empty($origens_sistema) ? implode(', ', array_map(function($o) { return '"' . $o . '"'; }, $origens_sistema)) : 'Nenhuma cadastrada';
-        $listaClassesStr = !empty($classes_sistema) ? implode(', ', array_map(function($c) { return '"' . $c . '"'; }, $classes_sistema)) : 'Nenhuma cadastrada';
+        $listaOrigensStr = !empty($origens_sistema) ? implode(', ', array_map(function ($o) {
+            return '"' . $o . '"'; }, $origens_sistema)) : 'Nenhuma cadastrada';
+        $listaClassesStr = !empty($classes_sistema) ? implode(', ', array_map(function ($c) {
+            return '"' . $c . '"'; }, $classes_sistema)) : 'Nenhuma cadastrada';
         $listaAtributosStr = '';
         if (!empty($atributos_sistema)) {
             foreach ($atributos_sistema as $attr) {
@@ -368,12 +372,12 @@ PROMPT;
     @set_time_limit(150);
 
     // 5a. Retry automático com backoff exponencial para erros temporários (503, 429)
-    $maxTentativas   = 3;           // número máximo de tentativas
-    $backoffInicial  = 2;           // segundos de espera na 1ª retentativa
-    $tentativa       = 0;
-    $response        = '';
-    $httpCode        = 0;
-    $curlError       = '';
+    $maxTentativas = 3;           // número máximo de tentativas
+    $backoffInicial = 2;           // segundos de espera na 1ª retentativa
+    $tentativa = 0;
+    $response = '';
+    $httpCode = 0;
+    $curlError = '';
 
     while ($tentativa < $maxTentativas) {
         $tentativa++;
@@ -381,16 +385,16 @@ PROMPT;
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => json_encode($payload),
-            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
-            CURLOPT_TIMEOUT        => 120,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+            CURLOPT_TIMEOUT => 120,
             CURLOPT_SSL_VERIFYPEER => false,
             CURLOPT_SSL_VERIFYHOST => false
         ]);
 
-        $response  = curl_exec($ch);
-        $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlError = curl_error($ch);
         curl_close($ch);
 
@@ -400,8 +404,8 @@ PROMPT;
         }
 
         // Erros recuperáveis com retry: 503 (servidor sobrecarregado) e 429 sem cota diária esgotada
-        $isServicoBloqueado  = ($httpCode === 503 || strpos($response, 'UNAVAILABLE') !== false);
-        $isRateLimitMomento  = ($httpCode === 429 && strpos($response, 'GenerateRequestsPerDayPerProjectPerModel') === false);
+        $isServicoBloqueado = ($httpCode === 503 || strpos($response, 'UNAVAILABLE') !== false);
+        $isRateLimitMomento = ($httpCode === 429 && strpos($response, 'GenerateRequestsPerDayPerProjectPerModel') === false);
 
         if (($isServicoBloqueado || $isRateLimitMomento) && $tentativa < $maxTentativas) {
             // Backoff exponencial: 2s, 4s, 8s...
@@ -416,10 +420,10 @@ PROMPT;
 
     // 6. Tratamento de Erros da API
     if ($httpCode !== 200) {
-        $isKeyInvalid      = false;
-        $isQuotaExceeded   = false;
+        $isKeyInvalid = false;
+        $isQuotaExceeded = false;
         $isServicoBloqueado = ($httpCode === 503 || strpos($response, 'UNAVAILABLE') !== false);
-        $retryDelay        = 60; // segundos padrão
+        $retryDelay = 60; // segundos padrão
 
         // API Key inválida
         if (strpos($response, 'API key not valid') !== false || strpos($response, 'API_KEY_INVALID') !== false) {
@@ -454,23 +458,23 @@ PROMPT;
             }
 
             echo json_encode([
-                'success'   => true,
-                'data'      => $respostaMock,
-                'mock'      => true,
-                'aviso'     => $mensagem,
-                'retry_em'  => $isQuotaExceeded ? $retryDelay : null
+                'success' => true,
+                'data' => $respostaMock,
+                'mock' => true,
+                'aviso' => $mensagem,
+                'retry_em' => $isQuotaExceeded ? $retryDelay : null
             ]);
             exit;
         }
 
         echo json_encode([
             'success' => false,
-            'error'   => "Erro na API do Gemini (HTTP {$httpCode}): " . ($response ?: $curlError)
+            'error' => "Erro na API do Gemini (HTTP {$httpCode}): " . ($response ?: $curlError)
         ]);
         exit;
     }
 
-    $respData     = json_decode($response, true);
+    $respData = json_decode($response, true);
     $textResponse = $respData['candidates'][0]['content']['parts'][0]['text'] ?? '';
 
     if (empty($textResponse)) {
@@ -480,7 +484,8 @@ PROMPT;
 
     // 7. Parsing e Sanitização do JSON — cascata de estratégias robustas
     if (!function_exists('normalizarEFormatacaoJson')) {
-        function normalizarEFormatacaoJson($jsonStr) {
+        function normalizarEFormatacaoJson($jsonStr)
+        {
             // Escapar quebras de linha literais (novas linhas, retornos) e tabulações dentro de strings delimitadas por aspas duplas
             $jsonStr = preg_replace_callback(
                 '/"([^"\\\\]*|\\\\.)*"/s',
@@ -509,7 +514,7 @@ PROMPT;
     if ($jsonResult === null) {
         $cleanedText = preg_replace('/^```(?:json)?\s*/i', '', trim($textResponseNormalizado));
         $cleanedText = preg_replace('/\s*```\s*$/s', '', $cleanedText);
-        $jsonResult  = json_decode(trim($cleanedText), true);
+        $jsonResult = json_decode(trim($cleanedText), true);
     }
 
     // Estratégia 2: extrair o primeiro bloco JSON { ... } de nível raiz
@@ -523,7 +528,7 @@ PROMPT;
     if ($jsonResult === null) {
         $normalizado = str_replace(
             ["\u{201C}", "\u{201D}", "\u{2018}", "\u{2019}", "\u{201A}", "\u{201B}"],
-            ['"',        '"',        "'",         "'",         "'",        "'"],
+            ['"', '"', "'", "'", "'", "'"],
             $textResponseNormalizado
         );
         $jsonResult = json_decode(trim($normalizado), true);
@@ -537,7 +542,7 @@ PROMPT;
     if ($jsonResult === null) {
         $semControle = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $textResponseNormalizado);
         $semControle = ltrim($semControle, "\xEF\xBB\xBF"); // BOM UTF-8
-        $jsonResult  = json_decode(trim($semControle), true);
+        $jsonResult = json_decode(trim($semControle), true);
         if ($jsonResult === null && preg_match('/\{[\s\S]*\}/s', $semControle, $matches)) {
             $jsonResult = json_decode($matches[0], true);
         }
@@ -549,7 +554,7 @@ PROMPT;
         if ($jsonResult === null) {
             $cleanedText = preg_replace('/^```(?:json)?\s*/i', '', trim($textResponse));
             $cleanedText = preg_replace('/\s*```\s*$/s', '', $cleanedText);
-            $jsonResult  = json_decode(trim($cleanedText), true);
+            $jsonResult = json_decode(trim($cleanedText), true);
         }
         if ($jsonResult === null) {
             if (preg_match('/\{[\s\S]*\}/s', $textResponse, $matches)) {
@@ -561,14 +566,15 @@ PROMPT;
     if ($jsonResult === null) {
         echo json_encode([
             'success' => false,
-            'error'   => 'A resposta gerada pela IA não pôde ser decodificada como JSON.',
-            'raw'     => $textResponse
+            'error' => 'A resposta gerada pela IA não pôde ser decodificada como JSON.',
+            'raw' => $textResponse
         ]);
         exit;
     }
 
     // 8. Sanitização recursiva: remove aspas simples dos valores string do resultado
-    function sanitizarAspas($value) {
+    function sanitizarAspas($value)
+    {
         if (is_string($value)) {
             return str_replace("'", "", $value);
         }
@@ -582,30 +588,31 @@ PROMPT;
     // 9. Resposta Final bem-sucedida
     echo json_encode([
         'success' => true,
-        'data'    => $jsonResult
+        'data' => $jsonResult
     ]);
 
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'error'   => 'Erro interno do servidor: ' . $e->getMessage()
+        'error' => 'Erro interno do servidor: ' . $e->getMessage()
     ]);
 }
 
 /**
  * Função Auxiliar: Gera uma resposta fictícia criativa de alta qualidade caso a API key seja inválida.
  */
-function gerarRespostaMockParaEngine($tipo, $prompt, $id_sistema = null, $atributos_sistema = []) {
+function gerarRespostaMockParaEngine($tipo, $prompt, $id_sistema = null, $atributos_sistema = [])
+{
     $promptLower = mb_strtolower($prompt);
-    
+
     if ($tipo === 'personagem') {
         $nome = "Vladis, o Renegado";
         $aparencia = "Um homem de cabelos grisalhos curtos, olhos âmbar penetrantes e cicatrizes visíveis nas mãos. Veste roupas pretas utilitárias cobertas por um casaco de couro desgastado com capuz.";
         $personalidade = "Cínico, reservado e extremamente observador. Fala pouco, mas suas palavras carregam peso. Nutre um forte senso de justiça com quem confia, embora seja implacável com inimigos.";
         $historia = "Vladis era um soldado de elite de uma ordem esquecida até ser traído por seu comandante por se recusar a executar camponeses inocentes. Ele sobreviveu au massacre da sua unidade e desde então vaga pelas sombras, buscando expiação e vingança.";
         $objetivos = "Destruir a facção corrompida que aniquilou sua ordem e resgatar o grimório antigo roubado.";
-        
+
         $attrs = [];
         if (!empty($atributos_sistema)) {
             foreach ($atributos_sistema as $att) {
@@ -617,14 +624,17 @@ function gerarRespostaMockParaEngine($tipo, $prompt, $id_sistema = null, $atribu
             $chaves = array_keys($attrs);
             if (!empty($chaves)) {
                 $attrs[$chaves[0]] = 3;
-                if (isset($chaves[1])) $attrs[$chaves[1]] = 3;
-                if (isset($chaves[2])) $attrs[$chaves[2]] = 2;
-                if (isset($chaves[3])) $attrs[$chaves[3]] = 2;
+                if (isset($chaves[1]))
+                    $attrs[$chaves[1]] = 3;
+                if (isset($chaves[2]))
+                    $attrs[$chaves[2]] = 2;
+                if (isset($chaves[3]))
+                    $attrs[$chaves[3]] = 2;
             }
         } else {
             $attrs = ["FOR" => 3, "AGI" => 4, "VIG" => 2, "INT" => 1];
         }
-        
+
         return [
             "nome" => $nome,
             "aparencia" => $aparencia,
@@ -641,47 +651,47 @@ function gerarRespostaMockParaEngine($tipo, $prompt, $id_sistema = null, $atribu
             "nome" => "Chronos Cyberpunk",
             "classificacao" => "16",
             "descricao_topicos" => [
-                [ "titulo" => "Historia: O Despertar do Neon", "conteudo" => "Um universo onde a tecnologia e a fusão biológica dividiram a humanidade. Em megalópoles tomadas pela chuva ácida e neon, gangues e corporações disputam dados e território." ],
-                [ "titulo" => "Regras: O Fluxo do Código", "conteudo" => "Foco em tiroteios táticos e invasão de implantes em tempo real. Cada ação gasta pontos de esforço tecnológico." ],
-                [ "titulo" => "Jogabilidade: Transcendendo o Metal", "conteudo" => "Os jogadores encarnam mercenários e hackers urbanos que realizam missões perigosas em troca de créditos e implantes de alta tecnologia." ]
+                ["titulo" => "Historia: O Despertar do Neon", "conteudo" => "Um universo onde a tecnologia e a fusão biológica dividiram a humanidade. Em megalópoles tomadas pela chuva ácida e neon, gangues e corporações disputam dados e território."],
+                ["titulo" => "Regras: O Fluxo do Código", "conteudo" => "Foco em tiroteios táticos e invasão de implantes em tempo real. Cada ação gasta pontos de esforço tecnológico."],
+                ["titulo" => "Jogabilidade: Transcendendo o Metal", "conteudo" => "Os jogadores encarnam mercenários e hackers urbanos que realizam missões perigosas em troca de créditos e implantes de alta tecnologia."]
             ],
             "atributos" => [
-                [ "nome" => "Físico", "sigla" => "FIS", "descricao" => "Resistência corporal e força bruta" ],
-                [ "nome" => "Reflexos", "sigla" => "REF", "descricao" => "Agilidade, tempo de reação e pontaria" ],
-                [ "nome" => "Intelecto", "sigla" => "INT", "descricao" => "Capacidade de raciocínio, hacks e engenharia" ],
-                [ "nome" => "Sintonia", "sigla" => "SIN", "descricao" => "Conexão com a rede e implantes cibernéticos" ],
-                [ "nome" => "Presença", "sigla" => "PRE", "descricao" => "Carisma, intimidação e força de vontade" ]
+                ["nome" => "Físico", "sigla" => "FIS", "descricao" => "Resistência corporal e força bruta"],
+                ["nome" => "Reflexos", "sigla" => "REF", "descricao" => "Agilidade, tempo de reação e pontaria"],
+                ["nome" => "Intelecto", "sigla" => "INT", "descricao" => "Capacidade de raciocínio, hacks e engenharia"],
+                ["nome" => "Sintonia", "sigla" => "SIN", "descricao" => "Conexão com a rede e implantes cibernéticos"],
+                ["nome" => "Presença", "sigla" => "PRE", "descricao" => "Carisma, intimidação e força de vontade"]
             ],
             "status" => [
-                [ "nome" => "Integridade", "sigla" => "INTG", "cor" => "#2ecc71", "base" => "FIS", "valor_inicial" => "10 + FIS", "recuperacao" => "Recupera por descanso curto" ],
-                [ "nome" => "Calor", "sigla" => "CAL", "cor" => "#e74c3c", "base" => "REF", "valor_inicial" => "5 + REF", "recuperacao" => "Resfria por ação manual" ]
+                ["nome" => "Integridade", "sigla" => "INTG", "cor" => "#2ecc71", "base" => "null", "valor_inicial" => "10 + FIS", "recuperacao" => "Recupera por descanso curto"],
+                ["nome" => "Calor", "sigla" => "CAL", "cor" => "#e74c3c", "base" => "null", "valor_inicial" => "5 + REF", "recuperacao" => "Resfria por ação manual"]
             ],
             "defesas" => [
-                [ "nome" => "Blindagem", "cor" => "#9b59b6", "base" => "REF", "formula" => "10 + REF", "descricao" => "Neutraliza danos físicos comuns" ]
+                ["nome" => "Blindagem", "cor" => "#9b59b6", "base" => "null", "formula" => "10 + REF", "descricao" => "Neutraliza danos físicos comuns"]
             ],
             "classes" => [
-                [ "nome" => "Netrunner", "descricao" => "Hackers capazes de invadir qualquer sistema cibernético à distância.", "habilidade" => "Invasão Rápida: Infiltra-se em implantes inimigos à distância de 10 metros." ],
-                [ "nome" => "Solo", "descricao" => "Guerreiros urbanos aprimorados com foco em armas pesadas e defesa.", "habilidade" => "Adrenalina: Regenera 5 pontos de escudo no início de seu turno." ],
-                [ "nome" => "Techie", "descricao" => "Engenheiros mecânicos que criam drones e customizam armas.", "habilidade" => "Drone de Apoio: Invoca um robô utilitário voador com 10 PV." ]
+                ["nome" => "Netrunner", "descricao" => "Hackers capazes de invadir qualquer sistema cibernético à distância.", "habilidade" => "Invasão Rápida: Infiltra-se em implantes inimigos à distância de 10 metros."],
+                ["nome" => "Solo", "descricao" => "Guerreiros urbanos aprimorados com foco em armas pesadas e defesa.", "habilidade" => "Adrenalina: Regenera 5 pontos de escudo no início de seu turno."],
+                ["nome" => "Techie", "descricao" => "Engenheiros mecânicos que criam drones e customizam armas.", "habilidade" => "Drone de Apoio: Invoca um robô utilitário voador com 10 PV."]
             ],
             "pericias" => [
-                [ "nome" => "Pontaria", "descricao" => "Uso de pistolas, rifles e canhões laser.", "habilidade" => "Baseado em Reflexos", "atributo_chave" => "REF" ],
-                [ "nome" => "Interface", "descricao" => "Controle de sistemas eletrônicos e hacking de portas.", "habilidade" => "Baseado em Intelecto", "atributo_chave" => "INT" ],
-                [ "nome" => "Atletismo", "descricao" => "Ações de esforço físico como pular, correr e escalar.", "habilidade" => "Baseado em Físico", "atributo_chave" => "FIS" ]
+                ["nome" => "Pontaria", "descricao" => "Uso de pistolas, rifles e canhões laser.", "habilidade" => "Baseado em Reflexos", "atributo_chave" => "REF"],
+                ["nome" => "Interface", "descricao" => "Controle de sistemas eletrônicos e hacking de portas.", "habilidade" => "Baseado em Intelecto", "atributo_chave" => "INT"],
+                ["nome" => "Atletismo", "descricao" => "Ações de esforço físico como pular, correr e escalar.", "habilidade" => "Baseado em Físico", "atributo_chave" => "FIS"]
             ],
             "origens" => [
-                [ "nome" => "Corporativo", "descricao" => "Ex-funcionário de megacorporações com conexões ricas.", "habilidade" => "Cartão de Crédito: Ganha 20% de desconto em itens comprados." ],
-                [ "nome" => "Nômade das Ruas", "descricao" => "Sobrevivente criado nas favelas verticais.", "habilidade" => "Faro de Sucata: Encontra peças sobressalentes com facilidade." ]
+                ["nome" => "Corporativo", "descricao" => "Ex-funcionário de megacorporações com conexões ricas.", "habilidade" => "Cartão de Crédito: Ganha 20% de desconto em itens comprados."],
+                ["nome" => "Nômade das Ruas", "descricao" => "Sobrevivente criado nas favelas verticais.", "habilidade" => "Faro de Sucata: Encontra peças sobressalentes com facilidade."]
             ],
             "equipamentos" => [
-                [ "nome" => "Pistola Inteligente", "tipo" => "Arma", "descricao" => "Arma leve com projéteis guiados.", "propriedades" => "Dano: 1d6+REF, Carga: 1" ],
-                [ "nome" => "Placa Subdérmica", "tipo" => "Proteção", "descricao" => "Implante de proteção sob a pele.", "propriedades" => "Dano Neutralizado: -2, Carga: 2" ]
+                ["nome" => "Pistola Inteligente", "tipo" => "Arma", "descricao" => "Arma leve com projéteis guiados.", "propriedades" => "Dano: 1d6+REF, Carga: 1"],
+                ["nome" => "Placa Subdérmica", "tipo" => "Proteção", "descricao" => "Implante de proteção sob a pele.", "propriedades" => "Dano Neutralizado: -2, Carga: 2"]
             ],
             "habilidades" => [
-                [ "nome" => "Olho Biônico", "descricao" => "Escaneia fraquezas inimigas e detecta armadilhas no cenário.", "requisito" => "Ser da classe Netrunner com pelo menos 2 pontos de Intelecto" ]
+                ["nome" => "Olho Biônico", "descricao" => "Escaneia fraquezas inimigas e detecta armadilhas no cenário.", "requisito" => "Ser da classe Netrunner com pelo menos 2 pontos de Intelecto"]
             ],
             "poderes" => [
-                [ "nome" => "Sobrecarga de Chip", "descricao" => "Eleva temporariamente os reflexos sacrificando integridade em combate.", "custo" => "2 Calor por ativação" ]
+                ["nome" => "Sobrecarga de Chip", "descricao" => "Eleva temporariamente os reflexos sacrificando integridade em combate.", "custo" => "2 Calor por ativação"]
             ],
             "ameacas" => [
                 [
@@ -693,9 +703,9 @@ function gerarRespostaMockParaEngine($tipo, $prompt, $id_sistema = null, $atribu
                     "xp" => 80,
                     "descricao" => "Robô de patrulha blindado equipado com metralhadoras térmicas de alta velocidade.",
                     "atributos" => [
-                        [ "sigla" => "FIS", "valor" => 2 ],
-                        [ "sigla" => "REF", "valor" => 4 ],
-                        [ "sigla" => "INT", "valor" => 1 ]
+                        ["sigla" => "FIS", "valor" => 2],
+                        ["sigla" => "REF", "valor" => 4],
+                        ["sigla" => "INT", "valor" => 1]
                     ]
                 ]
             ]
