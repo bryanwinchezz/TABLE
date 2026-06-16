@@ -3124,7 +3124,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
 
             return `
             <div class="card-ameaca-premium${elClass}">
-                <img src="${(a.ds_imagem && a.ds_imagem !== '../img/logo_icone.png') ? a.ds_imagem : '../img/logo_icone.png'}" class="card-ameaca-img">
+                <img src="${(a.ds_imagem && a.ds_imagem !== '../img/logo_icone.png' && a.ds_imagem !== '../img/uploads/perfil/avatar1.png') ? a.ds_imagem : '../img/uploads/perfil/avatar1.png'}" class="card-ameaca-img">
                 <div class="card-ameaca-body">
                     <h4>${a.nm_monstro}</h4>
                     <div class="card-ameaca-details">
@@ -3251,7 +3251,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
             if (data.success) {
                 const m = data.monstro;
                 const attrs = data.atributos;
-                const imgCriatura = (m.ds_imagem && m.ds_imagem !== '../img/logo_icone.png') ? m.ds_imagem : '../img/logo_icone.png';
+                const imgCriatura = (m.ds_imagem && m.ds_imagem !== '../img/logo_icone.png' && m.ds_imagem !== '../img/uploads/perfil/avatar1.png') ? m.ds_imagem : '../img/uploads/perfil/avatar1.png';
                 
                 // Mapeamento dinâmico de cor de destaque baseado no elemento da criatura
                 let corDestaque = 'var(--premium-accent)';
@@ -3419,7 +3419,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
             iniciativa: Math.floor(Math.random() * 20) + 1,
             qt_vida: parseInt(m.qt_vida) || 0,
             qt_vida_maxima: parseInt(m.qt_vida) || 1,
-            ds_foto: m.ds_imagem && m.ds_imagem !== '../img/logo_icone.png' ? m.ds_imagem : '../img/logo_icone.png'
+            ds_foto: m.ds_imagem && m.ds_imagem !== '../img/logo_icone.png' && m.ds_imagem !== '../img/uploads/perfil/avatar1.png' ? m.ds_imagem : '../img/uploads/perfil/avatar1.png'
         }));
         
         iniciativaLista = [...persList, ...monstList].sort((a, b) => b.iniciativa - a.iniciativa);

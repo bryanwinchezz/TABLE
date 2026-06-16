@@ -105,6 +105,7 @@ try {
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="shortcut icon" href="../img/logo_branco1.png" type="image/x-icon">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
     <link rel="stylesheet" href="../css/nav-footer.css">
     <link rel="stylesheet" href="../css/criar-sistema.css?v=1.3">
     <style>
@@ -484,11 +485,14 @@ if (isset($sistema['nm_sistema'])) {
                     <textarea id="m-desc" class="input-premium-field" style="height: 120px; resize: none;" placeholder="Descreva as peculiaridades e poderes desta ameaça..."></textarea>
                 </div>
 
-                <div class="acoes-form-painel" style="justify-content: flex-end; margin-top: 20px;">
-                    <button type="button" class="btn-cancelar-escuro" onclick="fecharModal('modal-criar-monstro')">Cancelar</button>
-                    <button type="button" class="btn-premium-dragon" id="btn-save-monstro-local" style="padding: 15px 30px;" onclick="salvarMonstro()">
-                        <i class="fas fa-skull"></i> ATUALIZAR AMEAÇA
-                    </button>
+                <div class="acoes-form-painel" style="justify-content: space-between; margin-top: 20px;">
+                    <button type="button" class="btn-cancelar-escuro" id="btn-excluir-monstro" style="background-color: #ff4d4d; border-color: #ff4d4d; display: none;">Excluir</button>
+                    <div style="display: flex; gap: 10px; width: 100%; justify-content: flex-end;" id="botoes-acao-monstro-container">
+                        <button type="button" class="btn-cancelar-escuro" onclick="fecharModal('modal-criar-monstro')">Cancelar</button>
+                        <button type="button" class="btn-premium-dragon" id="btn-save-monstro-local" style="padding: 15px 30px;" onclick="salvarMonstro()">
+                            <i class="fas fa-skull"></i> ATUALIZAR AMEAÇA
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -550,6 +554,8 @@ if (isset($sistema['nm_sistema'])) {
         const PODERES_DB = <?= json_encode($habilidades) ?>;
     </script>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+    <script src="../js/cropper-helper.js"></script>
     <script src="../js/nav-global.js?v=1.2" defer></script>
     <script src="../js/editar-sistema.js?v=1.8" defer></script>
     <script>

@@ -209,7 +209,7 @@ try {
     <link rel="stylesheet" href="../css/ficha.css?v=<?= time() ?>">
     <link rel="stylesheet" href="../css/criar-sistema.css?v=<?= time() ?>">
     <script src="../js/table-modal.js"></script>
-    <link rel="shortcut icon" href="../img/logo_icone.png" type="image/x-icon">
+    <link rel="shortcut icon" href="../img/logo_branco1.png" type="image/x-icon">
     <style>
         /* ============================================================ 
            DESIGN SYSTEM: PREMIUM DARK (SISTEMA)
@@ -1307,7 +1307,7 @@ try {
 
     <header>
         <div class="logotipo">
-            <a href="index.php"><img src="../img/logo_horizontal.png" alt="Logo TABLE"></a>
+            <a href="index.php"><img src="../img/logo_horizontal1.png" alt="Logo TABLE"></a>
         </div>
 
         <!-- BOTÃO MENU MOBILE (HAMBURGER) -->
@@ -1507,10 +1507,10 @@ try {
                         <?php if(!empty($defesas_sistema)): ?>
                             <div class="premium-defesas-grid" style="display: flex; gap: 15px; margin-top: 10px; flex-wrap: wrap;">
                                 <?php foreach($defesas_sistema as $defesa): ?>
-                                    <div class="p-defesa-item" style="flex: 1; min-width: 120px; display: flex; align-items: center; gap: 12px; background: rgba(0,0,0,0.3); padding: 12px 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: inset 0 0 20px rgba(0,0,0,0.2);">
+                                    <div class="p-defesa-item" style="flex: 1; min-width: 120px; display: flex; align-items: center; gap: 12px; background: rgba(0,0,0,0.3); padding: 12px 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: inset 0 0 20px rgba(0,0,0,0.2); overflow: hidden;">
                                         <i class="fas fa-shield-alt" style="color: <?= htmlspecialchars($defesa['ds_cor']) ?>; font-size: 1.8rem; filter: drop-shadow(0 0 8px <?= htmlspecialchars($defesa['ds_cor']) ?>);"></i>
-                                        <div style="display: flex; flex-direction: column;">
-                                            <span style="font-size: 0.65rem; color: #aaa; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;"><?= htmlspecialchars($defesa['nm_status']) ?></span>
+                                        <div style="display: flex; flex-direction: column; min-width: 0; flex: 1;">
+                                            <span style="font-size: 0.65rem; color: #aaa; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;" title="<?= htmlspecialchars($defesa['nm_status']) ?>"><?= htmlspecialchars($defesa['nm_status']) ?></span>
                                             <span style="color: #fff; font-weight: 900; font-size: 1.2rem;">0</span>
                                         </div>
                                     </div>
@@ -1700,7 +1700,7 @@ try {
                                     elseif (strpos($dsLower, 'medo') !== false || strpos($tpLower, 'medo') !== false) $elClass = ' elemento-medo';
                                 ?>
                                     <div class="card-ameaca-premium<?= $elClass ?>">
-                                        <img src="<?= (!empty($m['ds_imagem']) && $m['ds_imagem'] !== '../img/logo_icone.png') ? htmlspecialchars($m['ds_imagem']) : '../img/logo_icone.png' ?>"
+                                        <img src="<?= (!empty($m['ds_imagem']) && $m['ds_imagem'] !== '../img/logo_icone.png' && $m['ds_imagem'] !== '../img/uploads/perfil/avatar1.png') ? htmlspecialchars($m['ds_imagem']) : '../img/uploads/perfil/avatar1.png' ?>"
                                             alt="Monstro" class="card-ameaca-img">
                                         <div class="card-ameaca-body">
                                             <h4 style="color: #fff; font-weight: 800; font-size: 0.95rem; margin-bottom: 3px;">
@@ -2368,7 +2368,7 @@ try {
                 if (data.success) {
                     const m = data.monstro;
                     const attrs = data.atributos;
-                    const imgCriatura = (m.ds_imagem && m.ds_imagem !== '../img/logo_icone.png') ? m.ds_imagem : '../img/logo_icone.png';
+                    const imgCriatura = (m.ds_imagem && m.ds_imagem !== '../img/logo_icone.png' && m.ds_imagem !== '../img/uploads/perfil/avatar1.png') ? m.ds_imagem : '../img/uploads/perfil/avatar1.png';
                     container.innerHTML = `
                         <div class="ficha-header-comp" style="position: relative; background: linear-gradient(135deg, rgba(30, 11, 58, 0.95), rgba(49, 28, 97, 0.9)), url('${imgCriatura}') center/cover; padding: 30px; border-bottom: 2px solid var(--premium-accent); display: flex; align-items: center; gap: 20px;">
                             <img src="${imgCriatura}" style="width: 100px; height: 100px; border-radius: 15px; border: 3px solid var(--premium-accent); object-fit: cover; box-shadow: 0 10px 30px rgba(0,0,0,0.8);" />
