@@ -279,7 +279,7 @@ try {
                 $monstro['nome'], 
                 $monstro['desc'] ?? '', 
                 $monstro['val1'] ?? 'Criatura', 
-                '../img/logo_icone.png', 
+                '../img/uploads/perfil/avatar1.png', 
                 $monstro['vida'] ?? 0, 
                 $monstro['defesa'] ?? 0, 
                 $monstro['xp'] ?? 0, 
