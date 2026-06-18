@@ -5,7 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/../app/config/database.php';
 
 // Foto do avatar do usuário ativo na barra de navegação
-$fotoNavbar = '../img/uploads/perfil/avatar1.png';
+$fotoNavbar = '../img/avatar1.png';
 if (isset($_SESSION['usuario'])) {
     $fotoUsuario = $_SESSION['usuario']['foto'] ?? '';
     // Corrigir caminho relativo para a raiz se necessário
@@ -204,7 +204,6 @@ if (isset($_SESSION['usuario'])) {
                 </div>
                 <p>Acompanhe uma experiência imersiva nos mundos de RPG. Aprenda e jogue com seus amigos!</p>
             </div>
-
             <div class="rodape-links">
                 <h4>Navegação</h4>
                 <ul>
@@ -213,14 +212,11 @@ if (isset($_SESSION['usuario'])) {
                     <li><a
                             href="<?php echo isset($_SESSION['usuario']) ? 'perfil.php' : 'login.php'; ?>">Personagens</a>
                     </li>
-                    <li><a
-                            href="<?= isset($_SESSION['usuario']['cargo']) && in_array(strtolower($_SESSION['usuario']['cargo']), ['mestre', 'admin']) ? 'criar-mapa.php' : 'editar-perfil.php?abrir_mestre=1'; ?>">Mundos</a>
-                    </li>
+                    <li><a href="<?= isset($_SESSION['usuario']['cargo']) && in_array(strtolower($_SESSION['usuario']['cargo']), ['mestre','admin']) ? 'criar-mapa.php' : 'editar-perfil.php?abrir_mestre=1'; ?>">Mundos</a></li>
                     <li><a href="rolagem-de-dados.php">Dados</a></li>
                     <li><a href="sobre-nos.php" class="ativo">Sobre Nós</a></li>
                 </ul>
             </div>
-
             <div class="rodape-links">
                 <h4>Jogar</h4>
                 <ul>
@@ -233,13 +229,11 @@ if (isset($_SESSION['usuario'])) {
                 </ul>
             </div>
         </div>
-
         <div class="rodape-inferior">
-            <p>© 2025 T.A.B.L.E. Desenvolvido com <i class="fa-solid fa-heart" style="color: #e74c3c;"></i> para os Fãs
-                do RPG.</p>
+            <p>© 2026 TABLE. Todos os direitos reservados.</p>
             <div class="redes-sociais">
-                <a href="#" aria-label="Discord"><i class="fa-brands fa-discord"></i></a>
-                <a href="#" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+                <a href="#"><i class="fa-brands fa-discord"></i></a>
+                <a href="#"><i class="fa-brands fa-instagram"></i></a>
             </div>
         </div>
     </footer>
