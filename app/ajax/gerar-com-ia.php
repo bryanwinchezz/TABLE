@@ -81,9 +81,10 @@ Você é o game designer mais criativo e imersivo que já existiu. Sua missão �
 
 CONCEITO DO SISTEMA: "{$conceito}"
 
-════════ REGRA FUNDAMENTAL — EXPANSÃO CRIATIVA ════════
+════════ REGRA FUNDAMENTAL — EXPANSÃO CRIATIVA E INGESTÃO DE LINKS/PROMPTS ════════
 Não importa o tamanho ou vagueza do conceito informado — você DEVE criar um sistema de RPG de mesa completo, coerente e rico a partir dele.
 
+- SE O USUÁRIO ENVIAR UM LINK (URL) OU UM PROMPT PRONTO GIGANTESCO: "sugue" (absorva e analise detalhadamente) todas as informações presentes no texto ou descritas como provenientes desse link. Extraia as classes, origens, atributos, equipamentos, habilidades, status e ameaças exatamente como foram descritos ali, mesmo que as descrições sejam extensas. Traduza a lore, regras e mecânicas descritas fielmente para o formato do JSON, sem omitir ou ignorar detalhes importantes.
 - Se o conceito for uma única palavra (ex: "gay", "cozinha", "verde", "a", "amor"), use essa palavra como inspiração central e construa um universo RPG completo ao redor dela. Por exemplo:
   → "gay" pode se tornar um RPG sobre identidade, revolução social, drag queens, ativismo, subculturas, romance e resistência.
   → "cozinha" pode se tornar um RPG culinário épico com classes de chefs, ingredientes mágicos e batalhas gastronômicas.
@@ -94,11 +95,11 @@ Não importa o tamanho ou vagueza do conceito informado — você DEVE criar um 
 ═══════════════════════════════════════════════════════
 
 ━━━ NOME DO SISTEMA ━━━
-O campo "nome" deve ser CURTO, direto e referenciar o conceito pedido. NUNCA use travessão (—), parênteses ou subtítulos no nome.
-- "dragon ball" → "Dragon Ball RPG" (NUNCA "Dragon Ball RPG — A Era dos Guerreiros Z")
-- "gay" → "Pridefall RPG" (NUNCA "Pridefall — O RPG da Revolução e do Amor")
-- "cozinha" → "Mesa Épica RPG" (NUNCA "Mesa Épica — O RPG Culinário")
-NUNCA crie um nome genérico desconexo do conceito.
+O campo "nome" deve ser CURTO, direto e referenciar o conceito pedido.
+- NUNCA coloque a palavra "RPG" ou "Sistema" no final do nome. O nome gerado deve ser limpo e criativo, focando apenas no nome da obra ou conceito.
+- Se for baseado em uma obra real ou livro existente (ex: "Ponyo", "Harry Potter", "Percy Jackson", "Ordem Paranormal"), use EXATAMENTE o nome oficial da obra ou algo criativo conexo, SEM colocar "RPG" ou "Sistema". Por exemplo, se for pedido "RPG da Ponyo", o título gerado deve ser apenas "Ponyo".
+- Se for um tema próprio/livre (ex: "gay", "cozinha"), use um nome criativo e curto (ex: "Pridefall", "Mesa Épica").
+- NUNCA use travessão (—), parênteses, subtítulos ou explicações no nome.
 
 ━━━ TÍTULOS DOS TÓPICOS DE DESCRIÇÃO ━━━
 Cada tópico de descrição deve ter um título curto e temático no formato: Categoria: Subtítulo.
@@ -142,24 +143,22 @@ Gere uma quantidade rica e balanceada, mantendo-se dentro destes limites gerais:
 - classes: 6 a 10 (máx 15)
 - pericias: 10 a 15 (máx 30)
 - origens: 5 a 8 (máx 75)
-- equipamentos: 8 a 12 (máx 100)
-- habilidades passivas: 6 a 10 (máx 50)
-- poderes ativos: 6 a 10 (máx 50)
-- ameacas: 3 a 5 (máx 50)
+- equipamentos: 10 a 15 (máx 100)
+- habilidades passivas: 5 a 10 (máx 50)
+- poderes ativos: 5 a 10 (máx 50)
+- ameaças: 4 a 8 (máx 50)
 
-━━━ REQUISITOS POR EXTENSO ━━━
-O campo "requisito" das habilidades passivas deve ser descritivo e legível:
-- ERRADO: "3 BFE", "Nv2 NET"
-- CORRETO: "Possuir pelo menos 3 pontos em Brutalidade de Ferro" ou "Ser da classe Netrunner de nível 2 ou superior"
-
-━━━ DIRETRIZES TÉCNICAS ━━━
+━━━ DIRETRIZES TÉCNICAS E DE DESIGN CRIATIVO ━━━
 - STATUS/DEFESAS: campo base deve ser sempre a string "null" (sem atributo base associado).
 - HABILIDADES (passivas): descricao = efeito com números. requisito = condição por extenso. NUNCA coloque "Requer" dentro da descricao.
 - PODERES (ativos): descricao = efeito com duração e valores. custo = custo baseado nos status criados.
 - EQUIPAMENTOS: tipo = exatamente "Arma", "Proteção" ou "Utilitário".
 - Atributos: 5 a 8 atributos, siglas de 3 letras maiúsculas únicas do universo.
-- CLASSES E ORIGENS: obrigatório ter "nome", "descricao" e "habilidade". A chave "habilidade" DEVE detalhar o bônus inicial com valores mecânicos. NUNCA deixe "habilidade" vazia.
-- Nomes de Classes/Origens: devem ser completos, representativos e inteligíveis. É TERMINANTEMENTE PROIBIDO gerar nomes inacabados como apenas "Ex" ou siglas vazias. Se a origem for do tipo ex-profissional, você DEVE especificar o que a pessoa era por completo (ex: "Ex-Militar", "Ex-Policial", "Ex-Acadêmico", "Ex-Atleta", etc.). NUNCA abrevie para apenas "Ex".
+- CLASSES E ORIGENS: obrigatório ter "nome", "descricao" e "habilidade". A chave "habilidade" DEVE detalhar o bônus inicial com valores mecânicos e narrativos ultra criativos. NUNCA deixe "habilidade" vazia.
+- Nomes de Classes e Origens: devem ser completos, representativos, imersivos e extremamente bem especificados. É TERMINANTEMENTE E TOTALMENTE PROIBIDO gerar nomes inacabados, vazios ou de apenas duas letras como "Ex". Se uma origem representar o passado do personagem com uma profissão anterior, você DEVE obrigatoriamente especificar por completo (Exemplos obrigatórios: "Ex-Militar de Elite", "Ex-Policial Federal", "Ex-Cientista Corporativo", "Ex-Acadêmico de Ocultismo", "Ex-Atleta Olímpico", "Ex-Mercenário"). NUNCA use a palavra "Ex" sozinha ou isolada sob nenhuma circunstância.
+- Criatividade Exponencial: Fuja do genérico! Não crie classes comuns como "Guerreiro" ou "Mago" se o tema for culinário, crie "Mestre de Banquetes" ou "Chef Flamejante". Deixe o prompt inteiro recheado de lore profunda, mistérios e termos surpreendentes que façam o mestre de RPG ficar fascinado ao ler!
+- Origens Detalhadas e Completas: Toda origem que represente um histórico deve vir perfeitamente qualificada por extenso. NUNCA use "Ex" de forma isolada. Por exemplo, se a ideia for um ex-médico, gere "Ex-Cirurgião de Trauma" ou "Ex-Médico Militar".
+
 
 ━━━ STATUS, DEFESAS E CORES TEMÁTICAS ━━━
 - NUNCA use "Pontos de..." nos nomes. Use termos temáticos diretos ("Vida", "Sanidade", "Mana", "Calor", "Glória").
@@ -169,7 +168,7 @@ O campo "requisito" das habilidades passivas deve ser descritivo e legível:
 Responda EXCLUSIVAMENTE com JSON válido, sem markdown, sem blocos de código, sem texto extra:
 
 {
-  "nome": "Nome CURTO do sistema, sem travessão nem subtítulo — ex: Dragon Ball RPG, Pridefall RPG, Mesa Épica RPG",
+  "nome": "Nome CURTO do sistema, sem travessão nem subtítulo — ex: Ponyo, Harry Potter, Pridefall, Mesa Épica",
   "classificacao": "L, 10, 12, 14, 16 ou 18",
   "descricao_topicos": [
     {
@@ -228,9 +227,9 @@ Responda EXCLUSIVAMENTE com JSON válido, sem markdown, sem blocos de código, s
   ],
   "origens": [
     {
-      "nome": "Nome da Origem Temática (apenas o nome direto da origem, sem subtítulos ou explicações adicionais. Exemplos válidos: Soldado, Acadêmico, Ex-Militar, Ex-Policial. NUNCA use apenas 'Ex' isolado, sempre descreva completo)",
+      "nome": "Nome da Origem Temática Completo e Criativo por Extenso (apenas o nome direto da origem, sem subtítulos adicionais. Exemplos obrigatórios: Gladiador de Arena, Ex-Militar de Elite, Ex-Cientista Corporativo, Artista de Rua, Ex-Agente Secreto. É TERMINANTEMENTE E ABSOLUTAMENTE PROIBIDO gerar apenas 'Ex' ou abreviações curtas e incompletas)",
       "descricao": "Histórico de vida e lore desta origem. Se houver universo canônico, contextualize com locais, fações ou eventos reais do IP. Use aspas duplas, nunca aspas simples. (2 parágrafos)",
-      "habilidade": "Nome do Benefício/Poder: descrição do bônus ou vantagem inicial. Exemplo: Sobrevivente Nato: +2 em testes de Percepção."
+      "habilidade": "Nome do Benefício/Poder: descrição do bônus ou vantagem inicial com valores mecânicos. Exemplo: Sobrevivente do Submundo: Concede +2 em testes de Percepção."
     }
   ],
   "equipamentos": [
@@ -294,9 +293,10 @@ Você é um escritor de ficção e game designer veterano de RPG de mesa. Crie u
 
 CONCEITO DO PERSONAGEM: "{$conceito}"
 
-════════ REGRA FUNDAMENTAL — EXPANSÃO CRIATIVA ════════
+════════ REGRA FUNDAMENTAL — EXPANSÃO CRIATIVA E INGESTÃO DE LINKS/PROMPTS ════════
 Não importa o tamanho ou aparente vagueza do conceito — você DEVE criar um personagem completo e profundo a partir dele.
 
+- SE O CONCEITO CONTIVER UM LINK (URL) OU UM PROMPT DETALHADO E GIGANTESCO: "sugue" (absorva e analise detalhadamente) todas as informações presentes no texto ou descritas como provenientes desse link. Extraia o nome, a história de vida detalhada (lore), a aparência, personalidade, os objetivos, classe, origem e equipamentos iniciais de forma 100% fiel e detalhada a partir do texto/link fornecido, sem ignorar nada, estruturando tudo perfeitamente dentro dos campos do JSON de saída.
 - Se o conceito for uma palavra ou ideia curta (ex: "gay", "guerreiro", "a", "bruxa", "amor"), expanda criativamente dentro do universo do sistema informado. Por exemplo:
   → "gay" em um RPG medieval pode ser um nobre que desafiou a ordem, um bardo andrógino, um alquimista que destilou sua identidade em poções.
   → "a" pode ser a letra que inicia um nome épico — crie um personagem poderoso cujo nome começa com "A".

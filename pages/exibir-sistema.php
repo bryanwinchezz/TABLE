@@ -208,6 +208,9 @@ try {
     <link rel="stylesheet" href="../css/table-modal.css">
     <link rel="stylesheet" href="../css/ficha.css?v=<?= time() ?>">
     <link rel="stylesheet" href="../css/criar-sistema.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+    <script src="../js/cropper-helper.js"></script>
     <script src="../js/table-modal.js"></script>
     <link rel="shortcut icon" href="../img/logo_branco1.png" type="image/x-icon">
     <style>
@@ -1829,7 +1832,7 @@ try {
     <!-- MODAL FICHA MONSTRO (PREMIUM) -->
     <div class="modal-overlay" id="modal-ficha-monstro">
         <div class="modal-box" id="ficha-monstro-render"
-            style="max-width: 700px; max-height: 90vh; padding: 0; overflow-y: auto; overflow-x: hidden;">
+            style="width: 550px; max-height: 80vh; padding: 0; background: #0c0816; overflow-y: auto; overflow-x: hidden; border: 1.5px solid var(--premium-accent); border-radius: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.85);">
             <!-- Renderizado via AJAX -->
         </div>
     </div>
@@ -2196,7 +2199,10 @@ try {
         }
 
         // --- AMEAÇAS (MONSTROS) ---
+        let monstroFotoBlob = null;
+
         function resetarModalMonstro() {
+            monstroFotoBlob = null;
             const fields = ['m-id', 'm-imagem-atual', 'm-nome', 'm-vd', 'm-vida', 'm-defesa', 'm-xp', 'm-desc'];
             fields.forEach(id => {
                 const el = document.getElementById(id);
@@ -2222,11 +2228,19 @@ try {
         function previewImagemMonstro(input) {
             const preview = document.getElementById('preview-monstro-container');
             if (input.files && input.files[0] && preview) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    preview.innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
-                };
-                reader.readAsDataURL(input.files[0]);
+                const file = input.files[0];
+                if (typeof abrirCropperModal === 'function') {
+                    abrirCropperModal(file, 1, (croppedBlob, croppedBase64) => {
+                        monstroFotoBlob = croppedBlob;
+                        preview.innerHTML = `<img src="${croppedBase64}" style="width:100%; height:100%; object-fit:cover;">`;
+                    });
+                } else {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        preview.innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
+                    };
+                    reader.readAsDataURL(file);
+                }
             }
         }
 
@@ -2309,7 +2323,12 @@ try {
             formData.append('descricao', desc);
             formData.append('atributos', JSON.stringify(atributos));
             formData.append('imagem_atual', imgAtual);
-            if (foto) formData.append('foto', foto);
+            if (monstroFotoBlob) {
+                const ext = (monstroFotoBlob.type === 'image/gif' || (monstroFotoBlob.name && monstroFotoBlob.name.toLowerCase().endsWith('.gif'))) ? 'gif' : 'jpg';
+                formData.append('foto', monstroFotoBlob, `monstro.${ext}`);
+            } else if (foto) {
+                formData.append('foto', foto);
+            }
 
             try {
                 const res = await fetch('../app/ajax/salvar-monstro.php', {
@@ -2370,7 +2389,7 @@ try {
                     const attrs = data.atributos;
                     const imgCriatura = (m.ds_imagem && m.ds_imagem !== '../img/logo_icone.png' && m.ds_imagem !== '../img/uploads/perfil/avatar1.png') ? m.ds_imagem : '../img/uploads/perfil/avatar1.png';
                     container.innerHTML = `
-                        <div class="ficha-header-comp" style="position: relative; background: linear-gradient(135deg, rgba(30, 11, 58, 0.95), rgba(49, 28, 97, 0.9)), url('${imgCriatura}') center/cover; padding: 30px; border-bottom: 2px solid var(--premium-accent); display: flex; align-items: center; gap: 20px;">
+                        <div class="ficha-header-comp" style="position: sticky; top: 0; z-index: 100; background: linear-gradient(135deg, rgba(30, 11, 58, 0.95), rgba(49, 28, 97, 0.9)), url('${imgCriatura}') center/cover; padding: 25px 30px; border-bottom: 2px solid var(--premium-accent); display: flex; align-items: center; gap: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">
                             <img src="${imgCriatura}" style="width: 100px; height: 100px; border-radius: 15px; border: 3px solid var(--premium-accent); object-fit: cover; box-shadow: 0 10px 30px rgba(0,0,0,0.8);" />
                             <div style="flex: 1;">
                                 <h1 style="color: #fff; font-weight: 900; font-size: 2rem; margin-bottom: 5px; text-shadow: 0 5px 15px rgba(0,0,0,0.8);">${m.nm_monstro}</h1>

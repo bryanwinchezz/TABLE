@@ -670,8 +670,16 @@ $permissao = obterClassificacao($idade);
         inputFoto.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
+                // Se for GIF animado, ignora cropper e envia o arquivo original diretamente
+                if (file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif')) {
+                    document.getElementById('form-foto').submit();
+                    return;
+                }
+
                 abrirCropperModal(file, 1, function(croppedBlob) {
-                    const newFile = new File([croppedBlob], file.name || "avatar.jpg", { type: "image/jpeg" });
+                    const type = croppedBlob.type || file.type || "image/jpeg";
+                    const extension = type === "image/gif" ? "gif" : "jpg";
+                    const newFile = new File([croppedBlob], `avatar.${extension}`, { type: type });
                     const dataTransfer = new DataTransfer();
                     dataTransfer.items.add(newFile);
                     inputFoto.files = dataTransfer.files;

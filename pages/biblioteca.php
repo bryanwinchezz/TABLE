@@ -98,6 +98,28 @@ function formatarTamanhoBytes($bytes) {
     }
 }
 
+// Função PHP utilitária para ajustar brilho no backend
+function adjustBrightness($hex, $steps) {
+    $steps = max(-255, min(255, $steps));
+    $hex = str_replace('#', '', $hex);
+    if (strlen($hex) == 3) {
+        $hex = str_repeat(substr($hex, 0, 1), 2) . str_repeat(substr($hex, 1, 1), 2) . str_repeat(substr($hex, 2, 1), 2);
+    }
+    $r = hexdec(substr($hex, 0, 2));
+    $g = hexdec(substr($hex, 2, 2));
+    $b = hexdec(substr($hex, 4, 2));
+
+    $r = max(0, min(255, $r + $steps));
+    $g = max(0, min(255, $g + $steps));
+    $b = max(0, min(255, $b + $steps));
+
+    $r_hex = str_pad(dechex($r), 2, '0', STR_PAD_LEFT);
+    $g_hex = str_pad(dechex($g), 2, '0', STR_PAD_LEFT);
+    $b_hex = str_pad(dechex($b), 2, '0', STR_PAD_LEFT);
+
+    return '#' . $r_hex . $g_hex . $b_hex;
+}
+
 // ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
 // FUNÇÃO DE LEITURA RECURSIVA PROFUNDA (PARA INCLUIR SUBPASTAS DE MAPAS/TOKENS)
 // ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
@@ -313,8 +335,8 @@ if (is_dir($caminhoBase)) {
             width: 700px;
             height: 700px;
             background: radial-gradient(circle, rgba(168, 85, 247, 0.06) 0%, rgba(0, 0, 0, 0) 70%);
-            bottom: -10%;
-            right: -10%;
+            bottom: 0;
+            right: 0;
             z-index: 0;
             pointer-events: none;
         }
@@ -1117,6 +1139,12 @@ if (is_dir($caminhoBase)) {
                 justify-content: center;
             }
         }
+        
+        @media (max-width: 900px) {
+            .rodape-principal {
+                display: block !important;
+            }
+        }
     </style>
 </head>
 
@@ -1557,26 +1585,3 @@ if (is_dir($caminhoBase)) {
     </script>
 </body>
 </html>
-<?php
-// Função PHP utilitária para ajustar brilho no backend
-function adjustBrightness($hex, $steps) {
-    $steps = max(-255, min(255, $steps));
-    $hex = str_replace('#', '', $hex);
-    if (strlen($hex) == 3) {
-        $hex = str_repeat(substr($hex, 0, 1), 2) . str_repeat(substr($hex, 1, 1), 2) . str_repeat(substr($hex, 2, 1), 2);
-    }
-    $r = hexdec(substr($hex, 0, 2));
-    $g = hexdec(substr($hex, 2, 2));
-    $b = hexdec(substr($hex, 4, 2));
-
-    $r = max(0, min(255, $r + $steps));
-    $g = max(0, min(255, $g + $steps));
-    $b = max(0, min(255, $b + $steps));
-
-    $r_hex = str_pad(dechex($r), 2, '0', STR_PAD_LEFT);
-    $g_hex = str_pad(dechex($g), 2, '0', STR_PAD_LEFT);
-    $b_hex = str_pad(dechex($b), 2, '0', STR_PAD_LEFT);
-
-    return '#' . $r_hex . $g_hex . $b_hex;
-}
-?>

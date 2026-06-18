@@ -1622,31 +1622,60 @@ button {
 
 /* Grid de Atributos Horizontais */
 .atributos-agente-p1 {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px 5px;
     padding: 10px 0;
     border-top: 1px solid rgba(255, 255, 255, 0.06);
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+/* Grid de Atributos no Painel de Combate */
+.atributos-combate-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px 7px;
+    padding: 18px 15px;
+}
+
+
 .attr-p1-box {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 3px;
+    align-items: stretch;
+    border: 1.5px solid #ffffff;
+    border-radius: 8px;
+    overflow: hidden;
+    height: 22px;
+    background: rgba(0, 0, 0, 0.25);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    width: 100%;
 }
 
 .attr-p1-box span {
-    font-size: 0.68rem;
-    color: var(--text-secondary);
-    font-weight: 700;
+    background: #ffffff;
+    color: #251647; /* Roxo escuro */
+    width: 25px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 0.58rem;
     text-transform: uppercase;
+    border-right: 1.5px solid #ffffff;
+    flex-shrink: 0;
 }
 
+.attr-p1-box div,
 .attr-p1-box strong {
-    font-size: 1.1rem;
-    font-weight: 800;
-    color: #fff;
+    color: #ffffff;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 900;
+    text-align: center;
+    min-width: 18px;
 }
 
 /* Barras de Status */

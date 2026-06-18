@@ -79,6 +79,8 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST' &
             'Accept: application/json',
         ],
         CURLOPT_TIMEOUT => 15,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYHOST => false,
     ]);
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -116,6 +118,8 @@ if (($_GET['action'] ?? '') === 'themes_escudo') {
             'Accept: application/json',
         ],
         CURLOPT_TIMEOUT => 10,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYHOST => false,
     ]);
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -198,6 +202,44 @@ if (($_GET['action'] ?? '') === 'get_personagens_escudo') {
         ");
         $stmtHabs->execute([$p['id_personagem']]);
         $p['habilidades'] = $stmtHabs->fetchAll(PDO::FETCH_ASSOC);
+
+        // Buscar Status Customizados do Sistema (Barras)
+        $stmtStatus = $pdo->prepare("
+            SELECT ss.*, COALESCE(ps.qt_valor_atual, 0) as qt_atual, COALESCE(ps.qt_valor_maximo, 0) as qt_max 
+            FROM tb_sistema_status ss
+            LEFT JOIN tb_personagem_status ps ON ss.id_status_sistema = ps.id_status_sistema AND ps.id_personagem = ?
+            WHERE ss.id_sistema = ? AND ss.tp_status = 'barra'
+        ");
+        $stmtStatus->execute([$p['id_personagem'], $p['id_sistema']]);
+        $p['status_barras'] = $stmtStatus->fetchAll(PDO::FETCH_ASSOC);
+
+        // Fallback para Vida, Sanidade, Esforço caso o sistema não tenha barras customizadas
+        if (empty($p['status_barras'])) {
+            $p['status_barras'] = [
+                ['nm_status' => 'VIDA', 'ds_cor' => '#ed1c24', 'qt_atual' => (int)$p['qt_vida'], 'qt_max' => (int)$p['qt_vida_maxima'], 'id_status_sistema' => 'vida'],
+                ['nm_status' => 'SANIDADE', 'ds_cor' => '#a855f7', 'qt_atual' => (int)$p['qt_sanidade'], 'qt_max' => (int)$p['qt_sanidade_maxima'], 'id_status_sistema' => 'sanidade'],
+                ['nm_status' => 'ESFORÇO', 'ds_cor' => '#f97316', 'qt_atual' => (int)$p['qt_esforco'], 'qt_max' => (int)$p['qt_esforco_maximo'], 'id_status_sistema' => 'esforco']
+            ];
+        }
+
+        // Buscar Defesas Customizadas do Sistema com valores do Personagem
+        $stmtDefesas = $pdo->prepare("
+            SELECT ss.*, COALESCE(ps.qt_valor_atual, 10) as qt_atual 
+            FROM tb_sistema_status ss
+            LEFT JOIN tb_personagem_status ps ON ss.id_status_sistema = ps.id_status_sistema AND ps.id_personagem = ?
+            WHERE ss.id_sistema = ? AND ss.tp_status = 'defesa'
+        ");
+        $stmtDefesas->execute([$p['id_personagem'], $p['id_sistema']]);
+        $p['status_defesas'] = $stmtDefesas->fetchAll(PDO::FETCH_ASSOC);
+
+        // Fallback para Defesa, Bloqueio, Esquiva caso o sistema não tenha defesas customizadas
+        if (empty($p['status_defesas'])) {
+            $p['status_defesas'] = [
+                ['nm_status' => 'DEFESA', 'ds_cor' => '#95a5a6', 'qt_atual' => (int)($p['qt_defesa'] ?: 10), 'id_status_sistema' => 'defesa'],
+                ['nm_status' => 'BLOQUEIO', 'ds_cor' => '#f39c12', 'qt_atual' => (int)$p['qt_bloqueio'], 'id_status_sistema' => 'bloqueio'],
+                ['nm_status' => 'ESQUIVA', 'ds_cor' => '#2980b9', 'qt_atual' => (int)($p['qt_esquiva'] ?: ($p['qt_defesa'] ?: 10)), 'id_status_sistema' => 'esquiva']
+            ];
+        }
 
         // Bloqueio / Esquiva fallbacks
         $p['qt_bloqueio'] = $p['qt_bloqueio'] ?? 0;
@@ -340,6 +382,8 @@ $jogadoresAgrupados  = [];
 $isMaster            = false;
 $roomSlug            = '';
 $mapaParticipantesPersonagens = [];
+$sistemaStatusBarras = [];
+$sistemaStatusDefesas = [];
 
 
 $id_campanha = $_GET['id'] ?? null;
@@ -353,7 +397,7 @@ if ($id_campanha) {
     } catch (Exception $e) {}
 
     $stmt = $pdo->prepare("
-        SELECT c.*, s.nm_sistema, s.ds_background
+        SELECT c.*, s.nm_sistema, s.ds_background, s.ds_imagem AS ds_imagem_sistema
           FROM tb_campanha c
           LEFT JOIN tb_sistema s ON c.id_sistema = s.id_sistema
          WHERE c.id_campanha = ?
@@ -451,12 +495,59 @@ if ($id_campanha) {
             ");
             $stmtHabs->execute([$Personagem['id_personagem']]);
             $Personagem['habilidades'] = $stmtHabs->fetchAll();
+
+            // Buscar Status Customizados do Sistema (Barras)
+            $stmtStatus = $pdo->prepare("
+                SELECT ss.*, COALESCE(ps.qt_valor_atual, 0) as qt_atual, COALESCE(ps.qt_valor_maximo, 0) as qt_max 
+                FROM tb_sistema_status ss
+                LEFT JOIN tb_personagem_status ps ON ss.id_status_sistema = ps.id_status_sistema AND ps.id_personagem = ?
+                WHERE ss.id_sistema = ? AND ss.tp_status = 'barra'
+            ");
+            $stmtStatus->execute([$Personagem['id_personagem'], $Personagem['id_sistema']]);
+            $Personagem['status_barras'] = $stmtStatus->fetchAll();
+
+            // Fallback para Vida, Sanidade, Esforço caso o sistema não tenha barras customizadas
+            if (empty($Personagem['status_barras'])) {
+                $Personagem['status_barras'] = [
+                    ['nm_status' => 'VIDA', 'ds_cor' => '#ed1c24', 'qt_atual' => (int)$Personagem['qt_vida'], 'qt_max' => (int)$Personagem['qt_vida_maxima'], 'id_status_sistema' => 'vida'],
+                    ['nm_status' => 'SANIDADE', 'ds_cor' => '#a855f7', 'qt_atual' => (int)$Personagem['qt_sanidade'], 'qt_max' => (int)$Personagem['qt_sanidade_maxima'], 'id_status_sistema' => 'sanidade'],
+                    ['nm_status' => 'ESFORÇO', 'ds_cor' => '#f97316', 'qt_atual' => (int)$Personagem['qt_esforco'], 'qt_max' => (int)$Personagem['qt_esforco_maximo'], 'id_status_sistema' => 'esforco']
+                ];
+            }
+
+            // Buscar Defesas Customizadas do Sistema com valores do Personagem
+            $stmtDefesas = $pdo->prepare("
+                SELECT ss.*, COALESCE(ps.qt_valor_atual, 10) as qt_atual 
+                FROM tb_sistema_status ss
+                LEFT JOIN tb_personagem_status ps ON ss.id_status_sistema = ps.id_status_sistema AND ps.id_personagem = ?
+                WHERE ss.id_sistema = ? AND ss.tp_status = 'defesa'
+            ");
+            $stmtDefesas->execute([$Personagem['id_personagem'], $Personagem['id_sistema']]);
+            $Personagem['status_defesas'] = $stmtDefesas->fetchAll();
+
+            // Fallback para Defesa, Bloqueio, Esquiva caso o sistema não tenha defesas customizadas
+            if (empty($Personagem['status_defesas'])) {
+                $Personagem['status_defesas'] = [
+                    ['nm_status' => 'DEFESA', 'ds_cor' => '#95a5a6', 'qt_atual' => (int)($Personagem['qt_defesa'] ?: 10), 'id_status_sistema' => 'defesa'],
+                    ['nm_status' => 'BLOQUEIO', 'ds_cor' => '#f39c12', 'qt_atual' => (int)$Personagem['qt_bloqueio'], 'id_status_sistema' => 'bloqueio'],
+                    ['nm_status' => 'ESQUIVA', 'ds_cor' => '#2980b9', 'qt_atual' => (int)($Personagem['qt_esquiva'] ?: ($Personagem['qt_defesa'] ?: 10)), 'id_status_sistema' => 'esquiva']
+                ];
+            }
         }
         unset($Personagem);
 
         $stmtSisAttr = $pdo->prepare("SELECT * FROM tb_atributo WHERE id_sistema = ? ORDER BY id_atributo ASC");
         $stmtSisAttr->execute([$campanhaDados['id_sistema']]);
         $atributosSistema = $stmtSisAttr->fetchAll();
+
+        // Buscar status de barras e defesas globais do sistema da campanha
+        $stmtSisStatus = $pdo->prepare("SELECT * FROM tb_sistema_status WHERE id_sistema = ? AND tp_status = 'barra'");
+        $stmtSisStatus->execute([$campanhaDados['id_sistema']]);
+        $sistemaStatusBarras = $stmtSisStatus->fetchAll();
+
+        $stmtSisStatusDef = $pdo->prepare("SELECT * FROM tb_sistema_status WHERE id_sistema = ? AND tp_status = 'defesa'");
+        $stmtSisStatusDef->execute([$campanhaDados['id_sistema']]);
+        $sistemaStatusDefesas = $stmtSisStatusDef->fetchAll();
 
         $stmt = $pdo->prepare("
             SELECT c.*,
@@ -471,13 +562,28 @@ if ($id_campanha) {
 
         foreach ($combatesCampanha as &$comb) {
             $stmtM = $pdo->prepare("
-                SELECT m.* 
+                SELECT m.*, s.ds_imagem AS ds_imagem_sistema
                 FROM tb_monstro m
                 JOIN tb_combate_monstro cm ON m.id_monstro = cm.id_monstro
+                LEFT JOIN tb_sistema s ON m.id_sistema = s.id_sistema
                 WHERE cm.id_combate = ?
             ");
             $stmtM->execute([$comb['id_combate']]);
-            $comb['monstros'] = $stmtM->fetchAll();
+            $monstros = $stmtM->fetchAll();
+
+            foreach ($monstros as &$m) {
+                $stmtMonAttr = $pdo->prepare("
+                    SELECT a.id_atributo, a.nm_atributo, a.ds_abreviacao, COALESCE(ma.qt_valor, 0) as qt_valor 
+                    FROM tb_atributo a
+                    LEFT JOIN tb_monstro_atributo ma ON a.id_atributo = ma.id_atributo AND ma.id_monstro = ?
+                    WHERE a.id_sistema = ?
+                    ORDER BY a.id_atributo ASC
+                ");
+                $stmtMonAttr->execute([$m['id_monstro'], $m['id_sistema']]);
+                $m['atributos'] = $stmtMonAttr->fetchAll();
+            }
+            unset($m);
+            $comb['monstros'] = $monstros;
         }
         unset($comb);
 
@@ -1560,12 +1666,43 @@ $isOrdemParanormal = ($campanhaDados && strpos(strtolower($campanhaDados['nm_sis
             opacity: 1;
             transform: translateX(-50%) translateY(0) scale(1);
         }
-        .camp-log-personagem {
-            font-size: 0.75rem;
-            color: #a78bfa;
-            font-style: italic;
-            display: block;
-            margin-top: 2px;
+        
+        /* Loader de Tela Cheia */
+        #fullscreen-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #0d091a;
+            z-index: 100000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.4s ease, visibility 0.4s ease;
+        }
+
+        #fullscreen-loader .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3.5px solid rgba(139, 92, 246, 0.1);
+            border-left-color: #8b5cf6;
+            border-radius: 50%;
+            animation: loader-spin 1s linear infinite;
+        }
+
+        #fullscreen-loader p {
+            margin-top: 15px;
+            color: #fff;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+        }
+
+        @keyframes loader-spin {
+            to { transform: rotate(360deg); }
         }
 
     </style>
@@ -1578,6 +1715,12 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
 }
 ?>
 <body class="body-criar-campanha <?= $classeBackground ?>" <?= $estiloBackground ?>>
+
+    <!-- Loader de Tela Cheia -->
+    <div id="fullscreen-loader">
+        <div class="spinner"></div>
+        <p>Carregando para Campanha...</p>
+    </div>
 
     <!-- Canvas dddice — fullscreen, sobrepõe a tela durante a animação do Escudo -->
     <canvas id="dddice-canvas-escudo"></canvas>
@@ -2024,9 +2167,22 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                 <div class="combate-grid">
                     <div class="catalogo-ameacas">
                         <div class="area-banners-combate">
+                            <?php
+                            $idSisCampanha = $campanhaDados ? (int)$campanhaDados['id_sistema'] : 0;
+                            $sistemaPersonalizado = ($idSisCampanha !== 1 && $idSisCampanha !== 2 && $idSisCampanha > 0);
+                            $nomeSistemaCampanha = $campanhaDados ? $campanhaDados['nm_sistema'] : '';
+                            $imagemSistemaCampanha = ($campanhaDados && !empty($campanhaDados['ds_imagem_sistema'])) ? $campanhaDados['ds_imagem_sistema'] : '../img/logo_icone.png';
+                            ?>
                             <div class="banners-flex">
-                                <div class="banner-card banner-ordem ativo" onclick="selecionarOrigemCriatura('oficial', this)"><img src="../img/ordem-paranormal-icon.png" alt="Ordem Logo"></div>
-                                <div class="banner-card banner-table" onclick="selecionarOrigemCriatura('table', this)"><img src="../img/logo_branco.png" alt="TABLE Logo"><span>TABLE</span></div>
+                                <?php if ($sistemaPersonalizado): ?>
+                                    <div class="banner-card banner-custom ativo" onclick="selecionarOrigemCriatura('custom', this)" style="display: flex; align-items: center; justify-content: center; gap: 8px; border: 1.5px solid var(--premium-accent); border-radius: 10px; background: rgba(139, 92, 246, 0.1); padding: 10px 15px; cursor: pointer; transition: all 0.3s; color: #fff;">
+                                        <img src="<?= htmlspecialchars($imagemSistemaCampanha) ?>" alt="Sistema Logo" style="width: 28px; height: 28px; border-radius: 6px; object-fit: cover;">
+                                        <span style="font-weight: 800; font-size: 0.85rem; letter-spacing: 0.5px; text-transform: uppercase;"><?= htmlspecialchars($nomeSistemaCampanha) ?></span>
+                                    </div>
+                                    <div class="banner-card banner-ordem" onclick="selecionarOrigemCriatura('oficial', this)"><img src="../img/ordem-paranormal-icon.png" alt="Ordem Logo"></div>
+                                <?php else: ?>
+                                    <div class="banner-card banner-ordem ativo" onclick="selecionarOrigemCriatura('oficial', this)"><img src="../img/ordem-paranormal-icon.png" alt="Ordem Logo"></div>
+                                <?php endif; ?>
                                 <div class="banner-card banner-novas" onclick="redirecionarNovaCriatura()"><span>CRIAR NOVAS AMEAÇAS!</span></div>
                             </div>
                             <p class="banner-subtexto">Conteúdo oficial da TABLE. Veja mais <a href="biblioteca.php" style="background-color: #7b4ff7; color: #fff; padding: 4px 12px; border-radius: 6px; text-decoration: none; font-weight: 700; font-size: 0.8rem; display: inline-block; transition: 0.3s; box-shadow: 0 4px 10px rgba(123, 79, 247, 0.3);" onmouseover="this.style.backgroundColor='#9166ff'" onmouseout="this.style.backgroundColor='#7b4ff7'">aqui</a></p>
@@ -2062,9 +2218,8 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                     <aside class="escudo-sidebar">
                         <h3>Histórico de Dados</h3>
                         <div class="sidebar-dados-lista" id="sidebar-dados-lista">
-                            <div class="item-dado">
-                                <div class="hexa-dado">11</div>
-                                <div class="info-rolagem"><p>Resultado [11]</p><h4>1d20 = 11</h4></div>
+                            <div class="placeholder-historico" style="text-align:center; color: rgba(255,255,255,0.35); font-size:0.75rem; padding: 20px 10px; font-style: italic;">
+                                Nenhuma rolagem ainda.<br>Role um dado para começar.
                             </div>
                         </div>
                     </aside>
@@ -2116,51 +2271,41 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                                                 <span class="nivel-badge" style="display: block; margin-top: 2px; font-size: 0.72rem; font-weight: 800; color: #C193FD;">Nivel: <?= $Personagem['qt_nivel'] ?></span>
                                             </div>
                                         </div>
-                                        <div class="atributos-agente-p1" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px 6px; padding:10px 0; border-top:1px solid rgba(255,255,255,0.06); border-bottom:1px solid rgba(255,255,255,0.06);">
+                                        <div class="atributos-agente-p1">
                                             <?php foreach ($Personagem['atributos'] as $attr): 
                                                 $abbr = $attr['ds_abreviacao'] ?: substr($attr['nm_atributo'], 0, 3);
                                             ?>
-                                                <div class="attr-p1-box" style="display: flex; align-items: stretch; border-radius: 6px; overflow: hidden; height: 24px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
-                                                    <span style="background: #ffffff; color: #2d1b4e; width: 22px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.58rem; border-radius: 6px 0 0 6px; text-transform: uppercase;"><?= htmlspecialchars(strtoupper($abbr)) ?></span>
-                                                    <div style="background: transparent; border: 1.5px solid #ffffff; border-left: none; color: #ffffff; flex: 1; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 950; border-radius: 0 6px 6px 0; min-width: 20px; text-align: center;">
-                                                        <?= $attr['qt_valor'] ?>
-                                                    </div>
+                                                <div class="attr-p1-box">
+                                                    <span><?= htmlspecialchars(strtoupper($abbr)) ?></span>
+                                                    <div><?= $attr['qt_valor'] ?></div>
                                                 </div>
                                             <?php endforeach; ?>
                                         </div>
                                         <div class="status-bars-p1">
-                                            <?php foreach ([
-                                                ['VIDA','qt_vida','qt_vida_maxima','fill-vida-p1'],
-                                                ['SANIDADE','qt_sanidade','qt_sanidade_maxima','fill-sanidade-p1'],
-                                                ['ESFORÇO','qt_esforco','qt_esforco_maximo','fill-esforco-p1'],
-                                            ] as [$lbl,$cur,$max,$cls]): ?>
+                                            <?php foreach ($Personagem['status_barras'] as $barra): 
+                                                $pct = $barra['qt_max'] > 0 ? min(100, max(0, round(($barra['qt_atual'] / $barra['qt_max']) * 100))) : 0;
+                                                $cor = $barra['ds_cor'] ?: '#9d7aff';
+                                            ?>
                                                 <div class="barra-p1-container">
-                                                    <div class="barra-p1-label"><?= $lbl ?></div>
+                                                    <div class="barra-p1-label"><?= htmlspecialchars($barra['nm_status']) ?></div>
                                                     <div class="barra-p1-bg">
-                                                        <div class="barra-p1-fill <?= $cls ?>"
-                                                             style="width:<?= ($Personagem[$max]>0?round($Personagem[$cur]/$Personagem[$max]*100):0) ?>%"></div>
-                                                        <div class="barra-p1-text"><?= $Personagem[$cur] ?>/<?= $Personagem[$max] ?></div>
+                                                        <div class="barra-p1-fill" style="width:<?= $pct ?>%; background-color: <?= htmlspecialchars($cor) ?>;"></div>
+                                                        <div class="barra-p1-text"><?= $barra['qt_atual'] ?>/<?= $barra['qt_max'] ?></div>
                                                     </div>
                                                 </div>
                                             <?php endforeach; ?>
                                         </div>
                                         <div class="compacto-footer">
                                             <div class="footer-stats-grid" style="display: flex; gap: 15px; justify-content: center; align-items: center; margin-bottom: 12px;">
-                                                <div class="mini-shield-item" style="display: flex; flex-direction: column; align-items: center; position: relative;">
-                                                    <i class="fas fa-shield-alt" style="font-size: 1.8rem; color: #95a5a6; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"></i>
-                                                    <span style="position: absolute; top: 6px; font-size: 0.75rem; font-weight: 900; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.8);"><?= $Personagem['qt_defesa'] ?></span>
-                                                    <span style="font-size: 0.55rem; color: #aaa; font-weight: 700; text-transform: uppercase; margin-top: 4px;">DEF</span>
-                                                </div>
-                                                <div class="mini-shield-item" style="display: flex; flex-direction: column; align-items: center; position: relative;">
-                                                    <i class="fas fa-shield-alt" style="font-size: 1.8rem; color: #f39c12; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"></i>
-                                                    <span style="position: absolute; top: 6px; font-size: 0.75rem; font-weight: 900; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.8);"><?= $Personagem['qt_bloqueio'] ?></span>
-                                                    <span style="font-size: 0.55rem; color: #aaa; font-weight: 700; text-transform: uppercase; margin-top: 4px;">BLQ</span>
-                                                </div>
-                                                <div class="mini-shield-item" style="display: flex; flex-direction: column; align-items: center; position: relative;">
-                                                    <i class="fas fa-shield-alt" style="font-size: 1.8rem; color: #2980b9; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"></i>
-                                                    <span style="position: absolute; top: 6px; font-size: 0.75rem; font-weight: 900; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.8);"><?= $Personagem['qt_esquiva'] ?? $Personagem['qt_defesa'] ?></span>
-                                                    <span style="font-size: 0.55rem; color: #aaa; font-weight: 700; text-transform: uppercase; margin-top: 4px;">ESQ</span>
-                                                </div>
+                                                <?php foreach ($Personagem['status_defesas'] as $def): 
+                                                    $cor = $def['ds_cor'] ?: '#95a5a6';
+                                                ?>
+                                                    <div class="mini-shield-item" style="display: flex; flex-direction: column; align-items: center; position: relative;">
+                                                        <i class="fas fa-shield-alt" style="font-size: 1.8rem; color: <?= htmlspecialchars($cor) ?>; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"></i>
+                                                        <span style="position: absolute; top: 6px; font-size: 0.75rem; font-weight: 900; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.8);"><?= $def['qt_atual'] ?></span>
+                                                        <span style="font-size: 0.55rem; color: #aaa; font-weight: 700; text-transform: uppercase; margin-top: 4px;"><?= htmlspecialchars(substr($def['nm_status'], 0, 3)) ?></span>
+                                                    </div>
+                                                <?php endforeach; ?>
                                             </div>
                                             <a href="exibir-ficha.php?id=<?= $Personagem['id_personagem'] ?>" class="btn-ficha-compacto">Ver Ficha Completa</a>
                                         </div>
@@ -2436,7 +2581,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
     <!-- 4. FICHA DE MONSTRO -->
     <div class="modal-overlay" id="modal-ficha-monstro">
         <div class="modal-box" id="ficha-monstro-render"
-             style="width:600px;padding:0;background:#0c0816;overflow:hidden;border:1px solid var(--premium-accent);"></div>
+             style="width: 550px; max-height: 80vh; padding: 0; background: #0c0816; overflow-y: auto; overflow-x: hidden; border: 1.5px solid var(--premium-accent); border-radius: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.85);"></div>
     </div>
 
     <!-- 5. DETALHES DO JOGADOR -->
@@ -2489,17 +2634,19 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
     const campanhaInicial            = <?= json_encode($campanhaDados ?: null) ?: 'null' ?>;
     const campanhaInicialPersonagems = <?= json_encode($PersonagemsCampanha ?: []) ?: '[]' ?>;
     const combatesCampanha           = <?= json_encode($combatesCampanha ?: []) ?: '[]' ?>;
+    const sistemaStatusBarras        = <?= json_encode($sistemaStatusBarras ?: []) ?: '[]' ?>;
+    const sistemaStatusDefesas       = <?= json_encode($sistemaStatusDefesas ?: []) ?: '[]' ?>;
     const idCampanha                 = <?= $id_campanha ? (int)$id_campanha : 'null' ?>;
     const usuarioLogadoId            = <?= isset($_SESSION['usuario']['id']) ? (int)$_SESSION['usuario']['id'] : 'null' ?>;
     const isMasterLogado             = <?= $isMaster ? 'true' : 'false' ?>;
 
-    // Debugger visual de erros de JS para ambiente de desenvolvimento
+    // Captura de erros JS — apenas console (não bloqueia o usuário com alert)
     window.onerror = function(message, source, lineno, colno, error) {
-        alert("🚨 DETECTADO ERRO DE JAVASCRIPT NO SEU NAVEGADOR:\n\n" + message + "\n\nArquivo: " + source + "\nLinha: " + lineno + "\n\nStack Trace:\n" + (error ? error.stack : "N/A"));
+        console.error('🚨 JS Error:', message, '\nAt:', source, 'L:' + lineno, '\nStack:', error ? error.stack : 'N/A');
         return false;
     };
     window.addEventListener('unhandledrejection', function(event) {
-        alert("🚨 ERRO DE PROMISE REJEITADA NO SEU NAVEGADOR:\n\n" + event.reason);
+        console.error('🚨 Promise rejeitada:', event.reason);
     });
 
     // ============================================================
@@ -2568,6 +2715,39 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
         if (bB) bB.onclick = () => document.execCommand('bold',false,null);
         if (bI) bI.onclick = () => document.execCommand('italic',false,null);
         if (bU) bU.onclick = () => document.execCommand('underline',false,null);
+
+        // ============================================================
+        // CRIAR / EDITAR CAMPANHA — formulário de nova campanha
+        // ============================================================
+        const formCriar = document.getElementById('form-criar-campanha');
+        if (formCriar) {
+            formCriar.onsubmit = async function(e) {
+                e.preventDefault();
+                const btn  = e.target.querySelector('.btn-criar-campanha');
+                const orig = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Criando...';
+                const payload = {
+                    id_campanha: idCampanha,
+                    nome:        document.getElementById('nome-campanha').value.trim(),
+                    id_sistema:  document.getElementById('selecao-sistema').value,
+                    descricao:   document.getElementById('descricao-campanha').innerHTML
+                };
+                if (!payload.nome || !payload.id_sistema) {
+                    alert('Preencha o nome e selecione um sistema.');
+                    btn.disabled = false;
+                    btn.innerHTML = orig;
+                    return;
+                }
+                try {
+                    const res  = await fetch('../app/ajax/salvar-campanha.php', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+                    const data = await res.json();
+                    if (data.success) window.location.href = `criar-campanha.php?id=${data.id_campanha}`;
+                    else alert('Erro ao criar campanha: ' + (data.error || 'Desconhecido'));
+                } catch(err) { console.error(err); alert('Erro de conexão ao criar campanha.'); }
+                finally    { btn.disabled=false; btn.innerHTML=orig; }
+            };
+        }
     });
 
     // ============================================================
@@ -2757,11 +2937,9 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                             attrArea.innerHTML = p.atributos.map(attr => {
                                 const abrev = attr.ds_abreviacao || (attr.nm_atributo ? attr.nm_atributo.substring(0, 3).toUpperCase() : 'ATT');
                                 return `
-                                    <div class="attr-p1-box" style="display: flex; align-items: stretch; border-radius: 6px; overflow: hidden; height: 24px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
-                                        <span style="background: #ffffff; color: #2d1b4e; width: 22px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.58rem; border-radius: 6px 0 0 6px; text-transform: uppercase;">${abrev.toUpperCase()}</span>
-                                        <div style="background: transparent; border: 1.5px solid #ffffff; border-left: none; color: #ffffff; flex: 1; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 950; border-radius: 0 6px 6px 0; min-width: 20px; text-align: center;">
-                                            ${attr.qt_valor}
-                                        </div>
+                                    <div class="attr-p1-box">
+                                        <span>${abrev.toUpperCase()}</span>
+                                        <div>${attr.qt_valor}</div>
                                     </div>
                                 `;
                             }).join('');
@@ -2769,22 +2947,17 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                         
                         // Atualizar barras de status
                         const statusArea = card.querySelector('.status-bars-p1');
-                        if (statusArea) {
-                            const statusConfig = [
-                                { label: 'VIDA', cur: 'qt_vida', max: 'qt_vida_maxima', cls: 'fill-vida-p1' },
-                                { label: 'SANIDADE', cur: 'qt_sanidade', max: 'qt_sanidade_maxima', cls: 'fill-sanidade-p1' },
-                                { label: 'ESFORÇO', cur: 'qt_esforco', max: 'qt_esforco_maximo', cls: 'fill-esforco-p1' }
-                            ];
-                            
-                            statusArea.innerHTML = statusConfig.map(cfg => {
-                                const curVal = parseInt(p[cfg.cur]) || 0;
-                                const maxVal = parseInt(p[cfg.max]) || 1;
+                        if (statusArea && p.status_barras) {
+                            statusArea.innerHTML = p.status_barras.map(barra => {
+                                const curVal = parseInt(barra.qt_atual) || 0;
+                                const maxVal = parseInt(barra.qt_max) || 1;
                                 const pct = maxVal > 0 ? Math.min(100, Math.max(0, (curVal / maxVal) * 100)) : 0;
+                                const cor = barra.ds_cor || '#9d7aff';
                                 return `
                                     <div class="barra-p1-container">
-                                        <div class="barra-p1-label">${cfg.label}</div>
+                                        <div class="barra-p1-label">${barra.nm_status}</div>
                                         <div class="barra-p1-bg">
-                                            <div class="barra-p1-fill ${cfg.cls}" style="width:${pct}%"></div>
+                                            <div class="barra-p1-fill" style="width:${pct}%; background-color: ${cor};"></div>
                                             <div class="barra-p1-text">${curVal}/${maxVal}</div>
                                         </div>
                                     </div>
@@ -2792,28 +2965,23 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                             }).join('');
                         }
                         
-                        // Atualizar valores do footer compacto (Defesa, Esquiva, Bloqueio) com mini-escudos
+                        // Atualizar valores do footer compacto (Defesas)
                         const footer = card.querySelector('.compacto-footer');
                         if (footer) {
                             const statsGrid = footer.querySelector('.footer-stats-grid');
-                            if (statsGrid) {
-                                statsGrid.innerHTML = `
-                                    <div class="mini-shield-item" style="display: flex; flex-direction: column; align-items: center; position: relative;">
-                                        <i class="fas fa-shield-alt" style="font-size: 1.8rem; color: #95a5a6; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"></i>
-                                        <span style="position: absolute; top: 6px; font-size: 0.75rem; font-weight: 900; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">${p.qt_defesa || 10}</span>
-                                        <span style="font-size: 0.55rem; color: #aaa; font-weight: 700; text-transform: uppercase; margin-top: 4px;">DEF</span>
-                                    </div>
-                                    <div class="mini-shield-item" style="display: flex; flex-direction: column; align-items: center; position: relative;">
-                                        <i class="fas fa-shield-alt" style="font-size: 1.8rem; color: #f39c12; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"></i>
-                                        <span style="position: absolute; top: 6px; font-size: 0.75rem; font-weight: 900; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">${p.qt_bloqueio || 0}</span>
-                                        <span style="font-size: 0.55rem; color: #aaa; font-weight: 700; text-transform: uppercase; margin-top: 4px;">BLQ</span>
-                                    </div>
-                                    <div class="mini-shield-item" style="display: flex; flex-direction: column; align-items: center; position: relative;">
-                                        <i class="fas fa-shield-alt" style="font-size: 1.8rem; color: #2980b9; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"></i>
-                                        <span style="position: absolute; top: 6px; font-size: 0.75rem; font-weight: 900; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">${p.qt_esquiva || p.qt_defesa || 10}</span>
-                                        <span style="font-size: 0.55rem; color: #aaa; font-weight: 700; text-transform: uppercase; margin-top: 4px;">ESQ</span>
-                                    </div>
-                                `;
+                            if (statsGrid && p.status_defesas) {
+                                statsGrid.innerHTML = p.status_defesas.map(def => {
+                                    const cor = def.ds_cor || '#95a5a6';
+                                    const val = def.qt_atual;
+                                    const shortName = def.nm_status.substring(0, 3).toUpperCase();
+                                    return `
+                                        <div class="mini-shield-item" style="display: flex; flex-direction: column; align-items: center; position: relative;">
+                                            <i class="fas fa-shield-alt" style="font-size: 1.8rem; color: ${cor}; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"></i>
+                                            <span style="position: absolute; top: 6px; font-size: 0.75rem; font-weight: 900; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">${val}</span>
+                                            <span style="font-size: 0.55rem; color: #aaa; font-weight: 700; text-transform: uppercase; margin-top: 4px;">${shortName}</span>
+                                        </div>
+                                    `;
+                                }).join('');
                             }
                         }
                     }
@@ -2836,6 +3004,8 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                             participante.habilidades = p.habilidades;
                             participante.nm_classe = p.nm_classe;
                             participante.nm_origem = p.nm_origem;
+                            participante.status_barras = p.status_barras;
+                            participante.status_defesas = p.status_defesas;
                             
                             // Re-renderizar track de iniciativa do combate ativo
                             renderListaIniciativa();
@@ -2855,29 +3025,8 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
     }
 
     // ============================================================
-    // CRIAR / EDITAR CAMPANHA
+    // EDITAR CAMPANHA (salvar edição)
     // ============================================================
-    document.getElementById('form-criar-campanha').onsubmit = async function(e) {
-        e.preventDefault();
-        const btn  = e.target.querySelector('.btn-criar-campanha');
-        const orig = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Criando...';
-        const payload = {
-            id_campanha: idCampanha,
-            nome:        document.getElementById('nome-campanha').value,
-            id_sistema:  document.getElementById('selecao-sistema').value,
-            descricao:   document.getElementById('descricao-campanha').innerHTML
-        };
-        try {
-            const res  = await fetch('../app/ajax/salvar-campanha.php', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-            const data = await res.json();
-            if (data.success) window.location.href = `criar-campanha.php?id=${data.id_campanha}`;
-            else alert('Erro ao criar campanha: ' + data.error);
-        } catch(e) { console.error(e); alert('Erro de conexão.'); }
-        finally    { btn.disabled=false; btn.innerHTML=orig; }
-    };
-
     async function salvarEdicao() {
         const payload = {
             id_campanha: idCampanha,
@@ -3051,7 +3200,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
     // COMBATE (CRIATURAS E CATÁLOGO)
     // ============================================================
     let ameacasCatalogo = [], ameacasSelecionadas = [], filtroAtual = 'Todos';
-    let origemCriaturaFiltro = 'oficial'; // 'oficial' ou 'custom'
+    let origemCriaturaFiltro = <?= $sistemaPersonalizado ? "'custom'" : "'oficial'" ?>; // 'custom', 'oficial' ou 'table'
     let idCombateSendoEditado = null;
 
     async function renderCatalogo() {
@@ -3122,9 +3271,11 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                 else if(el === 'pessoa' || el === 'animal' || el === 'mundano') elClass = ' elemento-mundano';
             }
 
+            const fotoCapa = (a.ds_imagem && a.ds_imagem !== '../img/logo_icone.png' && a.ds_imagem !== '../img/uploads/perfil/avatar1.png') ? a.ds_imagem : '../img/uploads/perfil/avatar1.png';
+
             return `
             <div class="card-ameaca-premium${elClass}">
-                <img src="${(a.ds_imagem && a.ds_imagem !== '../img/logo_icone.png' && a.ds_imagem !== '../img/uploads/perfil/avatar1.png') ? a.ds_imagem : '../img/uploads/perfil/avatar1.png'}" class="card-ameaca-img">
+                <img src="${fotoCapa}" class="card-ameaca-img">
                 <div class="card-ameaca-body">
                     <h4>${a.nm_monstro}</h4>
                     <div class="card-ameaca-details">
@@ -3268,7 +3419,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                 }
 
                 c.innerHTML = `
-                    <div class="ficha-header-comp" style="position: relative; background: linear-gradient(135deg, rgba(30, 11, 58, 0.95), rgba(49, 28, 97, 0.9)), url('${imgCriatura}') center/cover; padding: 30px; border-bottom: 2px solid ${corDestaque}; display: flex; align-items: center; gap: 20px;">
+                    <div class="ficha-header-comp" style="position: sticky; top: 0; z-index: 100; background: linear-gradient(135deg, rgba(30, 11, 58, 0.95), rgba(49, 28, 97, 0.9)), url('${imgCriatura}') center/cover; padding: 25px 30px; border-bottom: 2px solid ${corDestaque}; display: flex; align-items: center; gap: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">
                         <img src="${imgCriatura}" style="width: 100px; height: 100px; border-radius: 15px; border: 3px solid ${corDestaque}; object-fit: cover; box-shadow: 0 10px 30px rgba(0,0,0,0.8);" />
                         <div style="flex: 1;">
                             <h1 style="color: #fff; font-weight: 900; font-size: 2rem; margin-bottom: 5px; text-shadow: 0 5px 15px rgba(0,0,0,0.8);">${m.nm_monstro}</h1>
@@ -3320,10 +3471,30 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
         if (!input.files || !input.files[0]) return;
         const file = input.files[0];
 
+        // Se for um GIF animado, envia diretamente mantendo a animação intacta
+        if (file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif')) {
+            const fd = new FormData();
+            fd.append('foto', file, 'capa.gif');
+            fd.append('id_campanha', idCampanha);
+            try {
+                const res  = await fetch('../app/ajax/salvar-foto-capa.php',{method:'POST',body:fd});
+                const data = await res.json();
+                if (data.success) { 
+                    document.getElementById('banner-campanha-display').style.backgroundImage=`url('${data.url}')`; 
+                    fecharModal('modal-foto-capa'); 
+                    location.reload(); 
+                } else {
+                    alert('Erro no upload: '+data.error);
+                }
+            } catch(e) { console.error(e); }
+            return;
+        }
+
         if (typeof abrirCropperModal === 'function') {
             abrirCropperModal(file, 16/9, async (croppedBlob, croppedBase64) => {
                 const fd = new FormData();
-                fd.append('foto', croppedBlob, 'capa.jpg');
+                const ext = (croppedBlob.type === 'image/gif' || (croppedBlob.name && croppedBlob.name.toLowerCase().endsWith('.gif'))) ? 'gif' : 'jpg';
+                fd.append('foto', croppedBlob, `capa.${ext}`);
                 fd.append('id_campanha', idCampanha);
                 try {
                     const res  = await fetch('../app/ajax/salvar-foto-capa.php',{method:'POST',body:fd});
@@ -3402,25 +3573,61 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
             ...p,
             tipo: 'Personagem',
             iniciativa: Math.floor(Math.random() * 20) + 1,
-            qt_vida: parseInt(p.qt_vida) || 0,
-            qt_vida_maxima: parseInt(p.qt_vida_maxima) || 1,
-            qt_sanidade: parseInt(p.qt_sanidade) || 0,
-            qt_sanidade_maxima: parseInt(p.qt_sanidade_maxima) || 1,
-            qt_esforco: parseInt(p.qt_esforco) || 0,
-            qt_esforco_maximo: parseInt(p.qt_esforco_maximo) || 1,
-            ds_foto: p.ds_foto || '../img/uploads/perfil/avatar1.png'
+            status_barras: p.status_barras ? JSON.parse(JSON.stringify(p.status_barras)) : [
+                { nm_status: 'VIDA', ds_cor: '#ed1c24', qt_atual: parseInt(p.qt_vida) || 0, qt_max: parseInt(p.qt_vida_maxima) || 1, id_status_sistema: 'vida' },
+                { nm_status: 'SANIDADE', ds_cor: '#a855f7', qt_atual: parseInt(p.qt_sanidade) || 0, qt_max: parseInt(p.qt_sanidade_maxima) || 1, id_status_sistema: 'sanidade' },
+                { nm_status: 'ESFORÇO', ds_cor: '#f97316', qt_atual: parseInt(p.qt_esforco) || 0, qt_max: parseInt(p.qt_esforco_maximo) || 1, id_status_sistema: 'esforco' }
+            ],
+            status_defesas: p.status_defesas ? JSON.parse(JSON.stringify(p.status_defesas)) : [
+                { nm_status: 'DEFESA', ds_cor: '#95a5a6', qt_atual: parseInt(p.qt_defesa) || 10, id_status_sistema: 'defesa' },
+                { nm_status: 'BLOQUEIO', ds_cor: '#f39c12', qt_atual: parseInt(p.qt_bloqueio) || 0, id_status_sistema: 'bloqueio' },
+                { nm_status: 'ESQUIVA', ds_cor: '#2980b9', qt_atual: parseInt(p.qt_esquiva) || (parseInt(p.qt_defesa) || 10), id_status_sistema: 'esquiva' }
+            ]
         }));
         
         // Monstros reais do combate
-        const monstList = (combate.monstros || []).map(m => ({
-            ...m,
-            nm_personagem: m.nm_monstro,
-            tipo: 'monstro',
-            iniciativa: Math.floor(Math.random() * 20) + 1,
-            qt_vida: parseInt(m.qt_vida) || 0,
-            qt_vida_maxima: parseInt(m.qt_vida) || 1,
-            ds_foto: m.ds_imagem && m.ds_imagem !== '../img/logo_icone.png' && m.ds_imagem !== '../img/uploads/perfil/avatar1.png' ? m.ds_imagem : '../img/uploads/perfil/avatar1.png'
-        }));
+        const monstList = (combate.monstros || []).map(m => {
+            const mVida = parseInt(m.qt_vida) || 0;
+            let mBars = [];
+            let mDefs = [];
+            
+            if (m.id_sistema && sistemaStatusBarras && sistemaStatusBarras.length > 0) {
+                mBars = sistemaStatusBarras.map(b => ({
+                    nm_status: b.nm_status,
+                    ds_cor: b.ds_cor,
+                    qt_atual: mVida,
+                    qt_max: mVida,
+                    id_status_sistema: b.id_status_sistema
+                }));
+            } else {
+                mBars = [
+                    { nm_status: 'VIDA', ds_cor: '#ed1c24', qt_atual: mVida, qt_max: mVida, id_status_sistema: 'vida' }
+                ];
+            }
+
+            if (m.id_sistema && sistemaStatusDefesas && sistemaStatusDefesas.length > 0) {
+                mDefs = sistemaStatusDefesas.map(d => ({
+                    nm_status: d.nm_status,
+                    ds_cor: d.ds_cor,
+                    qt_atual: parseInt(m.qt_defesa) || 10,
+                    id_status_sistema: d.id_status_sistema
+                }));
+            } else {
+                mDefs = [
+                    { nm_status: 'DEFESA', ds_cor: '#95a5a6', qt_atual: parseInt(m.qt_defesa) || 10, id_status_sistema: 'defesa' }
+                ];
+            }
+
+            return {
+                ...m,
+                nm_personagem: m.nm_monstro,
+                tipo: 'monstro',
+                iniciativa: Math.floor(Math.random() * 20) + 1,
+                status_barras: mBars,
+                status_defesas: mDefs,
+                ds_foto: m.ds_imagem && m.ds_imagem !== '../img/logo_icone.png' && m.ds_imagem !== '../img/uploads/perfil/avatar1.png' ? m.ds_imagem : '../img/uploads/perfil/avatar1.png'
+            };
+        });
         
         iniciativaLista = [...persList, ...monstList].sort((a, b) => b.iniciativa - a.iniciativa);
         indexTurno = 0;
@@ -3432,18 +3639,72 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
 
     function renderListaIniciativa() {
         const c = document.getElementById('lista-iniciativa-escudo'); if (!c) return;
-        c.innerHTML = iniciativaLista.map((p,i)=>`
+        c.innerHTML = iniciativaLista.map((p,i)=> {
+            let vidaAtual = p.qt_vida || 0;
+            let vidaMax = p.qt_vida_maxima || 1;
+            
+            if (p.status_barras && p.status_barras.length > 0) {
+                const barraVida = p.status_barras.find(b => b.nm_status.toLowerCase() === 'vida');
+                if (barraVida) {
+                    vidaAtual = barraVida.qt_atual;
+                    vidaMax = barraVida.qt_max;
+                } else {
+                    vidaAtual = p.status_barras[0].qt_atual;
+                    vidaMax = p.status_barras[0].qt_max;
+                }
+            }
+
+            return `
             <div class="item-iniciativa ${i===indexTurno?'ativo':''}" onclick="selecionarParticipanteEscudo(${i})">
                 <img src="${p.ds_foto||'../img/uploads/perfil/avatar1.png'}" class="img-iniciativa">
                 <div class="info-iniciativa">
-                    <h4 style="color:#fff;margin:0;font-size:.95rem;">${p.nm_personagem||p.nm_monstro}</h4>
+                    <h4 style="color:#fff;margin:0;font-size:.95rem;">${p.nm_personagem}</h4>
                     <div style="display:flex;gap:10px;margin-top:4px;">
-                        <span style="color:#ff4d4d;font-size:.7rem;font-weight:700;"><i class="fas fa-heart"></i> ${p.qt_vida}/${p.qt_vida_maxima}</span>
-                        ${p.tipo==='Personagem'?`<span style="color:#7c3aed;font-size:.7rem;font-weight:700;"><i class="fas fa-brain"></i> ${p.qt_sanidade||0}</span>`:''}
+                        <span style="color:#ff4d4d;font-size:.7rem;font-weight:700;"><i class="fas fa-heart"></i> ${vidaAtual}/${vidaMax}</span>
                     </div>
                 </div>
-                <div style="color:#fff;opacity:.5;font-weight:800;margin-left:auto;">${p.iniciativa}</div>
-            </div>`).join('');
+                <input type="number" class="input-iniciativa-combate" value="${p.iniciativa}" 
+                       onclick="event.stopPropagation()" 
+                       onchange="alterarIniciativaParticipante(${i}, this.value)" 
+                       style="width: 45px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; text-align: center; border-radius: 4px; font-weight: 800; margin-left: auto; outline: none;">
+            </div>`;
+        }).join('');
+    }
+
+    function alterarIniciativaParticipante(idx, val) {
+        const novoVal = parseInt(val) || 0;
+        const partOriginal = iniciativaLista[idx];
+        if (!partOriginal) return;
+
+        // Atualizar o valor de iniciativa do participante no array
+        partOriginal.iniciativa = novoVal;
+
+        // Manter referência para remapear o participante selecionado
+        const idSel = participanteSelecionado ? (participanteSelecionado.tipo === 'Personagem' ? participanteSelecionado.id_personagem : participanteSelecionado.id_monstro) : null;
+        const tipoSel = participanteSelecionado ? participanteSelecionado.tipo : null;
+
+        // Salvar qual o participante do turno atual
+        const partTurno = iniciativaLista[indexTurno];
+
+        // Reordenar a lista decrescente pela iniciativa
+        iniciativaLista.sort((a, b) => b.iniciativa - a.iniciativa);
+
+        // Achar o novo index do participante do turno
+        if (partTurno) {
+            indexTurno = iniciativaLista.findIndex(x => x.tipo === partTurno.tipo && (x.tipo === 'Personagem' ? x.id_personagem == partTurno.id_personagem : x.id_monstro == partTurno.id_monstro));
+            if (indexTurno === -1) indexTurno = 0;
+        }
+
+        // Achar o novo participante selecionado
+        if (idSel && tipoSel) {
+            const novoSel = iniciativaLista.find(x => x.tipo === tipoSel && (tipoSel === 'Personagem' ? x.id_personagem == idSel : x.id_monstro == idSel));
+            if (novoSel) {
+                participanteSelecionado = novoSel;
+            }
+        }
+
+        renderListaIniciativa();
+        renderDetalheParticipante();
     }
 
     function selecionarParticipanteEscudo(i) { indexTurno=i; participanteSelecionado=iniciativaLista[i]; renderListaIniciativa(); renderDetalheParticipante(); }
@@ -3470,9 +3731,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
         c.innerHTML=`
             <div class="detalhe-header"><h2>${p.nm_personagem}</h2><p>${p.nm_classe||'Ameaça'} • ${p.tipo==='Personagem'?'Personagem':'Monstro'}</p></div>
             <div class="barras-detalhes">
-                ${renderBarraAjustavel('Vida',p.qt_vida,p.qt_vida_maxima,'vida')}
-                ${p.tipo==='Personagem'?renderBarraAjustavel('Sanidade',p.qt_sanidade,p.qt_sanidade_maxima,'sanidade'):''}
-                ${p.tipo==='Personagem'?renderBarraAjustavel('Esforço',p.qt_esforco,p.qt_esforco_maximo,'esforco'):''}
+                ${(p.status_barras || []).map((barra, bIdx) => renderBarraAjustavel(barra.nm_status, barra.qt_atual, barra.qt_max, barra.id_status_sistema, barra.ds_cor)).join('')}
             </div>
             <div class="escudo-sub-nav">
                 <div class="btn-sub-aba ${subTabAtiva==='atributos'?'ativa':''}" onclick="switchEscudoSubTab('atributos')">Atributos</div>
@@ -3482,39 +3741,57 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
             <div id="escudo-sub-aba-content">${renderSubAbaContent(p)}</div>`;
     }
 
-    function renderBarraAjustavel(label, atual, max, tipo) {
+    function renderBarraAjustavel(label, atual, max, idStatus, cor) {
+        const barColor = cor || '#9d7aff';
         return `<div class="barra-ajustavel">
             <div class="controle-recurso">
-                <div style="display:flex;gap:5px;"><span class="btn-ajuste" onclick="ajustarRecurso('${tipo}',-5)">-5</span><span class="btn-ajuste" onclick="ajustarRecurso('${tipo}',-1)">-1</span></div>
+                <div style="display:flex;gap:5px;"><span class="btn-ajuste" onclick="ajustarRecurso('${idStatus}',-5)">-5</span><span class="btn-ajuste" onclick="ajustarRecurso('${idStatus}',-1)">-1</span></div>
                 <div class="valor-barra" style="color:#fff;font-weight:800;">${label}: ${atual}/${max}</div>
-                <div style="display:flex;gap:5px;"><span class="btn-ajuste" onclick="ajustarRecurso('${tipo}',1)">+1</span><span class="btn-ajuste" onclick="ajustarRecurso('${tipo}',5)">+5</span></div>
+                <div style="display:flex;gap:5px;"><span class="btn-ajuste" onclick="ajustarRecurso('${idStatus}',1)">+1</span><span class="btn-ajuste" onclick="ajustarRecurso('${idStatus}',5)">+5</span></div>
             </div>
-            <div class="bg-barra-detalhe"><div class="fill-barra-detalhe fill-${tipo}-d" style="width:${max>0?(atual/max)*100:0}%"></div></div>
+            <div class="bg-barra-detalhe"><div class="fill-barra-detalhe" style="width:${max>0?(atual/max)*100:0}%; background-color: ${barColor};"></div></div>
         </div>`;
     }
 
-    async function ajustarRecurso(tipo, val) {
+    async function ajustarRecurso(idStatus, val) {
         if (!participanteSelecionado) return;
-        const f=tipo==='vida'?'qt_vida':(tipo==='sanidade'?'qt_sanidade':'qt_esforco');
-        const m=f+(tipo==='esforco'?'_maximo':'_maxima');
         
-        participanteSelecionado[f]=Math.max(0,Math.min(participanteSelecionado[m]||1,(parseInt(participanteSelecionado[f])||0)+val));
+        const barra = (participanteSelecionado.status_barras || []).find(b => String(b.id_status_sistema) === String(idStatus));
+        if (!barra) return;
+        
+        barra.qt_atual = Math.max(0, Math.min(barra.qt_max || 1, (parseInt(barra.qt_atual) || 0) + val));
+        
+        // Sincronizar com os campos legados para manter compatibilidade
+        if (idStatus === 'vida' || idStatus === 'VIDA') {
+            participanteSelecionado.qt_vida = barra.qt_atual;
+        } else if (idStatus === 'sanidade' || idStatus === 'SANIDADE') {
+            participanteSelecionado.qt_sanidade = barra.qt_atual;
+        } else if (idStatus === 'esforco' || idStatus === 'ESFORÇO') {
+            participanteSelecionado.qt_esforco = barra.qt_atual;
+        }
         
         renderDetalheParticipante(); 
         renderListaIniciativa();
 
         // Se for um personagem real da campanha, atualiza no banco de dados via AJAX
         if (participanteSelecionado.tipo === 'Personagem') {
-            const mappedCampo = tipo === 'vida' ? 'VIDA' : (tipo === 'sanidade' ? 'SANIDADE' : 'ESFORÇO');
+            let mappedTipo = 'status_custom';
+            let mappedCampo = idStatus;
+            
+            if (idStatus === 'vida' || idStatus === 'sanidade' || idStatus === 'esforco') {
+                mappedTipo = 'stat';
+                mappedCampo = idStatus === 'vida' ? 'VIDA' : (idStatus === 'sanidade' ? 'SANIDADE' : 'ESFORÇO');
+            }
+            
             try {
                 await fetch('../app/ajax/atualizar-ficha.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         id_personagem: participanteSelecionado.id_personagem,
-                        tipo: 'stat',
+                        tipo: mappedTipo,
                         campo: mappedCampo,
-                        valor: participanteSelecionado[f]
+                        valor: barra.qt_atual
                     })
                 });
             } catch (e) {
@@ -3552,16 +3829,14 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                 { ds_abreviacao: 'VIG', qt_valor: p.qt_vigor || 0 }
             ];
             return `
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 20px 15px; justify-items: center;">
+                <div class="atributos-combate-grid">
                     ${attrs.map(a => {
                         const abrev = a.ds_abreviacao || a.nm_atributo || 'ATT';
                         const shortAbrev = abrev.substring(0, 3).toUpperCase();
                         return `
-                            <div class="attr-p1-box" style="display: flex; align-items: stretch; border-radius: 6px; overflow: hidden; height: 24px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); width: 100%; max-width: 80px;">
-                                <span style="background: #ffffff; color: #2d1b4e; width: 22px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.58rem; border-radius: 6px 0 0 6px; text-transform: uppercase;">${shortAbrev}</span>
-                                <div style="background: transparent; border: 1.5px solid #ffffff; border-left: none; color: #ffffff; flex: 1; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 950; border-radius: 0 6px 6px 0; min-width: 20px; text-align: center;">
-                                    ${a.qt_valor}
-                                </div>
+                            <div class="attr-p1-box">
+                                <span>${shortAbrev}</span>
+                                <div>${a.qt_valor}</div>
                             </div>
                         `;
                     }).join('')}
@@ -4374,8 +4649,8 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
         const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const novoItem = document.createElement('div'); novoItem.className = 'item-dado real-roll';
         novoItem.innerHTML = `<div class="hexa-dado" style="border-color:var(--premium-accent);color:#000;background:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;">${resultado}</div><div class="info-rolagem"><p>${time} • ${descricao}</p><h4 style="color:#fff;">Mestre <span style="font-size:0.6rem;color:var(--premium-accent);font-weight:700;background:rgba(139,92,246,0.15);padding:1px 5px;border-radius:4px;">3D</span></h4></div>`;
-        if (logContainer.querySelectorAll('.real-roll').length === 0) { logContainer.querySelectorAll('.item-dado:not(.real-roll)').forEach(p => p.remove()); }
-        logContainer.prepend(novoItem);
+        logContainer.innerHTML = '';
+        logContainer.appendChild(novoItem);
     }
 
     // ============================================================
@@ -4664,8 +4939,8 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
         if (historico.length > 50) historico.pop();
         localStorage.setItem(key, JSON.stringify(historico));
 
-        // Sincronizar também com o histórico do Escudo (se o mestre estiver na tela)
-        if (typeof isMasterLogado !== 'undefined' && isMasterLogado) {
+        // Sincronizar também com o histórico do Escudo (se o mestre estiver na tela e for rolagem própria)
+        if (typeof isMasterLogado !== 'undefined' && isMasterLogado && souEu) {
             const sidebarLog = document.getElementById('sidebar-dados-lista');
             if (sidebarLog) {
                 const itemEscudo = document.createElement('div');
@@ -4678,10 +4953,8 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                         ${personagemHTML}
                     </div>
                 `;
-                if (sidebarLog.querySelectorAll('.real-roll').length === 0) {
-                    sidebarLog.querySelectorAll('.item-dado:not(.real-roll)').forEach(p => p.remove());
-                }
-                sidebarLog.prepend(itemEscudo);
+                sidebarLog.innerHTML = '';
+                sidebarLog.appendChild(itemEscudo);
             }
         }
     }
@@ -4918,6 +5191,29 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                 if (select) { select.innerHTML = '<option value="local">Rolagem Local Premium</option>'; select.disabled = true; }
             });
             carregarHistoricoJogadorLocal();
+        }
+    });
+    </script>
+    <script>
+    // Gerenciamento de Transição Suave do Loader de Tela Cheia
+    window.addEventListener('load', () => {
+        const loader = document.getElementById('fullscreen-loader');
+        if (loader) {
+            loader.style.opacity = '0';
+            loader.style.visibility = 'hidden';
+            setTimeout(() => {
+                loader.style.display = 'none';
+            }, 400); // Aguarda o fim da animação de opacidade (0.4s)
+        }
+    });
+
+    // Ativa o loader ao submeter formulários ou recarregar a página
+    window.addEventListener('beforeunload', () => {
+        const loader = document.getElementById('fullscreen-loader');
+        if (loader) {
+            loader.style.display = 'flex';
+            loader.style.opacity = '1';
+            loader.style.visibility = 'visible';
         }
     });
     </script>

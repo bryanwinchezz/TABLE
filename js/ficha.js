@@ -1222,7 +1222,8 @@ let dddiceConectado = false;
 let dddiceTheme = 'dddice-standard';
 
 async function initDddice() {
-    if (typeof window.ThreeDDice === 'undefined') {
+    const ThreeDDiceClass = window.ThreeDDice || (window.dddice && window.dddice.ThreeDDice);
+    if (!ThreeDDiceClass) {
         console.warn("SDK do dddice não carregado.");
         return;
     }
@@ -1233,7 +1234,7 @@ async function initDddice() {
     }
 
     try {
-        dddiceSDK = new window.ThreeDDice(canvas, window.DDDICE_API_KEY);
+        dddiceSDK = new ThreeDDiceClass(canvas, window.DDDICE_API_KEY);
         dddiceSDK.start();
         await dddiceSDK.connect(window.DDDICE_ROOM_SLUG);
         dddiceConectado = true;

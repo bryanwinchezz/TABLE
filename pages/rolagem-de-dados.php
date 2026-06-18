@@ -26,6 +26,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['action'] ?? '') === 'roll')
             'Accept: application/json',
         ],
         CURLOPT_TIMEOUT => 15,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYHOST => false,
     ]);
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -63,6 +65,8 @@ if (($_GET['action'] ?? '') === 'themes') {
             'Accept: application/json',
         ],
         CURLOPT_TIMEOUT => 10,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYHOST => false,
     ]);
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -85,7 +89,7 @@ if (($_GET['action'] ?? '') === 'themes') {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
-    <script src="https://dddice.com/sdk/1.9/dddice.js"></script>
+    <script src="https://cdn.dddice.com/js/dddice-latest.js"></script>
     
     <style>
         :root {
@@ -184,6 +188,7 @@ if (($_GET['action'] ?? '') === 'themes') {
             transition: background 0.3s, box-shadow 0.3s;
         }
         #status-dot.ok      { background: #2ecc71; box-shadow: 0 0 7px #2ecc71; }
+        #status-dot.local   { background: #f1c40f; box-shadow: 0 0 7px #f1c40f; }
         #status-dot.loading { background: var(--premium-accent); animation: blink 0.9s infinite; }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
 
@@ -855,23 +860,38 @@ if (($_GET['action'] ?? '') === 'themes') {
     async function initSDK() {
         setStatus('loading');
 
-        if (!window.ThreeDDice) {
-            setStatus('error');
-            showToast('Motor de dados 3D não carregou. Verifique sua conexão.');
+        const ThreeDDiceClass = window.ThreeDDice || (window.dddice && window.dddice.ThreeDDice);
+
+        if (!ThreeDDiceClass) {
+            setStatus('local');
+            const select = document.getElementById('theme-select');
+            if (select) {
+                select.innerHTML = '<option value="local">Rolagem Local Premium</option>';
+                select.disabled = true;
+            }
+            themeId = 'local';
+            atualizarBtnRolar();
+            console.warn('Motor 3D não carregou. Ativando Modo de Rolagem Local Premium.');
             return;
         }
 
         try {
             const canvas = document.getElementById('dddice-canvas');
-            dddiceSDK = new window.ThreeDDice(canvas, API_KEY);
+            dddiceSDK = new ThreeDDiceClass(canvas, API_KEY);
             dddiceSDK.start();
             await dddiceSDK.connect(ROOM_SLUG);
             await carregarTemas();
             setStatus('ok');
         } catch (err) {
             console.error('initSDK:', err);
-            setStatus('error');
-            showToast('Erro ao inicializar dados 3D: ' + err.message);
+            setStatus('local');
+            const select = document.getElementById('theme-select');
+            if (select) {
+                select.innerHTML = '<option value="local">Rolagem Local Premium (Offline)</option>';
+                select.disabled = true;
+            }
+            themeId = 'local';
+            atualizarBtnRolar();
         }
     }
 
@@ -949,31 +969,39 @@ if (($_GET['action'] ?? '') === 'themes') {
             if (dddDice.length > 0) {
                 let phpResult;
                 try {
-                    if (dddiceSDK) {
+                    if (dddiceSDK && themeId !== 'local') {
                         const sdkRes = await dddiceSDK.roll(dddDice);
                         phpResult = {
                             ok: true,
                             total: parseInt(sdkRes.total_value),
                             values: sdkRes.values.map(v => ({ value: parseInt(v.value), type: v.type }))
                         };
-                    } else {
+                    } else if (themeId !== 'local') {
                         phpResult = await fetch('?action=roll', {
                             method:  'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body:    JSON.stringify({ dice: dddDice }),
                         }).then(r => r.json());
+                        if (phpResult.error) throw new Error(phpResult.error);
+                    } else {
+                        throw new Error('Modo local ativado');
                     }
                 } catch (e) {
-                    console.warn('SDK roll:', e);
-                    phpResult = { error: e.message };
-                }
-
-                if (phpResult.error) {
-                    showToast('Erro da API dddice: ' + phpResult.error);
-                    rolling = false;
-                    btn.innerHTML = '<i class="fas fa-dice"></i> Rolar Dados';
-                    atualizarBtnRolar();
-                    return;
+                    console.warn('SDK/API roll falhou, usando rolagem local premium:', e);
+                    // Rola todos os dados dddice localmente via JS
+                    let localTotal = 0;
+                    let localValues = [];
+                    dddDice.forEach(d => {
+                        const lados = parseInt(d.type.substring(1));
+                        const v = Math.floor(Math.random() * lados) + 1;
+                        localTotal += v;
+                        localValues.push({ value: v, type: d.type });
+                    });
+                    phpResult = {
+                        ok: true,
+                        total: localTotal,
+                        values: localValues
+                    };
                 }
 
                 finalTotal  += phpResult.total;
@@ -1085,7 +1113,7 @@ if (($_GET['action'] ?? '') === 'themes') {
     function setStatus(state) {
         const dot  = document.getElementById('status-dot');
         dot.className = state;
-        dot.title = state === 'ok' ? 'Conectado ao dddice' : state === 'loading' ? 'Conectando...' : 'Erro de conexão';
+        dot.title = state === 'ok' ? 'Conectado ao dddice' : state === 'local' ? 'Modo de Rolagem Local Premium' : state === 'loading' ? 'Conectando...' : 'Erro de conexão';
     }
 
     function showToast(msg) {

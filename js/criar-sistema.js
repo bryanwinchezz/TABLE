@@ -172,8 +172,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        const btn = document.querySelector('.btn-proximo-aba'); // Qualquer botão que serviu de submit ou um indicativo de carregamento
-        if(btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+        const btnConcluir = document.querySelector('.btn-concluir');
+        if (btnConcluir) {
+            btnConcluir.disabled = true;
+            btnConcluir.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+        }
         
         let descTotal = '';
         const descItems = document.querySelectorAll('.item-descricao');
@@ -217,9 +220,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.location.href = 'perfil.php';
             } else {
                 await TableModal.alert("Falha arcana: " + res.error, "Erro de Criação", "error");
+                if (btnConcluir) {
+                    btnConcluir.disabled = false;
+                    btnConcluir.innerHTML = 'Salvar Sistema <i class="fas fa-check"></i>';
+                }
             }
         } catch(e) {
             await TableModal.alert("Erro de comunicação com o servidor.", "Erro de Conexão", "error");
+            if (btnConcluir) {
+                btnConcluir.disabled = false;
+                btnConcluir.innerHTML = 'Salvar Sistema <i class="fas fa-check"></i>';
+            }
         }
     });
 

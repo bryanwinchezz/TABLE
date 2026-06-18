@@ -13,7 +13,12 @@ try {
     $pdo = Database::getConexao();
 
     // 1. Dados básicos
-    $stmt = $pdo->prepare("SELECT * FROM tb_monstro WHERE id_monstro = ?");
+    $stmt = $pdo->prepare("
+        SELECT m.*, s.ds_imagem AS ds_imagem_sistema 
+        FROM tb_monstro m
+        LEFT JOIN tb_sistema s ON m.id_sistema = s.id_sistema
+        WHERE m.id_monstro = ?
+    ");
     $stmt->execute([$id_monstro]);
     $monstro = $stmt->fetch();
 

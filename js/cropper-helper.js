@@ -2,6 +2,17 @@
 // Fornece modal de recorte de imagem premium e minimalista integrado ao Cropper.js
 
 function abrirCropperModal(file, aspectRatio, callback) {
+    // Se for um GIF animado, ignora o cropper para manter a animação rodando normalmente
+    if (file && (file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif'))) {
+        console.info("Imagem GIF detectada. Ignorando cropper para manter a animação.");
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            callback(file, event.target.result);
+        };
+        reader.readAsDataURL(file);
+        return;
+    }
+
     // Fallback robusto caso a CDN do Cropper.js tenha sido bloqueada (ex: no Opera GX)
     if (typeof Cropper === 'undefined') {
         console.warn("Cropper não está definido no escopo global. Usando fallback de leitura simples.");

@@ -505,7 +505,7 @@ $sistemas = $stmt->fetchAll();
             <div id="ia-loading-container-personagem" style="display: none; text-align: center; padding: 20px 0;">
                 <div class="ia-loading-spinner" style="width: 60px; height: 60px; border: 4px solid rgba(123, 79, 247, 0.1); border-left-color: #7b4ff7; border-radius: 50%; margin: 0 auto 20px auto; animation: spinIa 1s linear infinite;"></div>
                 <h3 style="color: #fff; font-size: 1.3rem; font-weight: 700; margin-bottom: 5px;">CassIA está forjando seu personagem...</h3>
-                <p style="color: #888; font-size: 0.85rem; margin-bottom: 15px; font-weight: 500;">Tempo médio de espera: 15 a 30 segundos</p>
+                <p style="color: #888; font-size: 0.85rem; margin-bottom: 15px; font-weight: 500;">Tempo médio de espera: 1min a 1min30s</p>
                 <p id="ia-loading-frase-personagem" style="color: #aaa; font-size: 0.95rem; font-style: italic; min-height: 24px;">Tecendo as regras da reality...</p>
             </div>
         </div>
