@@ -163,12 +163,40 @@ try {
         $stmtMonAttr = $pdo->prepare("INSERT INTO tb_monstro_atributo (id_monstro, id_atributo, qt_valor) VALUES (?, ?, ?)");
         
         foreach ($data['monstros'] as $monstro) {
-            // Imagem padrão já que a página de criação não processa upload neste endpoint MVP
+            $ds_imagem = '../img/uploads/perfil/avatar1.png'; // Padrão
+            if (!empty($monstro['foto_base64'])) {
+                $base64 = $monstro['foto_base64'];
+                if (preg_match('/^data:image\/(\w+);base64,/', $base64, $type)) {
+                    $data_img = substr($base64, strpos($base64, ',') + 1);
+                    $type = strtolower($type[1]); // jpg, png, gif
+
+                    if (in_array($type, ['jpg', 'jpeg', 'gif', 'png', 'webp'])) {
+                        $data_img = base64_decode($data_img);
+                        if ($data_img !== false) {
+                            $nome_arquivo = 'monstro_' . time() . '_' . uniqid() . '.' . $type;
+                            $caminho_salvamento = __DIR__ . '/../../img/uploads/perfil/' . $nome_arquivo;
+                            
+                            // Garante que o diretório existe
+                            if (!is_dir(__DIR__ . '/../../img/uploads/perfil/')) {
+                                mkdir(__DIR__ . '/../../img/uploads/perfil/', 0777, true);
+                            }
+
+                            if (file_put_contents($caminho_salvamento, $data_img)) {
+                                $ds_imagem = '../img/uploads/perfil/' . $nome_arquivo;
+                            }
+                        }
+                    }
+                }
+            }
+            if (empty($ds_imagem) || $ds_imagem === '../img/logo_icone.png' || $ds_imagem === 'undefined') {
+                $ds_imagem = '../img/uploads/perfil/avatar1.png';
+            }
+
             $stmtMonstro->execute([
                 $monstro['nome'], 
                 $monstro['desc'] ?? '', 
                 $monstro['val1'] ?? 'Criatura', // tipo/elemento vem de val1 no js
-                '../img/uploads/perfil/avatar1.png', 
+                $ds_imagem, 
                 $monstro['vida'] ?? 0, 
                 $monstro['defesa'] ?? 0, 
                 $monstro['xp'] ?? 0, 

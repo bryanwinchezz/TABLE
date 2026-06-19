@@ -43,6 +43,9 @@ try {
 
     // 1. Lidar com Upload de Imagem
     $caminho_imagem = $_POST['imagem_atual'] ?? null;
+    if (empty($caminho_imagem) || $caminho_imagem === '../img/logo_icone.png' || $caminho_imagem === 'undefined') {
+        $caminho_imagem = '../img/uploads/perfil/avatar1.png';
+    }
     if (isset($_FILES['foto']) && $_FILES['foto']['error'] === UPLOAD_ERR_OK) {
         $diretorio = __DIR__ . '/../../img/uploads/';
         if (!is_dir($diretorio)) mkdir($diretorio, 0777, true);

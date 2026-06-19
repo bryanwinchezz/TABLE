@@ -695,7 +695,7 @@ $isOrdemParanormal = ($campanhaDados && strpos(strtolower($campanhaDados['nm_sis
     <script src="../js/table-modal.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
-    <script src="../js/cropper-helper.js"></script>
+    <script src="../js/cropper-helper.js?v=<?= time() ?>"></script>
     <style>
         /* ── CORREÇÕES DE DESIGN - EXPANSÃO DAS FICHAS NO ESCUDO ── */
         .card-agente-compacto {
@@ -2170,18 +2170,27 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                             <?php
                             $idSisCampanha = $campanhaDados ? (int)$campanhaDados['id_sistema'] : 0;
                             $sistemaPersonalizado = ($idSisCampanha !== 1 && $idSisCampanha !== 2 && $idSisCampanha > 0);
+                            $isSistemaTable  = ($idSisCampanha === 2); // Sistema padrão TABLE
                             $nomeSistemaCampanha = $campanhaDados ? $campanhaDados['nm_sistema'] : '';
                             $imagemSistemaCampanha = ($campanhaDados && !empty($campanhaDados['ds_imagem_sistema'])) ? $campanhaDados['ds_imagem_sistema'] : '../img/logo_icone.png';
                             ?>
                             <div class="banners-flex">
                                 <?php if ($sistemaPersonalizado): ?>
+                                    <!-- Sistema personalizado: banner próprio (ativo) + Ordem + TABLE -->
                                     <div class="banner-card banner-custom ativo" onclick="selecionarOrigemCriatura('custom', this)" style="display: flex; align-items: center; justify-content: center; gap: 8px; border: 1.5px solid var(--premium-accent); border-radius: 10px; background: rgba(139, 92, 246, 0.1); padding: 10px 15px; cursor: pointer; transition: all 0.3s; color: #fff;">
                                         <img src="<?= htmlspecialchars($imagemSistemaCampanha) ?>" alt="Sistema Logo" style="width: 28px; height: 28px; border-radius: 6px; object-fit: cover;">
                                         <span style="font-weight: 800; font-size: 0.85rem; letter-spacing: 0.5px; text-transform: uppercase;"><?= htmlspecialchars($nomeSistemaCampanha) ?></span>
                                     </div>
                                     <div class="banner-card banner-ordem" onclick="selecionarOrigemCriatura('oficial', this)"><img src="../img/ordem-paranormal-icon.png" alt="Ordem Logo"></div>
+                                    <div class="banner-card banner-table" onclick="selecionarOrigemCriatura('table', this)"><img src="../img/logo_branco1.png" alt="TABLE Logo"><span>TABLE</span></div>
+                                <?php elseif ($isSistemaTable): ?>
+                                    <!-- Sistema TABLE padrão: TABLE ativo + Ordem -->
+                                    <div class="banner-card banner-table ativo" onclick="selecionarOrigemCriatura('table', this)"><img src="../img/logo_branco1.png" alt="TABLE Logo"><span>TABLE</span></div>
+                                    <div class="banner-card banner-ordem" onclick="selecionarOrigemCriatura('oficial', this)"><img src="../img/ordem-paranormal-icon.png" alt="Ordem Logo"></div>
                                 <?php else: ?>
+                                    <!-- Ordem Paranormal ou sem sistema: Ordem ativa + TABLE -->
                                     <div class="banner-card banner-ordem ativo" onclick="selecionarOrigemCriatura('oficial', this)"><img src="../img/ordem-paranormal-icon.png" alt="Ordem Logo"></div>
+                                    <div class="banner-card banner-table" onclick="selecionarOrigemCriatura('table', this)"><img src="../img/logo_branco1.png" alt="TABLE Logo"><span>TABLE</span></div>
                                 <?php endif; ?>
                                 <div class="banner-card banner-novas" onclick="redirecionarNovaCriatura()"><span>CRIAR NOVAS AMEAÇAS!</span></div>
                             </div>
@@ -2193,7 +2202,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                                 <i class="fas fa-search"></i>
                                 <input type="text" id="busca-ameaca" placeholder="Buscar..." oninput="renderCatalogo()">
                             </div>
-                            <div class="filtros-elemento" id="filtros-ameacas">
+                            <div class="filtros-elemento" id="filtros-ameacas" <?= !$isOrdemParanormal ? 'style="display: none;"' : '' ?>>
                                 <button class="btn-filtro ativo"  onclick="filtrarPorElemento('Todos',this)">Todos</button>
                                 <button class="btn-filtro"        onclick="filtrarPorElemento('Conhecimento',this)">Conhecimento</button>
                                 <button class="btn-filtro"        onclick="filtrarPorElemento('Morte',this)">Morte</button>
@@ -2680,6 +2689,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
             renderInvestigacoes();
             renderRelatorios();
             inicializarAnotacoes();
+            inicializarEventosDadosEscudo();
 
             // Redirecionamento de abas via query params
             const urlParams = new URLSearchParams(window.location.search);
@@ -2877,7 +2887,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
     }
 
     function irParaCombate() { showSection('sessao-combate'); renderCatalogo(); }
-    function irParaEscudo()  { document.getElementById('escudo-titulo-campanha').textContent = document.getElementById('display-nome-campanha').textContent; showSection('sessao-escudo'); if (!escudoDddiceSDK) { initEscudoSDK(); inicializarEventosDadosEscudo(); } iniciarEscudoPolling(); }
+    function irParaEscudo()  { document.getElementById('escudo-titulo-campanha').textContent = document.getElementById('display-nome-campanha').textContent; showSection('sessao-escudo'); if (!escudoDddiceSDK) { initEscudoSDK(); } iniciarEscudoPolling(); }
     function fecharEscudo()  { showSection('sessao-detalhes'); pararEscudoPolling(); }
 
     let escudoPollInterval = null;
@@ -3200,7 +3210,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
     // COMBATE (CRIATURAS E CATÁLOGO)
     // ============================================================
     let ameacasCatalogo = [], ameacasSelecionadas = [], filtroAtual = 'Todos';
-    let origemCriaturaFiltro = <?= $sistemaPersonalizado ? "'custom'" : "'oficial'" ?>; // 'custom', 'oficial' ou 'table'
+    let origemCriaturaFiltro = <?= $sistemaPersonalizado ? "'custom'" : ($isSistemaTable ? "'table'" : "'oficial'") ?>; // 'custom', 'oficial' ou 'table'
     let idCombateSendoEditado = null;
 
     async function renderCatalogo() {
@@ -3298,7 +3308,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
         
         const filtrosAmeacas = document.getElementById('filtros-ameacas');
         if (filtrosAmeacas) {
-            if (origem === 'table') {
+            if (origem === 'table' || !window.isOrdemParanormal) {
                 filtrosAmeacas.style.display = 'none';
             } else {
                 filtrosAmeacas.style.display = 'flex';
@@ -3429,7 +3439,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                         <i class="fas fa-times" onclick="fecharModal('modal-ficha-monstro')" style="color: #fff; cursor: pointer; font-size: 1.5rem; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8)); transition: 0.3s;" onmouseover="this.style.color='${corDestaque}'" onmouseout="this.style.color='#fff'"></i>
                     </div>
                     <div style="padding: 25px; background: #0c0816;">
-                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 25px;">
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 25px;">
                             <div style="background: rgba(255, 77, 77, 0.05); padding: 15px; border-radius: 12px; text-align: center; border: 1px solid rgba(255, 77, 77, 0.2);">
                                 <span style="display: block; color: #ff4d4d; font-weight: 900; font-size: 0.75rem; margin-bottom: 5px; letter-spacing: 1px;"><i class="fas fa-heart"></i> ${window.isOrdemParanormal ? 'VIDA' : 'VIDA TOTAL (VT)'}</span>
                                 <strong style="color: #fff; font-size: 1.8rem;">${window.isOrdemParanormal ? m.qt_vida : m.qt_vd}</strong>
@@ -3437,10 +3447,6 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                             <div style="background: rgba(41, 128, 185, 0.05); padding: 15px; border-radius: 12px; text-align: center; border: 1px solid rgba(41, 128, 185, 0.2);">
                                 <span style="display: block; color: #3498db; font-weight: 900; font-size: 0.75rem; margin-bottom: 5px; letter-spacing: 1px;"><i class="fas fa-shield-alt"></i> DEFESA</span>
                                 <strong style="color: #fff; font-size: 1.8rem;">${m.qt_defesa}</strong>
-                            </div>
-                            <div style="background: rgba(241, 196, 15, 0.05); padding: 15px; border-radius: 12px; text-align: center; border: 1px solid rgba(241, 196, 15, 0.2);">
-                                <span style="display: block; color: #f1c40f; font-weight: 900; font-size: 0.75rem; margin-bottom: 5px; letter-spacing: 1px;"><i class="fas fa-star"></i> RECOMPENSA</span>
-                                <strong style="color: #fff; font-size: 1.8rem;">${m.qt_xp_recompensa} <span style="font-size: 0.9rem; font-weight: normal; color: #aaa;">XP</span></strong>
                             </div>
                         </div>
 
@@ -4310,7 +4316,11 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
             const canvas = document.getElementById('dddice-canvas-escudo');
             escudoDddiceSDK = new window.ThreeDDice(canvas, ESCUDO_API_KEY);
             escudoDddiceSDK.start();
-            await escudoDddiceSDK.connect(ESCUDO_ROOM_SLUG);
+            const connectPromise = escudoDddiceSDK.connect(ESCUDO_ROOM_SLUG);
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout de conexão dddice')), 3000)
+            );
+            await Promise.race([connectPromise, timeoutPromise]);
             if (escudoDddiceSDK.participant && escudoDddiceSDK.participant.id) {
                 fetch(`https://dddice.com/api/1.0/room/${ESCUDO_ROOM_SLUG}/participant/${escudoDddiceSDK.participant.id}`, {
                     method: 'PATCH',
@@ -4384,7 +4394,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
             });
         } catch (err) { 
             console.error('initEscudoSDK:', err); 
-            setEscudoStatus('error'); 
+            setEscudoStatus('local'); 
             showEscudoToast('Erro ao inicializar dados 3D. Modo Local Ativo.'); 
             const btn = document.getElementById('escudo-btn-rolar');
             if (btn) btn.innerHTML = '<i class="fas fa-dice"></i> Rolar Dados';
@@ -4509,7 +4519,8 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
 
         const label = entries.map(([l,q]) => `${q}D${l}`).join(' + ');
 
-        const finalizarComDelay = (total, values, lbl) => {
+        const finalizarComDelay = (total, values, lbl, isLocalRoll = false) => {
+            const delay = isLocalRoll ? 800 : 5000;
             setTimeout(() => {
                 mostrarResultadoEscudo(total, values, lbl);
                 adicionarAoHistoricoEscudo(total, lbl);
@@ -4519,7 +4530,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                 escudoRolling = false;
                 if (btn) btn.innerHTML = isLocal ? '<i class="fas fa-dice"></i> Rolar Dados' : '<i class="fas fa-dice"></i> Rolar com Dados 3D';
                 atualizarBtnEscudo();
-            }, 5000);
+            }, delay);
         };
 
         try {
@@ -4534,7 +4545,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                         finalValues.push({ value: v, type: `d${lados}` });
                     }
                 });
-                finalizarComDelay(finalTotal, finalValues, label);
+                finalizarComDelay(finalTotal, finalValues, label, true);
             } else {
                 const dddiceEntries = entries.filter(([l]) => ESCUDO_DDDICE_MAP[parseInt(l)]);
                 const jsEntries     = entries.filter(([l]) => !ESCUDO_DDDICE_MAP[parseInt(l)]);
@@ -4591,16 +4602,16 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                                 finalValues.push({ value: v, type: `d${lados}` });
                             }
                         });
-                        finalizarComDelay(finalTotal, finalValues, label);
+                        finalizarComDelay(finalTotal, finalValues, label, true);
                     } else {
                         finalTotal  = phpResult.total + jsTotal;
                         finalValues  = [...phpResult.values, ...jsValues];
-                        finalizarComDelay(finalTotal, finalValues, label);
+                        finalizarComDelay(finalTotal, finalValues, label, false);
                     }
                 } else {
                     finalTotal = jsTotal;
                     finalValues = jsValues;
-                    finalizarComDelay(finalTotal, finalValues, label);
+                    finalizarComDelay(finalTotal, finalValues, label, true);
                 }
             }
         } catch (err) { 
@@ -4615,7 +4626,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                     fallbackValues.push({ value: v, type: `d${lados}` });
                 }
             });
-            finalizarComDelay(fallbackTotal, fallbackValues, label);
+            finalizarComDelay(fallbackTotal, fallbackValues, label, true);
         }
     }
 
@@ -4786,7 +4797,8 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
 
         const label = entries.map(([l,q]) => `${q}D${l}`).join(' + ');
 
-        const finalizarComDelay = (total, values, lbl) => {
+        const finalizarComDelay = (total, values, lbl, isLocalRoll = false) => {
+            const delay = isLocalRoll ? 800 : 5000;
             setTimeout(() => {
                 mostrarResultadoEscudo(total, values, lbl);
                 adicionarAoHistoricoCompartilhado(total, lbl, true);
@@ -4794,7 +4806,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                 campRolling = false;
                 if (btn) btn.innerHTML = '<i class="fas fa-dice"></i> Rolar Dados';
                 atualizarBtnCamp();
-            }, 5000);
+            }, delay);
         };
 
         try {
@@ -4808,7 +4820,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                         finalValues.push({ value: v, type: `d${lados}` });
                     }
                 });
-                finalizarComDelay(finalTotal, finalValues, label);
+                finalizarComDelay(finalTotal, finalValues, label, true);
             } else {
                 const dddiceEntries = entries.filter(([l]) => ESCUDO_DDDICE_MAP[parseInt(l)]);
                 const jsEntries     = entries.filter(([l]) => !ESCUDO_DDDICE_MAP[parseInt(l)]);
@@ -4845,14 +4857,14 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                                 finalValues.push({ value: v, type: `d${lados}` });
                             }
                         });
-                        finalizarComDelay(finalTotal, finalValues, label);
+                        finalizarComDelay(finalTotal, finalValues, label, true);
                     } else {
                         finalTotal  = phpResult.total + jsTotal;
                         finalValues = [...phpResult.values, ...jsValues];
-                        finalizarComDelay(finalTotal, finalValues, label);
+                        finalizarComDelay(finalTotal, finalValues, label, false);
                     }
                 } else {
-                    finalizarComDelay(jsTotal, jsValues, label);
+                    finalizarComDelay(jsTotal, jsValues, label, true);
                 }
             }
         } catch(err) {
@@ -4865,7 +4877,7 @@ if ($campanhaDados && !empty($campanhaDados['ds_background'])) {
                     fb += v; fv.push({ value: v, type: `d${lados}` });
                 }
             });
-            finalizarComDelay(fb, fv, label);
+            finalizarComDelay(fb, fv, label, true);
         }
     }
 

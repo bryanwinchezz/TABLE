@@ -210,7 +210,7 @@ try {
     <link rel="stylesheet" href="../css/criar-sistema.css?v=<?= time() ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
-    <script src="../js/cropper-helper.js"></script>
+    <script src="../js/cropper-helper.js?v=<?= time() ?>"></script>
     <script src="../js/table-modal.js"></script>
     <link rel="shortcut icon" href="../img/logo_branco1.png" type="image/x-icon">
     <style>
@@ -1497,7 +1497,7 @@ try {
                                     <div class="p-barra-status" style="margin-bottom: 18px;">
                                         <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; color: <?= htmlspecialchars($barra['ds_cor']) ?>; margin-bottom: 8px;">
                                             <span><?= htmlspecialchars($barra['nm_status']) ?></span>
-                                            <span style="opacity: 0.8;">100 / 100</span>
+                                            <span style="opacity: 0.8;">10 / 10</span>
                                         </div>
                                         <div style="width: 100%; height: 14px; background: rgba(0,0,0,0.5); border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08);">
                                             <div style="width: 100%; height: 100%; background: <?= htmlspecialchars($barra['ds_cor']) ?>; border-radius: 8px; box-shadow: 0 0 15px <?= htmlspecialchars($barra['ds_cor']) ?>;"></div>
@@ -1745,86 +1745,75 @@ try {
 
     <!-- MODAL CRIAR MONSTRO -->
     <div class="modal-overlay" id="modal-criar-monstro">
-        <div class="modal-box" style="max-width: 650px; max-height: 90vh; overflow-y: auto;">
-            <i class="fas fa-times modal-close" onclick="fecharModal('modal-criar-monstro')"></i>
-
-            <div style="text-align: center; margin-bottom: 30px;">
-                <h2 style="color: #fff; font-size: 1.8rem; font-weight: 900; letter-spacing: -1px; margin-bottom: 5px;">
-                    NOVA AMEAÇA</h2>
-                <p style="color: #666; font-size: 0.9rem;">Catalogando perigos do Outro Lado</p>
-            </div>
+        <div class="modal-box" style="width: 550px; max-height: 80vh; padding: 0; background: #0c0816; overflow-y: auto; overflow-x: hidden; border: 1.5px solid var(--premium-accent); border-radius: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.85);">
             <div id="form-criar-ameaca">
                 <input type="hidden" id="m-id" value="">
                 <input type="hidden" id="m-imagem-atual" value="">
-                <div class="form-section-title"><i class="fas fa-fingerprint"></i> IDENTIDADE</div>
-
-                <div class="monstro-identidade-container">
-                    <div id="preview-monstro-container" onclick="document.getElementById('m-foto').click()" style="width: 120px; height: 120px; border: 2px dashed rgba(157, 122, 255, 0.3); border-radius: 20px; 
-                                 display: flex; align-items: center; justify-content: center; cursor: pointer; 
-                                 background: rgba(0,0,0,0.4); overflow: hidden; transition: 0.3s; position: relative; flex-shrink: 0;">
-                        <i class="fas fa-cloud-upload-alt" style="font-size: 2rem; color: var(--premium-accent); opacity: 0.5;"></i>
-                        <span style="position: absolute; bottom: 10px; font-size: 0.6rem; color: #aaa; font-weight: 800; text-transform: uppercase;">Imagem</span>
+                
+                <!-- Header no estilo Ficha de Monstro -->
+                <div class="ficha-header-comp" id="m-header-gradient" style="position: sticky; top: 0; z-index: 100; background: linear-gradient(135deg, rgba(30, 11, 58, 0.95), rgba(49, 28, 97, 0.9)), url('../img/uploads/perfil/avatar1.png') center/cover; padding: 25px 30px; border-bottom: 2px solid var(--premium-accent); display: flex; align-items: center; gap: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">
+                    <div id="preview-monstro-container" onclick="document.getElementById('m-foto').click()" style="width: 100px; height: 100px; border-radius: 15px; border: 3px solid var(--premium-accent); object-fit: cover; box-shadow: 0 10px 30px rgba(0,0,0,0.8); cursor: pointer; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); flex-shrink: 0;">
+                        <img id="m-foto-preview" src="../img/uploads/perfil/avatar1.png" style="width: 100%; height: 100%; object-fit: cover;">
+                        <div style="position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.55rem; text-align: center; padding: 3px 0; font-weight: bold; text-transform: uppercase;">Mudar</div>
                     </div>
-                    <div class="monstro-identidade-inputs">
-                        <div class="input-premium-group" style="margin-bottom: 10px;">
-                            <label class="input-premium-label">NOME DA AMEAÇA</label>
-                            <input type="text" id="m-nome" class="input-premium-field" placeholder="Ex: Degolador, Aniquilação...">
-                        </div>
+                    <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+                        <input type="text" id="m-nome" class="input-premium-field" placeholder="Nome da Ameaça..." style="font-weight: 900; font-size: 1.6rem; color: #fff; background: rgba(0,0,0,0.4); border: 1px dashed rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 8px; width: 90%; outline: none;" required>
                         <input type="file" id="m-foto" accept="image/*" style="display: none;" onchange="previewImagemMonstro(this)">
-                        <div class="input-premium-group" style="margin: 0;">
-                            <label class="input-premium-label">TIPO / ELEMENTO</label>
-                            <input type="text" id="m-tipo" class="input-premium-field" placeholder="Ex: Medo, Conhecimento...">
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="text" id="m-tipo" class="input-premium-field" placeholder="TIPO / ELEMENTO" style="background: var(--premium-accent); color: #fff; padding: 4px 12px; border-radius: 6px; font-weight: 800; font-size: 0.8rem; border: 1.5px dashed rgba(255,255,255,0.5); outline: none; width: 130px; cursor: text;">
+                            <div style="display: flex; align-items: center; background: rgba(255, 50, 50, 0.2); border: 1px solid rgba(255, 50, 50, 0.5); padding: 2px 10px; border-radius: 6px; gap: 5px; height: 26px; box-sizing: border-box;">
+                                <span style="color: #ff4d4d; font-weight: 900; font-size: 0.8rem; text-transform: uppercase;"><?= $isOrdemParanormal ? 'VD' : 'VT' ?>:</span>
+                                <input type="number" id="m-vd" placeholder="0" style="background: transparent; color: #ff4d4d; border: none; font-weight: 900; font-size: 0.8rem; width: 40px; outline: none; text-align: center; padding: 0; margin: 0;">
+                            </div>
+                        </div>
+                    </div>
+                    <i class="fas fa-times" onclick="fecharModal('modal-criar-monstro')" style="color: #fff; cursor: pointer; font-size: 1.5rem; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8)); transition: 0.3s;" onmouseover="this.style.color='var(--premium-accent)'" onmouseout="this.style.color='#fff'"></i>
+                </div>
+                
+                <!-- Corpo no estilo Ficha de Monstro -->
+                <div style="padding: 25px; background: #0c0816;">
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 25px;">
+                        <div id="box-m-vida" style="background: rgba(255, 77, 77, 0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(255, 77, 77, 0.2); display: <?= $isOrdemParanormal ? 'flex' : 'none' ?>; flex-direction: column; align-items: center;">
+                            <span style="display: block; color: #ff4d4d; font-weight: 900; font-size: 0.75rem; margin-bottom: 5px; letter-spacing: 1px;"><i class="fas fa-heart"></i> PONTOS DE VIDA</span>
+                            <input type="number" id="m-vida" style="background: transparent; border: none; border-bottom: 1px dashed rgba(255,255,255,0.2); color: #fff; font-size: 1.8rem; font-weight: bold; width: 80px; text-align: center; outline: none;" placeholder="0">
+                        </div>
+                        <div id="box-m-vd" style="background: rgba(255, 77, 77, 0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(255, 77, 77, 0.2); display: <?= $isOrdemParanormal ? 'none' : 'flex' ?>; flex-direction: column; align-items: center;">
+                            <span id="label-box-vd-vt" style="display: block; color: #ff4d4d; font-weight: 900; font-size: 0.75rem; margin-bottom: 5px; letter-spacing: 1px;"><i class="fas fa-heart"></i> VIDA TOTAL (VT)</span>
+                            <input type="number" id="m-vd-status" style="background: transparent; border: none; border-bottom: 1px dashed rgba(255,255,255,0.2); color: #fff; font-size: 1.8rem; font-weight: bold; width: 80px; text-align: center; outline: none;" placeholder="0">
+                        </div>
+                        <div style="background: rgba(41, 128, 185, 0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(41, 128, 185, 0.2); display: flex; flex-direction: column; align-items: center;">
+                            <span style="display: block; color: #3498db; font-weight: 900; font-size: 0.75rem; margin-bottom: 5px; letter-spacing: 1px;"><i class="fas fa-shield-alt"></i> DEFESA</span>
+                            <input type="number" id="m-defesa" style="background: transparent; border: none; border-bottom: 1px dashed rgba(255,255,255,0.2); color: #fff; font-size: 1.8rem; font-weight: bold; width: 80px; text-align: center; outline: none;" placeholder="0">
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" id="m-xp" value="0">
+
+                    <label style="color: var(--premium-accent); font-size: 0.8rem; font-weight: 900; text-transform: uppercase; margin-bottom: 15px; display: block; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">ATRIBUTOS PRINCIPAIS</label>
+                    <div class="premium-atributos-grid" id="grid-atributos-monstro-form" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 25px;">
+                        <?php foreach ($atributos as $at): ?>
+                            <div class="premium-attr-box" style="height: 50px; position: relative; display: flex; align-items: stretch; border: 1.5px solid #444; border-radius: 8px; overflow: hidden;">
+                                <span class="attr-abbr" style="font-size: 0.85rem; width: 45px; background: #fff; color: #1e0b3a; display: flex; align-items: center; justify-content: center; font-weight: 900;"><?= htmlspecialchars($at['ds_abreviacao'] ?: $at['nm_atributo']) ?></span>
+                                <input type="number" class="input-premium-field attr-input-premium" data-id="<?= $at['id_atributo'] ?>" value="0" min="0" oninput="if(parseInt(this.value)<0)this.value=0;" style="background: transparent; border: none; color: #fff; font-size: 1.2rem; font-weight: bold; flex: 1; text-align: center; outline: none; padding: 0; margin: 0; height: 100%;">
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <label style="color: var(--premium-accent); font-size: 0.8rem; font-weight: 900; text-transform: uppercase; margin-bottom: 15px; display: block; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">DESCRIÇÃO / COMPORTAMENTO</label>
+                    <div style="background: rgba(0,0,0,0.5); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 25px;">
+                        <textarea id="m-desc" style="width: 100%; height: 120px; background: transparent; border: none; color: #ccc; font-size: 0.95rem; line-height: 1.8; resize: none; outline: none; padding: 0; box-shadow: none;" placeholder="Descreva as peculiaridades e poderes desta ameaça..."></textarea>
+                    </div>
+
+                    <div class="acoes-form-painel" style="display: flex; justify-content: space-between; gap: 15px; margin-top: 25px;">
+                        <button type="button" class="btn-cancelar-escuro" id="btn-excluir-monstro" style="background-color: #ff4d4d; border-color: #ff4d4d; display: none;">Excluir</button>
+                        <div style="display: flex; gap: 10px; width: 100%; justify-content: flex-end;" id="botoes-acao-monstro-container">
+                            <button type="button" class="btn-cancelar-escuro" onclick="fecharModal('modal-criar-monstro')">Cancelar</button>
+                            <button type="button" class="btn-premium-dragon" id="btn-save-monstro" style="padding: 15px 30px; display: flex; align-items: center; gap: 8px;" onclick="salvarMonstro()">
+                                <i class="fas fa-skull"></i> CONVOCAR Ameaça
+                            </button>
                         </div>
                     </div>
                 </div>
-
-                <div class="form-section-title"><i class="fas fa-skull"></i> STATUS DE COMBATE</div>
-
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 15px;">
-                    <div class="input-premium-group">
-                        <label class="input-premium-label" style="color: #ff4d4d;"><?= $isOrdemParanormal ? 'NÍVEL DE PERIGO (VD)' : 'VIDA TOTAL (VT)' ?></label>
-                        <input type="number" id="m-vd" class="input-premium-field" style="border-color: rgba(255, 77, 77, 0.2); color: #ff4d4d; font-weight: 900;" placeholder="0">
-                    </div>
-                    <div class="input-premium-group">
-                        <label class="input-premium-label" style="color: #f1c40f;">RECOMPENSA (XP)</label>
-                        <input type="number" id="m-xp" class="input-premium-field" style="border-color: rgba(241, 196, 15, 0.2); color: #f1c40f; font-weight: 900;" placeholder="0">
-                    </div>
-                </div>
-
-                <div style="display: grid; grid-template-columns: <?= $isOrdemParanormal ? 'repeat(2, 1fr)' : '1fr' ?>; gap: 15px; margin-bottom: 25px;">
-                    <?php if ($isOrdemParanormal): ?>
-                        <div class="input-premium-group">
-                            <label class="input-premium-label">PONTOS DE VIDA</label>
-                            <input type="number" id="m-vida" class="input-premium-field" placeholder="0">
-                        </div>
-                    <?php else: ?>
-                        <input type="hidden" id="m-vida" value="0">
-                    <?php endif; ?>
-                    <div class="input-premium-group">
-                        <label class="input-premium-label">DEFESA</label>
-                        <input type="number" id="m-defesa" class="input-premium-field" placeholder="0">
-                    </div>
-                </div>
-
-                <div class="form-section-title"><i class="fas fa-dice-d20"></i> ATRIBUTOS</div>
-                <div id="grid-atributos-monstro-form" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.03); margin-bottom: 25px;">
-                    <?php foreach ($atributos as $at): ?>
-                        <div class="input-premium-group" style="margin-bottom: 0;">
-                            <label class="input-premium-label" style="text-align: center; margin: 0 0 5px 0; font-size: 0.6rem;"><?= htmlspecialchars($at['ds_abreviacao'] ?: $at['nm_atributo']) ?></label>
-                            <input type="number" class="input-premium-field attr-input-premium" data-id="<?= $at['id_atributo'] ?>" value="0">
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-
-                <div class="form-section-title"><i class="fas fa-align-left"></i> DETALHES</div>
-                <div class="input-premium-group">
-                    <label class="input-premium-label">DESCRIÇÃO E HABILIDADES</label>
-                    <textarea id="m-desc" class="input-premium-field" style="height: 120px; resize: none;" placeholder="Descreva as peculiaridades e poderes desta ameaça..."></textarea>
-                </div>
-
-                <button type="button" class="btn-premium-dragon" id="btn-save-monstro" style="width: 100%; padding: 20px; justify-content: center;" onclick="salvarMonstro()">
-                    <i class="fas fa-skull"></i> CONVOCAR Ameaça
-                </button>
             </div>
         </div>
     </div>
@@ -2203,7 +2192,9 @@ try {
 
         function resetarModalMonstro() {
             monstroFotoBlob = null;
-            const fields = ['m-id', 'm-imagem-atual', 'm-nome', 'm-vd', 'm-vida', 'm-defesa', 'm-xp', 'm-desc'];
+            const fotoInput = document.getElementById('m-foto');
+            if (fotoInput) fotoInput.value = '';
+            const fields = ['m-id', 'm-imagem-atual', 'm-nome', 'm-vd', 'm-vd-status', 'm-vida', 'm-defesa', 'm-xp', 'm-desc'];
             fields.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.value = (id === 'm-nome' || id === 'm-desc' || id === 'm-imagem-atual' || id === 'm-id') ? '' : 0;
@@ -2214,9 +2205,14 @@ try {
             const preview = document.getElementById('preview-monstro-container');
             if (preview) {
                 preview.innerHTML = `
-                    <i class="fas fa-cloud-upload-alt" style="font-size: 2rem; color: var(--premium-accent); opacity: 0.5;"></i>
-                    <span style="position: absolute; bottom: 10px; font-size: 0.6rem; color: #aaa; font-weight: 800; text-transform: uppercase;">Imagem</span>
+                    <img id="m-foto-preview" src="../img/uploads/perfil/avatar1.png" style="width: 100%; height: 100%; object-fit: cover;">
+                    <div style="position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.55rem; text-align: center; padding: 3px 0; font-weight: bold; text-transform: uppercase;">Mudar</div>
                 `;
+            }
+
+            const headerGrad = document.getElementById('m-header-gradient');
+            if (headerGrad) {
+                headerGrad.style.backgroundImage = "linear-gradient(135deg, rgba(30, 11, 58, 0.95), rgba(49, 28, 97, 0.9)), url('../img/uploads/perfil/avatar1.png')";
             }
             
             const btnSave = document.getElementById('btn-save-monstro');
@@ -2227,22 +2223,36 @@ try {
 
         function previewImagemMonstro(input) {
             const preview = document.getElementById('preview-monstro-container');
+            const headerGrad = document.getElementById('m-header-gradient');
             if (input.files && input.files[0] && preview) {
                 const file = input.files[0];
                 if (typeof abrirCropperModal === 'function') {
                     abrirCropperModal(file, 1, (croppedBlob, croppedBase64) => {
                         monstroFotoBlob = croppedBlob;
-                        preview.innerHTML = `<img src="${croppedBase64}" style="width:100%; height:100%; object-fit:cover;">`;
+                        preview.innerHTML = `
+                            <img id="m-foto-preview" src="${croppedBase64}" style="width: 100%; height: 100%; object-fit: cover;">
+                            <div style="position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.55rem; text-align: center; padding: 3px 0; font-weight: bold; text-transform: uppercase;">Mudar</div>
+                        `;
+                        if (headerGrad) {
+                            headerGrad.style.backgroundImage = `linear-gradient(135deg, rgba(30, 11, 58, 0.95), rgba(49, 28, 97, 0.9)), url('${croppedBase64}')`;
+                        }
                     });
                 } else {
                     const reader = new FileReader();
                     reader.onload = function(e) {
-                        preview.innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
+                        preview.innerHTML = `
+                            <img id="m-foto-preview" src="${e.target.result}" style="width: 100%; height: 100%; object-fit: cover;">
+                            <div style="position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.55rem; text-align: center; padding: 3px 0; font-weight: bold; text-transform: uppercase;">Mudar</div>
+                        `;
+                        if (headerGrad) {
+                            headerGrad.style.backgroundImage = `linear-gradient(135deg, rgba(30, 11, 58, 0.95), rgba(49, 28, 97, 0.9)), url('${e.target.result}')`;
+                        }
                     };
                     reader.readAsDataURL(file);
                 }
             }
         }
+        window.previewImagemMonstro = previewImagemMonstro;
 
         async function editarMonstro(idM) {
             try {
@@ -2254,16 +2264,27 @@ try {
                     document.getElementById('m-nome').value = m.nm_monstro;
                     document.getElementById('m-tipo').value = m.tp_monstro || 'Ameaça';
                     document.getElementById('m-vd').value = m.qt_vd || 0;
+                    document.getElementById('m-vd-status').value = m.qt_vd || 0;
                     document.getElementById('m-vida').value = m.qt_vida || 0;
                     document.getElementById('m-defesa').value = m.qt_defesa || 0;
                     document.getElementById('m-xp').value = m.qt_xp_recompensa || 0;
                     document.getElementById('m-desc').value = m.ds_monstro || '';
                     document.getElementById('m-imagem-atual').value = m.ds_imagem || '';
                     
+                    const imgUrl = (m.ds_imagem && m.ds_imagem !== '../img/logo_icone.png' && m.ds_imagem !== '../img/uploads/perfil/avatar1.png') ? m.ds_imagem : '../img/uploads/perfil/avatar1.png';
+                    
                     const preview = document.getElementById('preview-monstro-container');
-                    if (m.ds_imagem && preview) {
-                        preview.innerHTML = `<img src="${m.ds_imagem}" style="width:100%; height:100%; object-fit:cover;">`;
+                    if (preview) {
+                        preview.innerHTML = `
+                            <img id="m-foto-preview" src="${imgUrl}" style="width: 100%; height: 100%; object-fit: cover;">
+                            <div style="position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.55rem; text-align: center; padding: 3px 0; font-weight: bold; text-transform: uppercase;">Mudar</div>
+                        `;
                     }
+                    const headerGrad = document.getElementById('m-header-gradient');
+                    if (headerGrad) {
+                        headerGrad.style.backgroundImage = `linear-gradient(135deg, rgba(30, 11, 58, 0.95), rgba(49, 28, 97, 0.9)), url('${imgUrl}')`;
+                    }
+                    
                     data.atributos.forEach(at => {
                         const input = document.querySelector(`.attr-input-premium[data-id="${at.id_atributo}"]`);
                         if (input) input.value = at.qt_valor;
@@ -2302,7 +2323,7 @@ try {
 
             const atributos = [];
             document.querySelectorAll('.attr-input-premium').forEach(input => {
-                atributos.push({ id: input.dataset.id, valor: input.value });
+                atributos.push({ id: input.dataset.id, valor: Math.max(0, parseInt(input.value) || 0) });
             });
 
             const btn = document.getElementById('btn-save-monstro');
@@ -2393,26 +2414,22 @@ try {
                             <img src="${imgCriatura}" style="width: 100px; height: 100px; border-radius: 15px; border: 3px solid var(--premium-accent); object-fit: cover; box-shadow: 0 10px 30px rgba(0,0,0,0.8);" />
                             <div style="flex: 1;">
                                 <h1 style="color: #fff; font-weight: 900; font-size: 2rem; margin-bottom: 5px; text-shadow: 0 5px 15px rgba(0,0,0,0.8);">${m.nm_monstro}</h1>
-                                <span style="display: inline-block; background: var(--premium-accent); color: #fff; padding: 4px 12px; border-radius: 6px; font-weight: 800; font-size: 0.8rem; text-transform: uppercase;">${m.tp_monstro || 'Desconhecido'}</span>
+                                <span style="display: inline-block; background: var(--premium-accent); color: #fff; padding: 4px 12px; border-radius: 6px; font-weight: 800; font-size: 0.8rem;">${m.tp_monstro || 'Desconhecido'}</span>
                                 <span style="display: inline-block; background: rgba(255, 50, 50, 0.2); border: 1px solid rgba(255, 50, 50, 0.5); color: #ff4d4d; padding: 4px 12px; border-radius: 6px; font-weight: 900; font-size: 0.8rem; margin-left: 10px;">${window.isOrdemParanormal ? 'VD' : 'VT'} ${m.qt_vd || '???'}</span>
                             </div>
                             <i class="fas fa-times" onclick="fecharModal('modal-ficha-monstro')" style="color: #fff; cursor: pointer; font-size: 1.5rem; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8)); transition: 0.3s;" onmouseover="this.style.color='var(--premium-accent)'" onmouseout="this.style.color='#fff'"></i>
                         </div>
                         <div style="padding: 25px; background: #0c0816;">
-                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 25px;">
-                                <div style="background: rgba(255, 77, 77, 0.05); padding: 15px; border-radius: 12px; text-align: center; border: 1px solid rgba(255, 77, 77, 0.2);">
-                                    <span style="display: block; color: #ff4d4d; font-weight: 900; font-size: 0.75rem; margin-bottom: 5px; letter-spacing: 1px;"><i class="fas fa-heart"></i> ${window.isOrdemParanormal ? 'VIDA' : 'VIDA TOTAL (VT)'}</span>
-                                    <strong style="color: #fff; font-size: 1.8rem;">${window.isOrdemParanormal ? m.qt_vida : m.qt_vd}</strong>
-                                </div>
-                                <div style="background: rgba(41, 128, 185, 0.05); padding: 15px; border-radius: 12px; text-align: center; border: 1px solid rgba(41, 128, 185, 0.2);">
-                                    <span style="display: block; color: #3498db; font-weight: 900; font-size: 0.75rem; margin-bottom: 5px; letter-spacing: 1px;"><i class="fas fa-shield-alt"></i> DEFESA</span>
-                                    <strong style="color: #fff; font-size: 1.8rem;">${m.qt_defesa}</strong>
-                                </div>
-                                <div style="background: rgba(241, 196, 15, 0.05); padding: 15px; border-radius: 12px; text-align: center; border: 1px solid rgba(241, 196, 15, 0.2);">
-                                    <span style="display: block; color: #f1c40f; font-weight: 900; font-size: 0.75rem; margin-bottom: 5px; letter-spacing: 1px;"><i class="fas fa-star"></i> RECOMPENSA</span>
-                                    <strong style="color: #fff; font-size: 1.8rem;">${m.qt_xp_recompensa} <span style="font-size: 0.9rem; font-weight: normal; color: #aaa;">XP</span></strong>
-                                </div>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 25px;">
+                            <div style="background: rgba(255, 77, 77, 0.05); padding: 15px; border-radius: 12px; text-align: center; border: 1px solid rgba(255, 77, 77, 0.2);">
+                                <span style="display: block; color: #ff4d4d; font-weight: 900; font-size: 0.75rem; margin-bottom: 5px; letter-spacing: 1px;"><i class="fas fa-heart"></i> ${window.isOrdemParanormal ? 'VIDA' : 'VIDA TOTAL (VT)'}</span>
+                                <strong style="color: #fff; font-size: 1.8rem;">${window.isOrdemParanormal ? m.qt_vida : m.qt_vd}</strong>
                             </div>
+                            <div style="background: rgba(41, 128, 185, 0.05); padding: 15px; border-radius: 12px; text-align: center; border: 1px solid rgba(41, 128, 185, 0.2);">
+                                <span style="display: block; color: #3498db; font-weight: 900; font-size: 0.75rem; margin-bottom: 5px; letter-spacing: 1px;"><i class="fas fa-shield-alt"></i> DEFESA</span>
+                                <strong style="color: #fff; font-size: 1.8rem;">${m.qt_defesa}</strong>
+                            </div>
+                        </div>
 
                             <label style="color: var(--premium-accent); font-size: 0.8rem; font-weight: 900; text-transform: uppercase; margin-bottom: 10px; display: block; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">ATRIBUTOS PRINCIPAIS</label>
                             <div class="premium-atributos-grid" style="grid-template-columns: repeat(5, 1fr); margin-bottom: 25px; gap: 8px;">
@@ -2434,6 +2451,15 @@ try {
                 }
             } catch (e) { console.error(e); }
         }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const mVD = document.getElementById('m-vd');
+            const mVDStatus = document.getElementById('m-vd-status');
+            if (mVD && mVDStatus) {
+                mVD.addEventListener('input', () => { mVDStatus.value = mVD.value; });
+                mVDStatus.addEventListener('input', () => { mVD.value = mVDStatus.value; });
+            }
+        });
     </script>
 
     <!-- ESTILO DO MODAL DE EXCLUSÃO (IGUAL PERFIL) -->

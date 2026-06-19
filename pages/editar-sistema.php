@@ -349,12 +349,12 @@ if (isset($sistema['nm_sistema'])) {
             <div id="aba-componentes" class="conteudo-aba">
                 <div class="container-componentes">
                     <div class="menu-componentes" id="menu-comp">
-                        <button type="button" class="btn-comp-aba ativa" data-index="0">CLASSES</button>
-                        <button type="button" class="btn-comp-aba" data-index="1">PERÍCIAS</button>
-                        <button type="button" class="btn-comp-aba" data-index="2">ORIGENS</button>
-                        <button type="button" class="btn-comp-aba" data-index="3">EQUIPAMENTOS</button>
-                        <button type="button" class="btn-comp-aba" data-index="4">PODERES</button>
-                        <button type="button" class="btn-comp-aba" data-index="5">AMEAÇAS</button>
+                        <button type="button" class="btn-comp-aba ativa" data-index="0" data-cat="CLASSES">CLASSES</button>
+                        <button type="button" class="btn-comp-aba" data-index="1" data-cat="PERÍCIAS">PERÍCIAS</button>
+                        <button type="button" class="btn-comp-aba" data-index="2" data-cat="ORIGENS">ORIGENS</button>
+                        <button type="button" class="btn-comp-aba" data-index="3" data-cat="EQUIPAMENTOS">EQUIPAMENTOS</button>
+                        <button type="button" class="btn-comp-aba" data-index="4" data-cat="PODERES">PODERES</button>
+                        <button type="button" class="btn-comp-aba" data-index="5" data-cat="AMEAÇAS">AMEAÇAS</button>
                     </div>
 
                     <div class="cabecalho-comp">
@@ -426,72 +426,68 @@ if (isset($sistema['nm_sistema'])) {
 
     <!-- MODAL CRIAR MONSTRO (PREMIUM) -->
     <div class="modal-overlay" id="modal-criar-monstro">
-        <div class="modal-box" style="max-width: 650px; max-height: 90vh; overflow-y: auto;">
-            <i class="fas fa-times modal-close" onclick="fecharModal('modal-criar-monstro')"></i>
-
-            <div style="text-align: center; margin-bottom: 30px;">
-                <h2 style="color: #fff; font-size: 1.8rem; font-weight: 900; letter-spacing: -1px; margin-bottom: 5px;">
-                    NOVA AMEAÇA</h2>
-                <p style="color: #666; font-size: 0.9rem;">Catalogando perigos do Outro Lado</p>
-            </div>
+        <div class="modal-box" style="width: 550px; max-height: 80vh; padding: 0; background: #0c0816; overflow-y: auto; overflow-x: hidden; border: 1.5px solid var(--premium-accent); border-radius: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.85);">
             <div id="form-criar-ameaca">
                 <input type="hidden" id="m-id-local" value="">
-                <div class="form-section-title"><i class="fas fa-fingerprint"></i> IDENTIDADE</div>
-
-                <div class="monstro-identidade-container">
-                    <div id="preview-monstro-container" onclick="document.getElementById('m-foto').click()" style="width: 120px; height: 120px; border: 2px dashed rgba(157, 122, 255, 0.3); border-radius: 20px; 
-                                 display: flex; align-items: center; justify-content: center; cursor: pointer; 
-                                 background: rgba(0,0,0,0.4); overflow: hidden; transition: 0.3s; position: relative; flex-shrink: 0;">
-                        <i class="fas fa-cloud-upload-alt" style="font-size: 2rem; color: var(--premium-accent); opacity: 0.5;"></i>
-                        <span style="position: absolute; bottom: 10px; font-size: 0.6rem; color: #aaa; font-weight: 800; text-transform: uppercase;">Imagem</span>
+                <input type="hidden" id="m-imagem-atual" value="">
+                
+                <!-- Header no estilo Ficha de Monstro -->
+                <div class="ficha-header-comp" id="m-header-gradient" style="position: sticky; top: 0; z-index: 100; background: linear-gradient(135deg, rgba(30, 11, 58, 0.95), rgba(49, 28, 97, 0.9)), url('../img/uploads/perfil/avatar1.png') center/cover; padding: 25px 30px; border-bottom: 2px solid var(--premium-accent); display: flex; align-items: center; gap: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">
+                    <div id="preview-monstro-container" onclick="document.getElementById('m-foto').click()" style="width: 100px; height: 100px; border-radius: 15px; border: 3px solid var(--premium-accent); object-fit: cover; box-shadow: 0 10px 30px rgba(0,0,0,0.8); cursor: pointer; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); flex-shrink: 0;">
+                        <img id="m-foto-preview" src="../img/uploads/perfil/avatar1.png" style="width: 100%; height: 100%; object-fit: cover;">
+                        <div style="position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.55rem; text-align: center; padding: 3px 0; font-weight: bold; text-transform: uppercase;">Mudar</div>
                     </div>
-                    <div class="monstro-identidade-inputs">
-                        <div class="input-premium-group" style="margin-bottom: 10px;">
-                            <label class="input-premium-label">NOME DA AMEAÇA</label>
-                            <input type="text" id="m-nome" class="input-premium-field" placeholder="Ex: Degolador, Aniquilação...">
-                        </div>
+                    <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+                        <input type="text" id="m-nome" class="input-premium-field" placeholder="Nome da Ameaça..." style="font-weight: 900; font-size: 1.6rem; color: #fff; background: rgba(0,0,0,0.4); border: 1px dashed rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 8px; width: 90%; outline: none;" required>
                         <input type="file" id="m-foto" accept="image/*" style="display: none;" onchange="previewImagemMonstro(this)">
-                        <div class="input-premium-group" style="margin: 0;">
-                            <label class="input-premium-label">TIPO / ELEMENTO</label>
-                            <input type="text" id="m-tipo" class="input-premium-field" placeholder="Ex: Medo, Conhecimento...">
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="text" id="m-tipo" class="input-premium-field" placeholder="TIPO / ELEMENTO" style="background: var(--premium-accent); color: #fff; padding: 4px 12px; border-radius: 6px; font-weight: 800; font-size: 0.8rem; border: 1.5px dashed rgba(255,255,255,0.5); outline: none; width: 130px; cursor: text;">
+                            <div style="display: flex; align-items: center; background: rgba(255, 50, 50, 0.2); border: 1px solid rgba(255, 50, 50, 0.5); padding: 2px 10px; border-radius: 6px; gap: 5px; height: 26px; box-sizing: border-box;">
+                                <span id="label-vd-vt" style="color: #ff4d4d; font-weight: 900; font-size: 0.8rem; text-transform: uppercase;">VD:</span>
+                                <input type="number" id="m-vd" placeholder="0" style="background: transparent; color: #ff4d4d; border: none; font-weight: 900; font-size: 0.8rem; width: 40px; outline: none; text-align: center; padding: 0; margin: 0;">
+                            </div>
                         </div>
                     </div>
+                    <i class="fas fa-times" onclick="fecharModal('modal-criar-monstro')" style="color: #fff; cursor: pointer; font-size: 1.5rem; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8)); transition: 0.3s;" onmouseover="this.style.color='var(--premium-accent)'" onmouseout="this.style.color='#fff'"></i>
                 </div>
-
-                <div class="form-section-title"><i class="fas fa-skull"></i> STATUS DE COMBATE</div>
-
-                <input type="hidden" id="m-vd" value="0">
-                <input type="hidden" id="m-xp" value="0">
-
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 25px;">
-                    <div class="input-premium-group">
-                        <label class="input-premium-label" style="color: #ff4d4d;">VIDA TOTAL</label>
-                        <input type="number" id="m-vida" class="input-premium-field" style="border-color: rgba(255, 77, 77, 0.2); color: #ff4d4d; font-weight: 900;" placeholder="0">
+                
+                <!-- Corpo no estilo Ficha de Monstro -->
+                <div style="padding: 25px; background: #0c0816;">
+                    <div id="m-status-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 25px;">
+                        <div id="box-m-vida" style="background: rgba(255, 77, 77, 0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(255, 77, 77, 0.2); display: flex; flex-direction: column; align-items: center;">
+                            <span style="display: block; color: #ff4d4d; font-weight: 900; font-size: 0.75rem; margin-bottom: 5px; letter-spacing: 1px;"><i class="fas fa-heart"></i> PONTOS DE VIDA</span>
+                            <input type="number" id="m-vida" style="background: transparent; border: none; border-bottom: 1px dashed rgba(255,255,255,0.2); color: #fff; font-size: 1.8rem; font-weight: bold; width: 80px; text-align: center; outline: none;" placeholder="0">
+                        </div>
+                        <div id="box-m-vd" style="background: rgba(255, 77, 77, 0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(255, 77, 77, 0.2); display: none; flex-direction: column; align-items: center;">
+                            <span id="label-box-vd-vt" style="display: block; color: #ff4d4d; font-weight: 900; font-size: 0.75rem; margin-bottom: 5px; letter-spacing: 1px;"><i class="fas fa-heart"></i> VIDA TOTAL (VT)</span>
+                            <input type="number" id="m-vd-status" style="background: transparent; border: none; border-bottom: 1px dashed rgba(255,255,255,0.2); color: #fff; font-size: 1.8rem; font-weight: bold; width: 80px; text-align: center; outline: none;" placeholder="0">
+                        </div>
+                        <div style="background: rgba(41, 128, 185, 0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(41, 128, 185, 0.2); display: flex; flex-direction: column; align-items: center;">
+                            <span style="display: block; color: #3498db; font-weight: 900; font-size: 0.75rem; margin-bottom: 5px; letter-spacing: 1px;"><i class="fas fa-shield-alt"></i> DEFESA</span>
+                            <input type="number" id="m-defesa" style="background: transparent; border: none; border-bottom: 1px dashed rgba(255,255,255,0.2); color: #fff; font-size: 1.8rem; font-weight: bold; width: 80px; text-align: center; outline: none;" placeholder="0">
+                        </div>
                     </div>
-                    <div class="input-premium-group">
-                        <label class="input-premium-label">DEFESA</label>
-                        <input type="number" id="m-defesa" class="input-premium-field" placeholder="0">
+                    
+                    <input type="hidden" id="m-xp" value="0">
+
+                    <label style="color: var(--premium-accent); font-size: 0.8rem; font-weight: 900; text-transform: uppercase; margin-bottom: 15px; display: block; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">ATRIBUTOS PRINCIPAIS</label>
+                    <div class="premium-atributos-grid" id="grid-atributos-monstro" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 25px;">
+                        <!-- Preenchido via JS dinamicamente -->
                     </div>
-                </div>
 
-                <div class="form-section-title"><i class="fas fa-dice-d20"></i> ATRIBUTOS</div>
-                <div id="grid-atributos-monstro" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px 10px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.03); margin-bottom: 25px;">
-                    <!-- Preenchido via JS dinamicamente com base em atributosObj -->
-                </div>
+                    <label style="color: var(--premium-accent); font-size: 0.8rem; font-weight: 900; text-transform: uppercase; margin-bottom: 15px; display: block; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">DESCRIÇÃO / COMPORTAMENTO</label>
+                    <div style="background: rgba(0,0,0,0.5); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 25px;">
+                        <textarea id="m-desc" style="width: 100%; height: 120px; background: transparent; border: none; color: #ccc; font-size: 0.95rem; line-height: 1.8; resize: none; outline: none; padding: 0; box-shadow: none;" placeholder="Descreva as peculiaridades e poderes desta ameaça..."></textarea>
+                    </div>
 
-                <div class="form-section-title"><i class="fas fa-align-left"></i> DETALHES</div>
-                <div class="input-premium-group">
-                    <label class="input-premium-label">DESCRIÇÃO E HABILIDADES</label>
-                    <textarea id="m-desc" class="input-premium-field" style="height: 120px; resize: none;" placeholder="Descreva as peculiaridades e poderes desta ameaça..."></textarea>
-                </div>
-
-                <div class="acoes-form-painel" style="justify-content: space-between; margin-top: 20px;">
-                    <button type="button" class="btn-cancelar-escuro" id="btn-excluir-monstro" style="background-color: #ff4d4d; border-color: #ff4d4d; display: none;">Excluir</button>
-                    <div style="display: flex; gap: 10px; width: 100%; justify-content: flex-end;" id="botoes-acao-monstro-container">
-                        <button type="button" class="btn-cancelar-escuro" onclick="fecharModal('modal-criar-monstro')">Cancelar</button>
-                        <button type="button" class="btn-premium-dragon" id="btn-save-monstro-local" style="padding: 15px 30px;" onclick="salvarMonstro()">
-                            <i class="fas fa-skull"></i> ATUALIZAR AMEAÇA
-                        </button>
+                    <div class="acoes-form-painel" style="display: flex; justify-content: space-between; gap: 15px; margin-top: 25px;">
+                        <button type="button" class="btn-cancelar-escuro" id="btn-excluir-monstro" style="background-color: #ff4d4d; border-color: #ff4d4d; display: none;">Excluir</button>
+                        <div style="display: flex; gap: 10px; width: 100%; justify-content: flex-end;" id="botoes-acao-monstro-container">
+                            <button type="button" class="btn-cancelar-escuro" onclick="fecharModal('modal-criar-monstro')">Cancelar</button>
+                            <button type="button" class="btn-premium-dragon" id="btn-save-monstro-local" style="padding: 15px 30px;" onclick="salvarMonstro()">
+                                <i class="fas fa-skull"></i> ATUALIZAR AMEAÇA
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -555,7 +551,7 @@ if (isset($sistema['nm_sistema'])) {
     </script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
-    <script src="../js/cropper-helper.js"></script>
+    <script src="../js/cropper-helper.js?v=<?= time() ?>"></script>
     <script src="../js/nav-global.js?v=1.2" defer></script>
     <script src="../js/editar-sistema.js?v=1.8" defer></script>
     <script>

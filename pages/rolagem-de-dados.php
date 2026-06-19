@@ -412,10 +412,8 @@ if (($_GET['action'] ?? '') === 'themes') {
             border-radius: 15px;
             margin-bottom: 12px;
             animation: slideIn 0.3s ease-out;
-            border-left: 3px solid transparent;
+            border-left: 3px solid var(--premium-accent);
         }
-
-        .log-item.dados-3d-roll { border-left-color: var(--premium-accent); }
 
         @keyframes slideIn {
             from { opacity: 0; transform: translateX(20px); }
@@ -531,21 +529,42 @@ if (($_GET['action'] ?? '') === 'themes') {
         #result-total.pop { animation: pop-in 0.45s cubic-bezier(0.34,1.56,0.64,1) forwards; }
 
         #result-breakdown {
-            font-size: 0.85rem;
-            color: #666;
-            letter-spacing: 1px;
-            margin-bottom: 6px;
-            min-height: 20px;
+            font-size: 1.7rem;
+            color: #a78bfa;
+            letter-spacing: 1.5px;
+            margin-top: 25px;
+            margin-bottom: 25px;
+            min-height: 35px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 8px;
         }
-        #result-breakdown .val { color: #c4b5fd; font-weight: 700; }
-        #result-breakdown .op  { color: #3a3528; margin: 0 3px; }
+        #result-breakdown .val { 
+            color: #ffffff; 
+            font-weight: 800; 
+            background: rgba(255, 255, 255, 0.05); 
+            border: 1px solid rgba(255, 255, 255, 0.15); 
+            padding: 6px 14px; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            text-shadow: 0 0 10px rgba(255,255,255,0.4); 
+        }
+        #result-breakdown .op  { 
+            color: var(--premium-accent); 
+            font-weight: 900; 
+            font-size: 1.8rem;
+            margin: 0 4px;
+        }
 
-        #result-dice-info { font-size: 0.75rem; color: #444; margin-top: 4px; font-style: italic; }
+        #result-dice-info { display: none; }
 
         #result-dismiss {
-            margin-top: 22px;
+            margin-top: 30px;
             font-size: 0.62rem;
-            color: #333;
+            color: #444;
             letter-spacing: 2px;
             text-transform: uppercase;
             font-family: 'Cinzel', serif;
@@ -759,6 +778,7 @@ if (($_GET['action'] ?? '') === 'themes') {
     // ============================================================
     const API_KEY   = <?php echo json_encode(DDDICE_API_KEY); ?>;
     const ROOM_SLUG = <?php echo json_encode(DDDICE_ROOM_SLUG); ?>;
+    const USUARIO_NOME = <?php echo json_encode($_SESSION['usuario']['nome'] ?? 'Jogador'); ?>;
 
     // Mapa de lados ? tipo dddice (só dados suportados)
     const DDDICE_TYPE_MAP = {
@@ -961,20 +981,35 @@ if (($_GET['action'] ?? '') === 'themes') {
             }
         });
 
+        const finalLabel = entries.map(([l,q]) => `${q}D${l}`).join(' + ');
+
+        const finalizarComDelay = (total, values, lbl, isLocalRoll = false) => {
+            const delay = isLocalRoll ? 800 : 5000;
+            setTimeout(() => {
+                mostrarResultado(total, values, lbl, !isLocalRoll);
+                adicionarAoHistorico(total, lbl, !isLocalRoll);
+                limparSelecao();
+                rolling = false;
+                btn.innerHTML = '<i class="fas fa-dice"></i> Rolar Dados';
+                atualizarBtnRolar();
+            }, delay);
+        };
+
         try {
             let finalTotal  = jsTotal;
             let finalValues = [...jsValues];
-            let finalLabel  = entries.map(([l,q]) => `${q}D${l}`).join(' + ');
 
             if (dddDice.length > 0) {
                 let phpResult;
                 try {
                     if (dddiceSDK && themeId !== 'local') {
                         const sdkRes = await dddiceSDK.roll(dddDice);
+                        const resValues = sdkRes.data?.values || sdkRes.values || [];
+                        const resTotal = sdkRes.data?.total_value !== undefined ? sdkRes.data.total_value : (sdkRes.total_value || 0);
                         phpResult = {
                             ok: true,
-                            total: parseInt(sdkRes.total_value),
-                            values: sdkRes.values.map(v => ({ value: parseInt(v.value), type: v.type }))
+                            total: parseInt(resTotal),
+                            values: resValues.map(v => ({ value: parseInt(v.value), type: v.type }))
                         };
                     } else if (themeId !== 'local') {
                         phpResult = await fetch('?action=roll', {
@@ -1007,24 +1042,17 @@ if (($_GET['action'] ?? '') === 'themes') {
                 finalTotal  += phpResult.total;
                 finalValues  = [...phpResult.values, ...jsValues];
 
-                // Aguarda animação terminar (~1.2s) para exibir popup
-                setTimeout(() => {
-                    mostrarResultado(finalTotal, finalValues, finalLabel, true);
-                    adicionarAoHistorico(finalTotal, finalLabel, true);
-                    limparSelecao();
-                }, 1200);
+                const isLocalFallback = themeId === 'local' || !dddiceSDK;
+                finalizarComDelay(finalTotal, finalValues, finalLabel, isLocalFallback);
 
             } else {
                 // Só dados JS (d2 / d100)
-                mostrarResultado(finalTotal, finalValues, finalLabel, false);
-                adicionarAoHistorico(finalTotal, finalLabel, false);
-                limparSelecao();
+                finalizarComDelay(finalTotal, finalValues, finalLabel, true);
             }
 
         } catch (err) {
             console.error(err);
             showToast('Erro na rolagem: ' + err.message);
-        } finally {
             rolling = false;
             btn.innerHTML = '<i class="fas fa-dice"></i> Rolar Dados';
             atualizarBtnRolar();
@@ -1068,27 +1096,31 @@ if (($_GET['action'] ?? '') === 'themes') {
     // -- HISTÓRICO ---------------------------------------------
     function adicionarAoHistorico(resultado, descricao, viaDddice) {
         const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        renderizarItemHistorico(resultado, descricao, time, viaDddice);
+        const nome = USUARIO_NOME;
+        renderizarItemHistorico(resultado, descricao, time, viaDddice, nome);
 
         // Persiste no localStorage
         const logs = JSON.parse(localStorage.getItem('table_historico_dados') || '[]');
-        logs.push({ resultado, descricao, time, viaDddice });
+        logs.push({ resultado, descricao, time, viaDddice, nome });
         if (logs.length > 50) logs.shift();
         localStorage.setItem('table_historico_dados', JSON.stringify(logs));
     }
 
-    function renderizarItemHistorico(resultado, descricao, time, viaDddice) {
+    function renderizarItemHistorico(resultado, descricao, time, viaDddice, nomeExibicao = null) {
         const logContainer = document.getElementById('historico-lista');
         const msgVazio     = document.getElementById('msg-vazio');
         if (msgVazio) msgVazio.remove();
+
+        const nome = nomeExibicao || USUARIO_NOME;
+        const tag3D = viaDddice ? `<span style="font-size:0.6rem; color:var(--premium-accent); font-weight:700; background:rgba(139,92,246,0.15); padding:1px 5px; border-radius:4px; margin-left:5px;">3D</span>` : '';
 
         const novoItem = document.createElement('div');
         novoItem.className = 'log-item' + (viaDddice ? ' dddice-roll' : '');
         novoItem.innerHTML = `
             <div class="log-resultado">${resultado}</div>
             <div class="log-info">
-                <p>${time} • ${descricao}${viaDddice ? '<span class="badge-dddice">dddice</span>' : ''}</p>
-                <h4>Resultado</h4>
+                <p>${time} • ${descricao}</p>
+                <h4>${nome} ${tag3D}</h4>
             </div>
         `;
         logContainer.prepend(novoItem);
@@ -1096,7 +1128,7 @@ if (($_GET['action'] ?? '') === 'themes') {
 
     function carregarHistoricoLocal() {
         const logs = JSON.parse(localStorage.getItem('table_historico_dados') || '[]');
-        logs.forEach(log => renderizarItemHistorico(log.resultado, log.descricao, log.time, log.viaDddice));
+        logs.forEach(log => renderizarItemHistorico(log.resultado, log.descricao, log.time, log.viaDddice, log.nome));
     }
 
     function limparHistorico() {

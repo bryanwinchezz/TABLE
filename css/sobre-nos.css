@@ -36,7 +36,7 @@
    1. HERO BANNER (SYNERA)
 ========================================== */
 .secao-hero-synera {
-    background-image: url('../img/tela_synera.png');
+    background-image: url('../img/tela_synera.png'), url('../img/fundo_inicial.jpg');
     background-size: cover;
     background-position: center center;
     background-repeat: no-repeat;
@@ -59,7 +59,7 @@
    2. SEÇÃO SOBRE NÓS
 ========================================== */
 .secao-sobre-nos {
-    background-image: url('../img/tela_sobrenos.png');
+    background-image: url('../img/tela_sobrenos.png'), url('../img/fundo_inicial.jpg');
     background-size: cover;
     background-position: top center;
     background-repeat: no-repeat;
@@ -155,7 +155,7 @@
    4. SEÇÃO NOSSOS VALORES
 ========================================== */
 .secao-nossos-valores {
-    background-image: url('../img/tela_nossosvalores.png');
+    background-image: url('../img/tela_nossosvalores.png'), url('../img/fundo_regras.jpg');
     background-size: cover;
     background-position: top center;
     background-repeat: no-repeat;

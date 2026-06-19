@@ -9,10 +9,15 @@
  */
 
 if (session_status() === PHP_SESSION_NONE) {
-if (session_status() === PHP_SESSION_NONE) { session_start(); }
+    session_start();
 }
 if (isset($_SESSION['usuario']['foto'])) {
     $_SESSION['usuario']['foto'] = str_replace('avatar.png', 'avatar1.png', $_SESSION['usuario']['foto']);
+    $caminhoFoto = $_SESSION['usuario']['foto'];
+    $caminhoFisico = dirname(dirname(__DIR__)) . '/' . ltrim(str_replace('../', '', $caminhoFoto), '/');
+    if (strpos($caminhoFoto, 'avatar1.png') !== false || !file_exists($caminhoFisico)) {
+        $_SESSION['usuario']['foto'] = '../img/avatar1.png';
+    }
 }
 
 class Database {

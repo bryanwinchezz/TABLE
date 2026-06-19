@@ -265,30 +265,94 @@ try {
         }
     }
 
-    // Inserir NOVOS Monstros e Atributos de Monstros
-    // Monstros existentes são editados via Dashboard, aqui permitimos adicionar novos em lote sem perder o progresso da página
-    if (!empty($data['monstros'])) {
-        $stmtMonstro = $pdo->prepare("INSERT INTO tb_monstro (nm_monstro, ds_monstro, tp_monstro, ds_imagem, qt_vida, qt_defesa, qt_xp_recompensa, qt_vd, id_sistema) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmtMonAttr = $pdo->prepare("INSERT INTO tb_monstro_atributo (id_monstro, id_atributo, qt_valor) VALUES (?, ?, ?)");
-        
-        foreach ($data['monstros'] as $monstro) {
-            // Só processamos os novos (ID não numérico)
-            if (is_numeric($monstro['id'])) continue;
+    // Sincronizar Monstros (Novos, Existentes e Deletados)
+    $stmtMonstrosBd = $pdo->prepare("SELECT id_monstro FROM tb_monstro WHERE id_sistema = ?");
+    $stmtMonstrosBd->execute([$id_sistema]);
+    $dbMonstroIds = $stmtMonstrosBd->fetchAll(PDO::FETCH_COLUMN);
+    $payloadMonstroIds = [];
 
-            $stmtMonstro->execute([
-                $monstro['nome'], 
-                $monstro['desc'] ?? '', 
-                $monstro['val1'] ?? 'Criatura', 
-                '../img/uploads/perfil/avatar1.png', 
-                $monstro['vida'] ?? 0, 
-                $monstro['defesa'] ?? 0, 
-                $monstro['xp'] ?? 0, 
-                $monstro['val2'] ?? 0, 
-                $id_sistema
-            ]);
-            $id_monstro = $pdo->lastInsertId();
+    if (isset($data['monstros'])) {
+        foreach ($data['monstros'] as $monstro) {
+            $itemId = $monstro['id'];
             
+            // Tratamento da imagem do monstro
+            $ds_imagem = '../img/uploads/perfil/avatar1.png'; // Padrão
+            
+            if (is_numeric($itemId)) {
+                $stmtGetImg = $pdo->prepare("SELECT ds_imagem FROM tb_monstro WHERE id_monstro = ?");
+                $stmtGetImg->execute([$itemId]);
+                $ds_imagem = $stmtGetImg->fetchColumn();
+            }
+            if (empty($ds_imagem) || $ds_imagem === '../img/logo_icone.png' || $ds_imagem === 'undefined') {
+                $ds_imagem = '../img/uploads/perfil/avatar1.png';
+            }
+            
+            if (!empty($monstro['foto_base64'])) {
+                $base64 = $monstro['foto_base64'];
+                if (preg_match('/^data:image\/(\w+);base64,/', $base64, $type)) {
+                    $data_img = substr($base64, strpos($base64, ',') + 1);
+                    $type = strtolower($type[1]);
+
+                    if (in_array($type, ['jpg', 'jpeg', 'gif', 'png', 'webp'])) {
+                        $data_img = base64_decode($data_img);
+                        if ($data_img !== false) {
+                            $nome_arquivo = 'monstro_' . time() . '_' . uniqid() . '.' . $type;
+                            $caminho_salvamento = __DIR__ . '/../../img/uploads/perfil/' . $nome_arquivo;
+                            
+                            if (!is_dir(__DIR__ . '/../../img/uploads/perfil/')) {
+                                mkdir(__DIR__ . '/../../img/uploads/perfil/', 0777, true);
+                            }
+
+                            if (file_put_contents($caminho_salvamento, $data_img)) {
+                                $ds_imagem = '../img/uploads/perfil/' . $nome_arquivo;
+                            }
+                        }
+                    }
+                } else if (strpos($base64, '../img/uploads/perfil/') === 0) {
+                    $ds_imagem = $base64;
+                }
+            }
+
+            if (is_numeric($itemId)) {
+                // UPDATE existente
+                $payloadMonstroIds[] = $itemId;
+                $stmtUpMonstro = $pdo->prepare("UPDATE tb_monstro SET nm_monstro = ?, ds_monstro = ?, tp_monstro = ?, ds_imagem = ?, qt_vida = ?, qt_defesa = ?, qt_xp_recompensa = ?, qt_vd = ? WHERE id_monstro = ? AND id_sistema = ?");
+                $stmtUpMonstro->execute([
+                    $monstro['nome'],
+                    $monstro['desc'] ?? '',
+                    $monstro['val1'] ?? 'Criatura',
+                    $ds_imagem,
+                    $monstro['vida'] ?? 0,
+                    $monstro['defesa'] ?? 0,
+                    $monstro['xp'] ?? 0,
+                    $monstro['val2'] ?? 0,
+                    $itemId,
+                    $id_sistema
+                ]);
+                $id_monstro = $itemId;
+
+                // Limpar atributos do monstro para reinserir
+                $pdo->prepare("DELETE FROM tb_monstro_atributo WHERE id_monstro = ?")->execute([$id_monstro]);
+            } else {
+                // INSERT novo
+                $stmtInsMonstro = $pdo->prepare("INSERT INTO tb_monstro (nm_monstro, ds_monstro, tp_monstro, ds_imagem, qt_vida, qt_defesa, qt_xp_recompensa, qt_vd, id_sistema) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmtInsMonstro->execute([
+                    $monstro['nome'],
+                    $monstro['desc'] ?? '',
+                    $monstro['val1'] ?? 'Criatura',
+                    $ds_imagem,
+                    $monstro['vida'] ?? 0,
+                    $monstro['defesa'] ?? 0,
+                    $monstro['xp'] ?? 0,
+                    $monstro['val2'] ?? 0,
+                    $id_sistema
+                ]);
+                $id_monstro = $pdo->lastInsertId();
+            }
+
+            // Reinserir atributos do monstro
             if (!empty($monstro['atributos_monstro'])) {
+                $stmtMonAttr = $pdo->prepare("INSERT INTO tb_monstro_atributo (id_monstro, id_atributo, qt_valor) VALUES (?, ?, ?)");
                 foreach ($monstro['atributos_monstro'] as $mAttr) {
                     $realAttrId = $attrIdMap[$mAttr['abrev']] ?? null;
                     if ($realAttrId) {
@@ -296,6 +360,17 @@ try {
                     }
                 }
             }
+        }
+    }
+
+    // Remover monstros deletados no front
+    $toDeleteMonstros = array_diff($dbMonstroIds, $payloadMonstroIds);
+    foreach ($toDeleteMonstros as $delId) {
+        try {
+            $pdo->prepare("DELETE FROM tb_monstro_atributo WHERE id_monstro = ?")->execute([$delId]);
+            $pdo->prepare("DELETE FROM tb_monstro WHERE id_monstro = ? AND id_sistema = ?")->execute([$delId, $id_sistema]);
+        } catch (PDOException $e) {
+            continue; // Se estiver em uso, mantém para integridade
         }
     }
 

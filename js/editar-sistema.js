@@ -667,13 +667,18 @@ document.addEventListener('DOMContentLoaded', () => {
             botoesMenuComp.forEach(b => b.classList.remove('ativa'));
             btn.classList.add('ativa');
             abaCompAtual = index;
-            catAtiva = btn.textContent.trim();
+            catAtiva = btn.getAttribute('data-cat') || btn.textContent.trim();
             trackComp.style.transform = `translateX(-${abaCompAtual * (100 / 6)}%)`;
             atualizarUIComponentes();
         });
     });
 
     const atualizarUIComponentes = () => {
+        const nomeSis = document.getElementById('input-nome-sistema').value.toLowerCase();
+        const isOrdem = nomeSis.includes('ordem paranormal');
+        if (window.componentesDb['AMEAÇAS']) {
+            window.componentesDb['AMEAÇAS'].labels[1] = isOrdem ? 'VD' : 'VT';
+        }
         const catData = window.componentesDb[catAtiva];
         if (!catData) return;
         document.getElementById('contador-comp-atual').textContent = `${catData.items.length}/${catData.limit}`;
@@ -692,6 +697,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `);
         });
     };
+    window.atualizarUIComponentes = atualizarUIComponentes;
 
     function configurarModalDinamico(comp = null) {
         const inputNome = document.getElementById('modal-input-nome');
@@ -762,30 +768,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('btn-criar-comp').addEventListener('click', () => {
         if (catAtiva === 'AMEAÇAS' || catAtiva === 'MONSTROS') {
-            document.getElementById('m-id-local').value = '';
-            document.getElementById('m-nome').value = '';
-            document.getElementById('m-tipo').value = 'Criatura';
-            document.getElementById('m-vd').value = 0;
-            document.getElementById('m-vida').value = 0;
-            document.getElementById('m-defesa').value = 0;
-            document.getElementById('m-xp').value = 0;
-            document.getElementById('m-desc').value = '';
-            document.getElementById('preview-monstro-container').innerHTML = '<i class="fas fa-cloud-upload-alt" style="font-size: 2rem; color: var(--premium-accent); opacity: 0.5;"></i>';
-            document.querySelector('#modal-criar-monstro h2').textContent = 'Nova Ameaça';
-            document.getElementById('btn-save-monstro-local').innerHTML = '<i class="fas fa-skull"></i> CONVOCAR AMEAÇA';
-
-            const grid = document.getElementById('grid-atributos-monstro');
-            grid.innerHTML = '';
-            window.atributosObj.forEach(at => {
-                grid.insertAdjacentHTML('beforeend', `
-                    <div class="input-premium-group" style="margin-bottom: 0; display: flex; flex-direction: column;">
-                        <label class="input-premium-label" style="text-align: center; margin: 0 0 5px 0; font-size: 0.6rem; color: #888; font-weight: 800;">${at.abrev}</label>
-                        <input type="number" class="input-premium-field attr-input-premium" data-id="${at.id}" data-abrev="${at.abrev}" value="0">
-                    </div>
-                `);
-            });
-            const btnExcluirMonstro = document.getElementById('btn-excluir-monstro');
-            if (btnExcluirMonstro) btnExcluirMonstro.style.display = 'none';
+            resetarModalMonstro();
             document.getElementById('modal-criar-monstro').classList.add('ativo');
         } else {
             window.compEditandoID = null;
@@ -874,103 +857,262 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function fecharModal(id) { document.getElementById(id).classList.remove('ativo'); }
+
+function resetarModalMonstro() {
+    const fotoInput = document.getElementById('m-foto');
+    if (fotoInput) fotoInput.value = '';
+    document.getElementById('m-id-local').value = '';
+    document.getElementById('m-imagem-atual').value = '';
+    document.getElementById('m-nome').value = '';
+    document.getElementById('m-tipo').value = 'Ameaça';
+    document.getElementById('m-vd').value = 0;
+    document.getElementById('m-vd-status').value = 0;
+    document.getElementById('m-vida').value = 0;
+    document.getElementById('m-defesa').value = 0;
+    document.getElementById('m-xp').value = 0;
+    document.getElementById('m-desc').value = '';
+
+    const preview = document.getElementById('preview-monstro-container');
+    if (preview) {
+        preview.innerHTML = `
+            <img id="m-foto-preview" src="../img/uploads/perfil/avatar1.png" style="width: 100%; height: 100%; object-fit: cover;">
+            <div style="position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.55rem; text-align: center; padding: 3px 0; font-weight: bold; text-transform: uppercase;">Mudar</div>
+        `;
+    }
+
+    const headerGrad = document.getElementById('m-header-gradient');
+    if (headerGrad) {
+        headerGrad.style.backgroundImage = "linear-gradient(135deg, rgba(30, 11, 58, 0.95), rgba(49, 28, 97, 0.9)), url('../img/uploads/perfil/avatar1.png')";
+    }
+
+    const btnSave = document.getElementById('btn-save-monstro-local');
+    if (btnSave) btnSave.innerHTML = '<i class="fas fa-skull"></i> CONVOCAR AMEAÇA';
+
+    const btnExcluir = document.getElementById('btn-excluir-monstro');
+    if (btnExcluir) btnExcluir.style.display = 'none';
+
+    // Dinamismo VD/VT e Vida
+    const nomeSis = document.getElementById('input-nome-sistema').value.toLowerCase();
+    const isOrdem = nomeSis.includes('ordem paranormal');
+    const labelVdVt = document.getElementById('label-vd-vt');
+    if (labelVdVt) labelVdVt.textContent = isOrdem ? 'VD:' : 'VT:';
+
+    const boxVida = document.getElementById('box-m-vida');
+    const boxVd = document.getElementById('box-m-vd');
+    const gridStatus = document.getElementById('m-status-grid');
+    if (boxVida && boxVd && gridStatus) {
+        gridStatus.style.gridTemplateColumns = 'repeat(2, 1fr)';
+        if (isOrdem) {
+            boxVida.style.display = 'flex';
+            boxVd.style.display = 'none';
+        } else {
+            boxVida.style.display = 'none';
+            boxVd.style.display = 'flex';
+        }
+    }
+
+    // Renderiza atributos dinamicamente
+    const grid = document.getElementById('grid-atributos-monstro');
+    grid.innerHTML = '';
+    window.atributosObj.forEach(at => {
+        grid.insertAdjacentHTML('beforeend', `
+            <div class="premium-attr-box" style="height: 50px; position: relative; display: flex; align-items: stretch; border: 1.5px solid #444; border-radius: 8px; overflow: hidden;">
+                <span class="attr-abbr" style="font-size: 0.85rem; width: 45px; background: #fff; color: #1e0b3a; display: flex; align-items: center; justify-content: center; font-weight: 900;">${at.abrev}</span>
+                <input type="number" class="input-premium-field attr-input-premium" data-id="${at.id}" data-abrev="${at.abrev}" value="0" min="0" oninput="if(parseInt(this.value)<0)this.value=0;" style="background: transparent; border: none; color: #fff; font-size: 1.2rem; font-weight: bold; flex: 1; text-align: center; outline: none; padding: 0; margin: 0; height: 100%;">
+            </div>
+        `);
+    });
+}
+window.resetarModalMonstro = resetarModalMonstro;
+
 function previewImagemMonstro(input) {
-    if (input.files && input.files[0]) {
-        abrirCropperModal(input.files[0], 1, (croppedBlob, croppedBase64) => {
-            document.getElementById('preview-monstro-container').innerHTML = `<img src="${croppedBase64}" style="width:100%; height:100%; object-fit:cover;">`;
-            
-            // Injetar o arquivo recortado de volta no input para consistência
-            const newFile = new File([croppedBlob], input.files[0].name || "ameaca.jpg", { type: "image/jpeg" });
-            const dataTransfer = new DataTransfer();
-            dataTransfer.items.add(newFile);
-            input.files = dataTransfer.files;
-        });
+    const preview = document.getElementById('preview-monstro-container');
+    const headerGrad = document.getElementById('m-header-gradient');
+    if (input.files && input.files[0] && preview) {
+        const file = input.files[0];
+        if (typeof abrirCropperModal === 'function') {
+            abrirCropperModal(file, 1, (croppedBlob, croppedBase64) => {
+                preview.innerHTML = `
+                    <img id="m-foto-preview" src="${croppedBase64}" style="width: 100%; height: 100%; object-fit: cover;">
+                    <div style="position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.55rem; text-align: center; padding: 3px 0; font-weight: bold; text-transform: uppercase;">Mudar</div>
+                `;
+                if (headerGrad) {
+                    headerGrad.style.backgroundImage = `linear-gradient(135deg, rgba(30, 11, 58, 0.95), rgba(49, 28, 97, 0.9)), url('${croppedBase64}')`;
+                }
+                
+                // Injetar o arquivo recortado de volta no input para consistência
+                const newFile = new File([croppedBlob], input.files[0].name || "ameaca.jpg", { type: "image/jpeg" });
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(newFile);
+                input.files = dataTransfer.files;
+            });
+        } else {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.innerHTML = `
+                    <img id="m-foto-preview" src="${e.target.result}" style="width: 100%; height: 100%; object-fit: cover;">
+                    <div style="position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.55rem; text-align: center; padding: 3px 0; font-weight: bold; text-transform: uppercase;">Mudar</div>
+                `;
+                if (headerGrad) {
+                    headerGrad.style.backgroundImage = `linear-gradient(135deg, rgba(30, 11, 58, 0.95), rgba(49, 28, 97, 0.9)), url('${e.target.result}')`;
+                }
+            };
+            reader.readAsDataURL(file);
+        }
     }
 }
+window.previewImagemMonstro = previewImagemMonstro;
 
 function abrirModalEdicaoMonstro(comp) {
+    const fotoInput = document.getElementById('m-foto');
+    if (fotoInput) fotoInput.value = '';
     document.getElementById('m-id-local').value = comp.id;
     document.getElementById('m-nome').value = comp.nome;
-    document.getElementById('m-tipo').value = comp.val1;
-    document.getElementById('m-vd').value = comp.val2;
+    document.getElementById('m-tipo').value = comp.val1 || 'Ameaça';
+    document.getElementById('m-vd').value = comp.val2 || 0;
+    document.getElementById('m-vd-status').value = comp.val2 || 0;
     document.getElementById('m-vida').value = comp.vida || 0;
     document.getElementById('m-defesa').value = comp.defesa || 0;
     document.getElementById('m-xp').value = comp.xp || 0;
     document.getElementById('m-desc').value = comp.desc || '';
+    document.getElementById('m-imagem-atual').value = comp.foto_base64 || '';
     
-    const grid = document.getElementById('grid-atributos-monstro');
-    grid.innerHTML = '';
-    window.atributosObj.forEach(at => {
-        const valAttr = (comp.atributos_monstro || []).find(a => a.abrev == at.abrev)?.valor || 0;
-        grid.insertAdjacentHTML('beforeend', `
-            <div class="input-premium-group" style="margin-bottom: 0; display: flex; flex-direction: column;">
-                <label class="input-premium-label" style="text-align: center; margin: 0 0 5px 0; font-size: 0.6rem; color: #888; font-weight: 800;">${at.abrev}</label>
-                <input type="number" class="input-premium-field attr-input-premium" data-id="${at.id}" data-abrev="${at.abrev}" value="${valAttr}" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 8px; border-radius: 8px; text-align: center; font-weight: 900; font-family: 'Montserrat', sans-serif; outline: none;">
-            </div>
-        `);
-    });
-
-    if (comp.foto_base64) {
-        document.getElementById('preview-monstro-container').innerHTML = `<img src="${comp.foto_base64}" style="width:100%; height:100%; object-fit:cover;">`;
-    } else {
-        document.getElementById('preview-monstro-container').innerHTML = '<i class="fas fa-cloud-upload-alt" style="font-size: 2rem; color: var(--premium-accent); opacity: 0.5;"></i>';
+    const imgUrl = (comp.foto_base64 && comp.foto_base64 !== '../img/logo_icone.png' && comp.foto_base64 !== '../img/uploads/perfil/avatar1.png') ? comp.foto_base64 : '../img/uploads/perfil/avatar1.png';
+    
+    const preview = document.getElementById('preview-monstro-container');
+    if (preview) {
+        preview.innerHTML = `
+            <img id="m-foto-preview" src="${imgUrl}" style="width: 100%; height: 100%; object-fit: cover;">
+            <div style="position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.55rem; text-align: center; padding: 3px 0; font-weight: bold; text-transform: uppercase;">Mudar</div>
+        `;
+    }
+    const headerGrad = document.getElementById('m-header-gradient');
+    if (headerGrad) {
+        headerGrad.style.backgroundImage = `linear-gradient(135deg, rgba(30, 11, 58, 0.95), rgba(49, 28, 97, 0.9)), url('${imgUrl}')`;
     }
 
-    const btnExcluirMonstro = document.getElementById('btn-excluir-monstro');
-    if (btnExcluirMonstro) {
-        btnExcluirMonstro.style.display = 'block';
-        btnExcluirMonstro.onclick = () => {
+    const btnSave = document.getElementById('btn-save-monstro-local');
+    if (btnSave) btnSave.innerHTML = '<i class="fas fa-skull"></i> ATUALIZAR AMEAÇA';
+
+    const btnExcluir = document.getElementById('btn-excluir-monstro');
+    if (btnExcluir) {
+        btnExcluir.style.display = 'block';
+        btnExcluir.onclick = () => {
             if (confirm("Tem certeza que deseja excluir esta ameaça?")) {
-                window.componentesDb['AMEAÇAS'].items = window.componentesDb['AMEAÇAS'].items.filter(c => c.id != comp.id);
+                window.componentesDb['AMEAÇAS'].items = window.componentesDb['AMEAÇAS'].items.filter(c => c.id !== comp.id);
                 fecharModal('modal-criar-monstro');
-                atualizarUIComponentes();
+                if (typeof window.atualizarUIComponentes === 'function') {
+                    window.atualizarUIComponentes();
+                } else if (typeof atualizarUIComponentes === 'function') {
+                    atualizarUIComponentes();
+                }
             }
         };
     }
 
-    document.querySelector('#modal-criar-monstro h2').textContent = 'Editar Ameaça';
-    document.getElementById('btn-save-monstro-local').innerHTML = '<i class="fas fa-skull"></i> ATUALIZAR AMEAÇA';
+    // Dinamismo VD/VT e Vida
+    const nomeSis = document.getElementById('input-nome-sistema').value.toLowerCase();
+    const isOrdem = nomeSis.includes('ordem paranormal');
+    const labelVdVt = document.getElementById('label-vd-vt');
+    if (labelVdVt) labelVdVt.textContent = isOrdem ? 'VD:' : 'VT:';
+
+    const boxVida = document.getElementById('box-m-vida');
+    const boxVd = document.getElementById('box-m-vd');
+    const gridStatus = document.getElementById('m-status-grid');
+    if (boxVida && boxVd && gridStatus) {
+        gridStatus.style.gridTemplateColumns = 'repeat(2, 1fr)';
+        if (isOrdem) {
+            boxVida.style.display = 'flex';
+            boxVd.style.display = 'none';
+        } else {
+            boxVida.style.display = 'none';
+            boxVd.style.display = 'flex';
+        }
+    }
+    
+    const grid = document.getElementById('grid-atributos-monstro');
+    grid.innerHTML = '';
+    window.atributosObj.forEach(at => {
+        let valAttr = 0;
+        if (comp.atributos_monstro) {
+            const attrMatch = comp.atributos_monstro.find(a => a.abrev === at.abrev || a.id_atributo_temp === at.id || a.id_atributo === at.id);
+            if (attrMatch) valAttr = Math.max(0, parseInt(attrMatch.valor || attrMatch.qt_valor) || 0);
+        }
+
+        grid.insertAdjacentHTML('beforeend', `
+            <div class="premium-attr-box" style="height: 50px; position: relative; display: flex; align-items: stretch; border: 1.5px solid #444; border-radius: 8px; overflow: hidden;">
+                <span class="attr-abbr" style="font-size: 0.85rem; width: 45px; background: #fff; color: #1e0b3a; display: flex; align-items: center; justify-content: center; font-weight: 900;">${at.abrev}</span>
+                <input type="number" class="input-premium-field attr-input-premium" data-id="${at.id}" data-abrev="${at.abrev}" value="${valAttr}" min="0" oninput="if(parseInt(this.value)<0)this.value=0;" style="background: transparent; border: none; color: #fff; font-size: 1.2rem; font-weight: bold; flex: 1; text-align: center; outline: none; padding: 0; margin: 0; height: 100%;">
+            </div>
+        `);
+    });
+
     document.getElementById('modal-criar-monstro').classList.add('ativo');
 }
 
 function salvarMonstro() {
     const nome = document.getElementById('m-nome').value.trim();
     const idLocal = document.getElementById('m-id-local').value;
-    if(!nome) return alert('Dê um nome!');
-    
+    const tipo = document.getElementById('m-tipo').value || 'Ameaça';
+    const vd = document.getElementById('m-vd').value || 0;
+    const vida = document.getElementById('m-vida').value || 0;
+    const defesa = document.getElementById('m-defesa').value || 0;
+    const xp = document.getElementById('m-xp').value || 0;
+    const desc = document.getElementById('m-desc').value || '';
+
+    if(!nome) {
+        alert('Dê um nome à ameaça!');
+        return;
+    }
+
     const atributos = [];
     document.querySelectorAll('.attr-input-premium').forEach(input => {
-        atributos.push({ abrev: input.getAttribute('data-abrev'), valor: input.value || 0 });
+        atributos.push({
+            id_atributo_temp: input.getAttribute('data-id'),
+            abrev: input.getAttribute('data-abrev'),
+            valor: Math.max(0, parseInt(input.value) || 0)
+        });
     });
-    
-    const nomeSis = typeof SYSTEM_DB !== 'undefined' ? SYSTEM_DB.nm_sistema : '';
-    const isOrdem = (nomeSis || '').toLowerCase().includes('ordem paranormal');
-    const vidaVal = document.getElementById('m-vida').value || 0;
-    const vdVal = isOrdem ? (document.getElementById('m-vd').value || 0) : vidaVal;
+
+    const imgPreview = document.querySelector('#m-foto-preview');
+    const imgPath = imgPreview ? imgPreview.src : '../img/uploads/perfil/avatar1.png';
 
     const ameacaData = {
         nome: nome,
-        val1: document.getElementById('m-tipo').value || 'Criatura',
-        val2: vdVal,
-        desc: document.getElementById('m-desc').value || '',
-        vida: vidaVal,
-        defesa: document.getElementById('m-defesa').value || 0,
-        xp: document.getElementById('m-xp').value || 0,
+        val1: tipo,
+        val2: vd,
+        desc: desc,
+        vida: vida,
+        defesa: defesa,
+        xp: xp,
         atributos_monstro: atributos,
-        foto_base64: document.querySelector('#preview-monstro-container img')?.src || null
+        foto_base64: imgPath
     };
 
     if (idLocal) {
         const idx = window.componentesDb['AMEAÇAS'].items.findIndex(c => c.id == idLocal);
         window.componentesDb['AMEAÇAS'].items[idx] = { ...window.componentesDb['AMEAÇAS'].items[idx], ...ameacaData };
     } else {
+        const gerarIDComp = () => '_' + Math.random().toString(36).substr(2, 9);
         window.componentesDb['AMEAÇAS'].items.push({
-            id: '_' + Math.random().toString(36).substr(2, 9),
+            id: gerarIDComp(),
             ...ameacaData
         });
     }
 
     fecharModal('modal-criar-monstro');
-    const btnAtivo = document.querySelector('.btn-comp-aba.ativa');
-    if(btnAtivo && btnAtivo.textContent.trim() === 'AMEAÇAS') btnAtivo.click();
+    if (typeof window.atualizarUIComponentes === 'function') {
+        window.atualizarUIComponentes();
+    } else if (typeof atualizarUIComponentes === 'function') {
+        atualizarUIComponentes();
+    }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    const mVD = document.getElementById('m-vd');
+    const mVDStatus = document.getElementById('m-vd-status');
+    if (mVD && mVDStatus) {
+        mVD.addEventListener('input', () => { mVDStatus.value = mVD.value; });
+        mVDStatus.addEventListener('input', () => { mVD.value = mVDStatus.value; });
+    }
+});

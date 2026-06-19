@@ -38,7 +38,7 @@ function abrirCropperModal(file, aspectRatio, callback) {
                 background: rgba(10, 8, 16, 0.85);
                 backdrop-filter: blur(8px);
                 -webkit-backdrop-filter: blur(8px);
-                z-index: 999999;
+                z-index: 10000000 !important;
                 display: flex;
                 justify-content: center;
                 align-items: center;
@@ -165,6 +165,7 @@ function abrirCropperModal(file, aspectRatio, callback) {
     // 2. Criar a estrutura do modal
     const overlay = document.createElement('div');
     overlay.className = 'cropper-modal-overlay';
+    overlay.style.setProperty('z-index', '100000000', 'important');
     
     const container = document.createElement('div');
     container.className = 'cropper-container-box';

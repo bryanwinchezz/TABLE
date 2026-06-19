@@ -61,7 +61,7 @@ $sistemas = $stmt->fetchAll();
     <link rel="stylesheet" href="../css/criar-personagem.css?v=<?= time() ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
-    <script src="../js/cropper-helper.js"></script>
+    <script src="../js/cropper-helper.js?v=<?= time() ?>"></script>
     <link rel="stylesheet" href="../css/table-modal.css">
     <script src="../js/table-modal.js"></script>
 

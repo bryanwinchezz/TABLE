@@ -342,7 +342,7 @@ try {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
-    <script src="../js/cropper-helper.js"></script>
+    <script src="../js/cropper-helper.js?v=<?= time() ?>"></script>
     <link rel="stylesheet" href="../css/nav-footer.css">
     <link rel="stylesheet" href="../css/ficha.css?v=<?= time() ?>">
     <style>

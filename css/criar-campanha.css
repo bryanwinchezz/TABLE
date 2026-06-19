@@ -1086,11 +1086,11 @@ button {
     filter: brightness(1.15);
 }
 
-.banner-table { background-color: #2a2438; }
+.banner-table { background-color: #1e1528; }
 .banner-table.ativo {
     opacity: 1;
-    border-color: #ffffff;
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+    border-color: #7b4ff7;
+    box-shadow: 0 0 20px rgba(123, 79, 247, 0.45);
     filter: brightness(1.15);
 }
 
